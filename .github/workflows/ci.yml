@@ -231,6 +231,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Ensure git identity is set (Vercel CLI requires one)
+        # Vercel's CLI shells out to git for deployment metadata during
+        # `vercel build`/`vercel deploy`. On a fresh CI runner with no
+        # global git identity configured, that fails with:
+        #   "git config --global user.email" (dpl_7pHvNqGYZEjGnoDboqys64MPgnZw)
+        # Not caused by any script in this repo — this is defensive so the
+        # Vercel CLI always finds a usable identity regardless of what
+        # internally triggers the git call.
+        run: |
+          git config --global user.email "ci@justcallmepratt.dev"
+          git config --global user.name "CI Bot"
+
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
