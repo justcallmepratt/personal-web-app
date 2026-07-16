@@ -16,24 +16,17 @@ env:
 jobs:
   # NOTE: this workflow is NOT part of the production deploy path (Railway +
   # Vercel handle that, via ci.yml). It only mirrors images to GHCR for
-  # optional self-hosting. Both jobs fail fast (~5-10s) at the GHCR push step
-  # rather than the actual docker build — that timing signature means the
-  # default GITHUB_TOKEN is being denied `packages: write`, most likely
-  # because the repo's Settings → Actions → General → "Workflow permissions"
-  # is set to "Read repository contents permission" (read-only), which caps
-  # what any workflow-declared `permissions:` block can request, no matter
-  # what the YAML says.
+  # optional self-hosting.
   #
-  # FIX (one-time, requires repo admin — 30s):
-  #   GitHub → repo → Settings → Actions → General → Workflow permissions
-  #   → select "Read and write permissions" → Save
-  #
-  # Until that's confirmed, both jobs are marked continue-on-error so this
-  # optional workflow can no longer show as a "failing" check against pushes.
+  # 2026-07-16: jobs were failing fast (~5-10s) at the GHCR push step because
+  # repo Settings → Actions → General → "Workflow permissions" was read-only,
+  # capping the job-level `packages: write` request below. Fixed via
+  # `gh api -X PUT repos/.../actions/permissions/workflow -f
+  # default_workflow_permissions=write` — confirmed write access is now set
+  # repo-wide, so continue-on-error has been removed.
   build-backend:
     name: Build backend image
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
       contents: read
       packages: write
@@ -73,7 +66,6 @@ jobs:
   build-frontend:
     name: Build frontend image
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
       contents: read
       packages: write
