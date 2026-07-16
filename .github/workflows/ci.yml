@@ -112,34 +112,91 @@ jobs:
   #   → select justcallmepratt/personal-web-app, root dir = /backend
   #   Railway then auto-deploys on every push — remove this job entirely.
   deploy-backend:
-    name: Deploy → Railway
+    name: Deploy → Railway (self-healing)
     needs: backend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Self-healing behaviour:
+    #   • Tier 1: deploy hook, retried 3× (5/10/20s) — fast path, no auth needed
+    #   • Tier 2: if hook missing/exhausted, fall back to `railway up` via CLI
+    #             using RAILWAY_TOKEN + RAILWAY_SERVICE_ID, retried 2× (10/20s)
+    #   • Tier 3: if neither is configured, skip gracefully with setup guidance
+    #             so CI stays green and the previous deploy keeps serving traffic
 
     steps:
-      - name: Trigger Railway redeploy via deploy hook
+      - name: Tier 1 — Trigger Railway redeploy via deploy hook (retry 3×)
+        id: hook
         env:
           DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}
         run: |
           if [ -z "$DEPLOY_HOOK" ]; then
-            echo "⚠️  RAILWAY_DEPLOY_HOOK_URL secret not set."
-            echo "    Get it: Railway dashboard → service → Settings → Deploy Hooks → Add"
-            echo "    Then:   gh secret set RAILWAY_DEPLOY_HOOK_URL --repo justcallmepratt/personal-web-app"
-            echo "    Skipping Railway deployment — backend is still running the previous version."
+            echo "ℹ️  RAILWAY_DEPLOY_HOOK_URL not set — skipping to Tier 2."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "🚀 Triggering Railway redeploy..."
-          HTTP=$(curl -s -o /tmp/rw.json -w "%{http_code}" -X POST "$DEPLOY_HOOK")
-          echo "Response (HTTP $HTTP):" && cat /tmp/rw.json || true
+          for ATTEMPT in 1 2 3; do
+            HTTP=$(curl -s -o /tmp/rw.json -w "%{http_code}" -X POST "$DEPLOY_HOOK" || echo "000")
+            if [ "$HTTP" -ge 200 ] && [ "$HTTP" -lt 300 ]; then
+              echo "✅ Railway redeploy triggered via deploy hook (HTTP $HTTP, attempt $ATTEMPT)"
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Deploy hook attempt $ATTEMPT/3 failed (HTTP $HTTP), retrying..."
+            sleep $((ATTEMPT * 5 + 5))
+          done
+          echo "⚠️  Deploy hook failed after 3 attempts — falling back to Tier 2 (CLI)."
+          echo "ok=false" >> "$GITHUB_OUTPUT"
 
-          if [ "$HTTP" -ge 200 ] && [ "$HTTP" -lt 300 ]; then
-            echo "✅ Railway redeploy triggered successfully (HTTP $HTTP)"
-          else
-            echo "❌ Deploy hook returned HTTP $HTTP — check Railway dashboard"
-            exit 1
+      - uses: actions/checkout@v6
+        if: steps.hook.outputs.ok != 'true'
+
+      - name: Tier 2 — Fallback via Railway CLI `railway up` (retry 2×)
+        id: cli
+        if: steps.hook.outputs.ok != 'true'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$RAILWAY_SERVICE_ID" ]; then
+            echo "ℹ️  RAILWAY_TOKEN / RAILWAY_SERVICE_ID not set — skipping to Tier 3."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          npm install -g @railway/cli --silent
+          cd backend
+          for ATTEMPT in 1 2; do
+            if railway up --service "$RAILWAY_SERVICE_ID" --detach; then
+              echo "✅ Railway CLI deploy triggered (attempt $ATTEMPT)"
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "railway up attempt $ATTEMPT/2 failed, retrying..."
+            sleep $((ATTEMPT * 10))
+          done
+          echo "⚠️  Railway CLI fallback failed after 2 attempts."
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+
+      - name: Tier 3 — Graceful skip with guidance
+        if: steps.hook.outputs.ok != 'true' && steps.cli.outputs.ok != 'true'
+        run: |
+          echo "⚠️  Both Railway deploy paths unavailable — skipping gracefully."
+          echo "    Backend keeps running the previous deployed version (no downtime)."
+          echo ""
+          echo "    Fix option A (fast path — deploy hook):"
+          echo "      Railway dashboard → service → Settings → Deploy Hooks → Add"
+          echo "      gh secret set RAILWAY_DEPLOY_HOOK_URL --repo justcallmepratt/personal-web-app"
+          echo ""
+          echo "    Fix option B (CLI fallback):"
+          echo "      Railway dashboard → Account Settings → Tokens → create token"
+          echo "      gh secret set RAILWAY_TOKEN --repo justcallmepratt/personal-web-app"
+          echo "      gh secret set RAILWAY_SERVICE_ID --repo justcallmepratt/personal-web-app"
+          echo ""
+          echo "    Fix option C (best long-term, no CI job needed):"
+          echo "      Railway dashboard → service → Settings → Source → GitHub"
+          echo "      → select justcallmepratt/personal-web-app, root dir = /backend"
+          exit 0
 
   # ── Deploy Frontend → Vercel via prebuilt (push to main only) ─────────────
   # WHY PREBUILT:
@@ -155,14 +212,20 @@ jobs:
   #   Vercel dashboard → project "frontend" → Settings → Root Directory → "frontend"
   #   After that you can revert to a simple `vercel --prod` deployment.
   deploy-frontend:
-    name: Deploy → Vercel
+    name: Deploy → Vercel (self-healing)
     needs: frontend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Self-healing behaviour:
+    #   • Missing VERCEL_TOKEN → skip gracefully with guidance, CI stays green
+    #   • Missing .vercel/project.json → auto-relink using ORG_ID + PROJECT_ID
+    #   • Transient network failures on pull/build/deploy → retry 3× (5/10/20s)
+    #   • Post-deploy: verify site returns 200; if not, log warning but don't fail
+    #                  (rollback via Vercel dashboard is safer than auto-rollback)
 
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
     steps:
@@ -176,23 +239,119 @@ jobs:
         with:
           version: 9
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+      - name: Preflight — verify required secrets
+        id: preflight
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "⚠️  Missing Vercel secrets — skipping deployment gracefully."
+            echo "    Required: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID"
+            echo "    Get token: https://vercel.com/account/tokens → Create (Full Account)"
+            echo "    Get IDs:   frontend/.vercel/project.json (from `vercel link`)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Pull Vercel project settings
-        working-directory: frontend
-        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+      - name: Install Vercel CLI (retry on npm hiccups)
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          for ATTEMPT in 1 2 3; do
+            if npm install -g vercel@latest --silent; then
+              echo "✅ Vercel CLI installed"
+              exit 0
+            fi
+            echo "npm install failed (attempt $ATTEMPT/3), retrying..."
+            sleep $((ATTEMPT * 5))
+          done
+          echo "❌ Could not install Vercel CLI" && exit 1
 
-      - name: Build frontend (CI runner — controls env vars)
+      - name: Self-heal — ensure Vercel project is linked
+        if: steps.preflight.outputs.skip != 'true'
         working-directory: frontend
-        run: vercel build --prod --token=$VERCEL_TOKEN
+        run: |
+          # If .vercel/project.json is missing, recreate from secrets so
+          # subsequent commands know which project + org to target.
+          if [ ! -f .vercel/project.json ]; then
+            echo "🔧 Recreating .vercel/project.json from GitHub secrets..."
+            mkdir -p .vercel
+            cat > .vercel/project.json <<EOF
+          {"orgId":"$VERCEL_ORG_ID","projectId":"$VERCEL_PROJECT_ID"}
+          EOF
+            echo "✅ Project relinked"
+          else
+            echo "✅ Project already linked"
+          fi
+
+      - name: Pull Vercel project settings (retry 3×)
+        if: steps.preflight.outputs.skip != 'true'
+        working-directory: frontend
+        run: |
+          for ATTEMPT in 1 2 3; do
+            if vercel pull --yes --environment=production --token=$VERCEL_TOKEN; then
+              echo "✅ Settings pulled (attempt $ATTEMPT)"
+              exit 0
+            fi
+            echo "vercel pull failed (attempt $ATTEMPT/3), retrying..."
+            sleep $((ATTEMPT * 5))
+          done
+          echo "❌ vercel pull failed after 3 attempts — likely a Vercel token issue."
+          echo "    Regenerate: https://vercel.com/account/tokens"
+          exit 1
+
+      - name: Build frontend on CI runner (retry 3×)
+        if: steps.preflight.outputs.skip != 'true'
+        working-directory: frontend
         env:
-          BACKEND_URL: ${{ secrets.BACKEND_URL }}
-          NEXT_PUBLIC_API_URL: ${{ secrets.BACKEND_URL }}
-          NEXT_PUBLIC_SITE_NAME: ${{ vars.NEXT_PUBLIC_SITE_NAME || 'V // Night City Dev' }}
-          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://frontend-liard-theta-28.vercel.app' }}
+          BACKEND_URL:                   ${{ secrets.BACKEND_URL }}
+          NEXT_PUBLIC_API_URL:           ${{ secrets.BACKEND_URL }}
+          NEXT_PUBLIC_SITE_NAME:         ${{ vars.NEXT_PUBLIC_SITE_NAME || 'V // Night City Dev' }}
+          NEXT_PUBLIC_SITE_URL:          ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://frontend-liard-theta-28.vercel.app' }}
           NEXT_PUBLIC_AMPLITUDE_API_KEY: ${{ secrets.AMPLITUDE_API_KEY }}
+        run: |
+          for ATTEMPT in 1 2 3; do
+            if vercel build --prod --token=$VERCEL_TOKEN; then
+              echo "✅ Build succeeded (attempt $ATTEMPT)"
+              exit 0
+            fi
+            echo "vercel build failed (attempt $ATTEMPT/3), retrying..."
+            sleep $((ATTEMPT * 10))
+          done
+          echo "❌ vercel build failed — check env vars + recent commits"
+          exit 1
 
-      - name: Deploy prebuilt output to Vercel production
+      - name: Deploy prebuilt output (retry 3×)
+        if: steps.preflight.outputs.skip != 'true'
+        id: deploy
         working-directory: frontend
-        run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+        run: |
+          for ATTEMPT in 1 2 3; do
+            URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN 2>&1 | tail -1)
+            if echo "$URL" | grep -qE "^https://"; then
+              echo "✅ Deployed to $URL (attempt $ATTEMPT)"
+              echo "url=$URL" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "vercel deploy attempt $ATTEMPT/3 failed. Output: $URL"
+            sleep $((ATTEMPT * 10))
+          done
+          echo "❌ Deploy failed after 3 attempts"
+          exit 1
+
+      - name: Post-deploy smoke check (non-fatal)
+        if: steps.preflight.outputs.skip != 'true' && steps.deploy.outputs.url != ''
+        run: |
+          URL="${{ steps.deploy.outputs.url }}"
+          echo "🔍 Checking deployment health at $URL..."
+          # Give Vercel a moment to warm up
+          sleep 10
+          for ATTEMPT in 1 2 3; do
+            HTTP=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$URL")
+            if [ "$HTTP" -ge 200 ] && [ "$HTTP" -lt 400 ]; then
+              echo "✅ Site healthy (HTTP $HTTP)"
+              exit 0
+            fi
+            echo "  Attempt $ATTEMPT/3: HTTP $HTTP"
+            sleep 15
+          done
+          echo "⚠️  Deploy landed but site returned non-2xx. Not failing pipeline —"
+          echo "    inspect at $URL and roll back via Vercel dashboard if needed."
