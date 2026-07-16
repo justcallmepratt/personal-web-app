@@ -2,6 +2,34 @@
 
 > 📊 **Last validated end-to-end:** 2026-05-18 — see [`docs/VALIDATION.md`](docs/VALIDATION.md) for the full report.
 > Production live · 241/241 tests green · email validation + rate limiting confirmed working in prod.
+> 🔧 **Last deploy-pipeline audit:** 2026-07-16 — both prod endpoints confirmed live (200/200); see Backlog below.
+
+---
+
+## 🔥 Backlog — Known Issues (as of 2026-07-16)
+
+| # | Issue | Severity | Status |
+|---|---|---|---|
+| 1 | **Repo renamed** `justcallmepratt/personal-web-app` → `pratO66/personal-web-app`. All `gh secret set --repo ...` instructions in `ci.yml`, README, ORCHESTRATOR.md, phase-15 doc pointed at the old owner. | High (broke secret-setup instructions) | ✅ Fixed 2026-07-16 — all refs repointed to `pratO66/personal-web-app` |
+| 2 | **Railway CLI OAuth token expired.** `railway status` → `Unauthorized: Token refresh failed: invalid_grant`. Local CLI can't deploy or inspect the service until `railway login` is re-run interactively. | Medium (only blocks local/manual `railway up`; prod itself is unaffected) | ⏳ Needs manual `railway login` (interactive, can't be done by agent) |
+| 3 | **CI Railway deploy relies on `RAILWAY_DEPLOY_HOOK_URL` secret** which was never confirmed as set. If missing, Tier 1 of the self-healing deploy skips straight to Tier 2, which also needs `RAILWAY_TOKEN` + `RAILWAY_SERVICE_ID` — neither confirmed set either. Net effect: **pushes to `main` may currently no-op on the backend deploy** (Tier 3 graceful skip), silently leaving Railway on the previous build. | High (deploys may not be reaching prod) | ⏳ User action: set one of the two secret pairs — see `docs/VALIDATION.md` outstanding actions #1 |
+| 4 | **`vercel` CLI not installed locally** — `vercel whoami` / `vercel ls` fail with "command not found" outside of CI (where it's installed fresh each run). Not a bug, just means local Vercel debugging needs `npm install -g vercel` first. | Low | Informational only |
+| 5 | **GitHub Actions API returned persistent HTTP 503** on `gh run list` during this audit (2026-07-16) — could not confirm actual pass/fail history of recent CI runs. Likely a transient GitHub-side outage, not a repo issue. | Low | ⏳ Re-check `gh run list` next session to confirm recent run status |
+| 6 | **Production health check (manual, 2026-07-16):** backend `/actuator/health` → 200, frontend → 200. Both live and serving traffic despite issues #2/#3 above — meaning the *current* deployed versions are fine, but **new pushes to `main` may not be propagating** until secrets are fixed. | High (silent staleness risk) | ⏳ Verify next deploy actually updates a version marker in prod |
+
+### Immediate next steps to close the backlog
+1. Run `railway login` locally to refresh CLI auth (issue #2)
+2. Either add `RAILWAY_DEPLOY_HOOK_URL`, or both `RAILWAY_TOKEN` + `RAILWAY_SERVICE_ID`, as repo secrets (issue #3):
+   ```bash
+   gh secret set RAILWAY_DEPLOY_HOOK_URL --repo pratO66/personal-web-app
+   # or
+   gh secret set RAILWAY_TOKEN --repo pratO66/personal-web-app
+   gh secret set RAILWAY_SERVICE_ID --repo pratO66/personal-web-app
+   ```
+3. Push a trivial commit to `main` and confirm the `deploy-backend` job reports Tier 1 or Tier 2 success (not Tier 3 skip) in the Actions log
+4. Re-run `gh run list` once GitHub's API 503s clear, to audit recent CI history
+
+---
 
 ## Phase 1 — Foundation ✅
 - [x] Spring Boot 3.5 + JPA + Postgres (Supabase), JWT auth, seed runner
@@ -332,7 +360,7 @@ ADZUNA_APP_KEY=
 
 # Phase 15 — GitHub
 GITHUB_TOKEN=   # optional; increases rate limit from 60 to 5000 req/hr
-GITHUB_USERNAME=justcallmepratt
+GITHUB_USERNAME=pratO66
 
 # Phase 15 — Benchmark peers (comma-separated GitHub usernames)
 BENCHMARK_PEERS=torvalds,gaearon,addyosmani,kentcdodds,tj

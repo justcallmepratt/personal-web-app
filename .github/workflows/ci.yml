@@ -105,11 +105,11 @@ jobs:
   # HOW TO GET THE DEPLOY HOOK URL (one-time, 2 min):
   #   Railway dashboard → personal-web-app-backend service
   #   → Settings → Deploy Hooks → "Add Deploy Hook" → copy URL
-  #   → gh secret set RAILWAY_DEPLOY_HOOK_URL --repo justcallmepratt/personal-web-app
+  #   → gh secret set RAILWAY_DEPLOY_HOOK_URL --repo pratO66/personal-web-app
   #
   # ALTERNATIVE (best long-term): connect Railway service to GitHub
   #   Railway dashboard → service → Settings → Source → GitHub
-  #   → select justcallmepratt/personal-web-app, root dir = /backend
+  #   → select pratO66/personal-web-app, root dir = /backend
   #   Railway then auto-deploys on every push — remove this job entirely.
   deploy-backend:
     name: Deploy → Railway (self-healing)
@@ -186,16 +186,16 @@ jobs:
           echo ""
           echo "    Fix option A (fast path — deploy hook):"
           echo "      Railway dashboard → service → Settings → Deploy Hooks → Add"
-          echo "      gh secret set RAILWAY_DEPLOY_HOOK_URL --repo justcallmepratt/personal-web-app"
+          echo "      gh secret set RAILWAY_DEPLOY_HOOK_URL --repo pratO66/personal-web-app"
           echo ""
           echo "    Fix option B (CLI fallback):"
           echo "      Railway dashboard → Account Settings → Tokens → create token"
-          echo "      gh secret set RAILWAY_TOKEN --repo justcallmepratt/personal-web-app"
-          echo "      gh secret set RAILWAY_SERVICE_ID --repo justcallmepratt/personal-web-app"
+          echo "      gh secret set RAILWAY_TOKEN --repo pratO66/personal-web-app"
+          echo "      gh secret set RAILWAY_SERVICE_ID --repo pratO66/personal-web-app"
           echo ""
           echo "    Fix option C (best long-term, no CI job needed):"
           echo "      Railway dashboard → service → Settings → Source → GitHub"
-          echo "      → select justcallmepratt/personal-web-app, root dir = /backend"
+          echo "      → select pratO66/personal-web-app, root dir = /backend"
           exit 0
 
   # ── Deploy Frontend → Vercel via prebuilt (push to main only) ─────────────

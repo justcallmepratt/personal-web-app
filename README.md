@@ -1,7 +1,7 @@
 # 🌆 Night City Dev — Cyberpunk Personal Portfolio
 
-[![CI](https://github.com/justcallmepratt/personal-web-app/actions/workflows/ci.yml/badge.svg)](https://github.com/justcallmepratt/personal-web-app/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/justcallmepratt/personal-web-app/actions/workflows/codeql.yml/badge.svg)](https://github.com/justcallmepratt/personal-web-app/actions/workflows/codeql.yml)
+[![CI](https://github.com/pratO66/personal-web-app/actions/workflows/ci.yml/badge.svg)](https://github.com/pratO66/personal-web-app/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/pratO66/personal-web-app/actions/workflows/codeql.yml/badge.svg)](https://github.com/pratO66/personal-web-app/actions/workflows/codeql.yml)
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?style=flat&logo=openjdk)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?style=flat&logo=springboot)](https://spring.io/projects/spring-boot)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000?style=flat&logo=nextdotjs)](https://nextjs.org)
@@ -230,7 +230,7 @@ claude "Read docs/agents/ORCHESTRATOR.md then docs/agents/phase-08-analytics.md
 
 ```bash
 # Clone
-git clone https://github.com/justcallmepratt/personal-web-app.git
+git clone https://github.com/pratO66/personal-web-app.git
 cd personal-web-app
 
 # Backend

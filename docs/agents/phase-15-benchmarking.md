@@ -10,7 +10,7 @@ None.
 ## Environment variables
 | Var | Value | Notes |
 |---|---|---|
-| `GITHUB_USERNAME` | `justcallmepratt` | Your GitHub handle |
+| `GITHUB_USERNAME` | `pratO66` | Your GitHub handle |
 | `GITHUB_TOKEN` | (optional) | Raises rate limit 60→5000/hr |
 | `BENCHMARK_PEERS` | `torvalds,gaearon,addyosmani,kentcdodds,tj` | Comma-separated handles |
 

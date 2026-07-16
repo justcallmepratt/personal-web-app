@@ -14,7 +14,7 @@ Read this first. Then read the phase file for your assigned task.
 | Backend | Spring Boot 3.5 · Java 21 · JPA | https://personal-web-app-backend-production.up.railway.app |
 | Database | Railway Postgres (internal) | postgres-hhrc.railway.internal:5432 |
 | Analytics DB | Supabase Postgres | nxqiuqlwyjimioosaiio.supabase.co |
-| Repo | GitHub | https://github.com/justcallmepratt/personal-web-app |
+| Repo | GitHub | https://github.com/pratO66/personal-web-app |
 
 ## Local dev
 ```bash
