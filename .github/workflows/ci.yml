@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Backend ────────────────────────────────────────────────────────────────
+  # ── Backend ───────────────────────────────────────────────────────────[...]
   backend:
     name: Backend — Java 21 / Maven
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
           path: backend/target/*.jar
           retention-days: 7
 
-  # ── Frontend ───────────────────────────────────────────────────────────────
+  # ── Frontend ──────────────────────────────────────────────────────────[...]
   frontend:
     name: Frontend — Node 22 / pnpm
     runs-on: ubuntu-latest
@@ -258,7 +258,7 @@ jobs:
             echo "⚠️  Missing Vercel secrets — skipping deployment gracefully."
             echo "    Required: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID"
             echo "    Get token: https://vercel.com/account/tokens → Create (Full Account)"
-            echo "    Get IDs:   frontend/.vercel/project.json (from `vercel link`)"
+            echo "    Get IDs:   frontend/.vercel/project.json (from \`vercel link\`)"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
