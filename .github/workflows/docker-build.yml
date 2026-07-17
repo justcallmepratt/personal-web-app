@@ -27,6 +27,7 @@ jobs:
   build-backend:
     name: Build backend image
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -66,6 +67,7 @@ jobs:
   build-frontend:
     name: Build frontend image
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write

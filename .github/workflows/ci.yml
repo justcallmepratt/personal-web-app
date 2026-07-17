@@ -10,11 +10,18 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Guardrail: default to read-only GITHUB_TOKEN repo-wide. Jobs that need more
+# (deploy-backend/deploy-frontend push no repo content, they only call out to
+# Railway/Vercel with their own secrets) declare their own narrower block below.
+permissions:
+  contents: read
+
 jobs:
   # ── Backend ───────────────────────────────────────────────────────────[...]
   backend:
     name: Backend — Java 21 / Maven
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend
@@ -51,6 +58,7 @@ jobs:
   frontend:
     name: Frontend — Node 22 / pnpm
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -115,7 +123,9 @@ jobs:
     name: Deploy → Railway (self-healing)
     needs: backend
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
     # Self-healing behaviour:
     #   • Tier 1: deploy hook, retried 3× (5/10/20s) — fast path, no auth needed
     #   • Tier 2: if hook missing/exhausted, fall back to `railway up` via CLI
@@ -215,7 +225,9 @@ jobs:
     name: Deploy → Vercel (self-healing)
     needs: frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
     # Self-healing behaviour:
     #   • Missing VERCEL_TOKEN → skip gracefully with guidance, CI stays green
     #   • Missing .vercel/project.json → auto-relink using ORG_ID + PROJECT_ID
