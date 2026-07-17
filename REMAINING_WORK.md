@@ -1,395 +1,330 @@
-# Remaining Work
+# 🚀 Remaining Work: Migration to GitHub Pages & GHCR
 
-> 📊 **Last validated end-to-end:** 2026-05-18 — see [`docs/VALIDATION.md`](docs/VALIDATION.md) for the full report.
-> Production live · 241/241 tests green · email validation + rate limiting confirmed working in prod.
-> 🔧 **Last deploy-pipeline audit:** 2026-07-16 — both prod endpoints confirmed live (200/200); see Backlog below.
+This document tracks all remaining work needed to complete the migration from Vercel/Railway to GitHub-native deployment.
 
 ---
 
-## 🔥 Backlog — Known Issues (as of 2026-07-16)
+## 📊 Status Overview
 
-| # | Issue | Severity | Status |
-|---|---|---|---|
-| 1 | **False alarm, corrected:** briefly mis-repointed refs to `pratO66/personal-web-app` after misreading a git push redirect, then reverted. The canonical repo is `justcallmepratt/personal-web-app` — confirmed via GitHub's redirect from `pratO66/personal-web-app` (an old/alias remote). All docs and `ci.yml` reference `justcallmepratt/personal-web-app`; local git remote updated to match. | Low (self-corrected within session) | ✅ Fixed 2026-07-16 |
-| 2 | **Railway CLI OAuth token expired.** `railway status` → `Unauthorized: Token refresh failed: invalid_grant`. Local CLI can't deploy or inspect the service until `railway login` is re-run interactively. | Medium (only blocks local/manual `railway up`; prod itself is unaffected) | ⏳ Needs manual `railway login` (interactive, can't be done by agent) |
-| 3 | **CI Railway deploy relies on `RAILWAY_DEPLOY_HOOK_URL` secret** which was never confirmed as set. If missing, Tier 1 of the self-healing deploy skips straight to Tier 2, which also needs `RAILWAY_TOKEN` + `RAILWAY_SERVICE_ID` — neither confirmed set either. Net effect: **pushes to `main` may currently no-op on the backend deploy** (Tier 3 graceful skip), silently leaving Railway on the previous build. | High (deploys may not be reaching prod) | ⏳ User action: set one of the two secret pairs — see `docs/VALIDATION.md` outstanding actions #1 |
-| 4 | **`vercel` CLI not installed locally** — `vercel whoami` / `vercel ls` fail with "command not found" outside of CI (where it's installed fresh each run). Not a bug, just means local Vercel debugging needs `npm install -g vercel` first. | Low | Informational only |
-| 5 | **GitHub Actions API returned persistent HTTP 503** on `gh run list` during this audit (2026-07-16) — could not confirm actual pass/fail history of recent CI runs. Likely a transient GitHub-side outage, not a repo issue. | Low | ⏳ Re-check `gh run list` next session to confirm recent run status |
-| 6 | **Production health check (manual, 2026-07-16):** backend `/actuator/health` → 200, frontend → 200. Both live and serving traffic despite issues #2/#3 above — meaning the *current* deployed versions are fine, but **new pushes to `main` may not be propagating** until secrets are fixed. | High (silent staleness risk) | ⏳ Verify next deploy actually updates a version marker in prod |
-| 7 | **Root cause of Vercel deploys failing since May 17 found:** root `vercel.json` contained `"rootDirectory": "frontend"`, an invalid `vercel.json` schema key (it's a dashboard/project setting, not a config property). Every deploy was rejected at schema validation: `should NOT have additional property 'rootDirectory'` (confirmed via deployment `dpl_5eG6HQWTtz1eNUHqkFju9UEijNVH`). | High (blocked all Vercel deploys for ~2 months) | ✅ Fixed 2026-07-16 (commit `dac5286`) — key removed; CI's prebuilt-deploy flow already sets the frontend working directory separately |
-| 8 | **Docker Build (GHCR) jobs fail fast (~5-10s)** at the GHCR push step — consistent with `GITHUB_TOKEN` being denied `packages: write`, likely because repo Settings → Actions → General → "Workflow permissions" is read-only. Not part of the production deploy path (Railway/Vercel handle that). | Low (cosmetic — not part of deploy path) | ⏳ Marked `continue-on-error` (commit `9a9bbcb`) so it no longer shows red; real fix needs repo admin to flip the Workflow permissions setting |
-| 9 | **`gh` CLI auth token still invalid** as of 2026-07-16, even after a manual `gh auth login` attempt — blocks `gh run list` / `gh run view --log-failed`, so recent CI run history couldn't be directly audited from this session. | Medium (blocks agent-side CI debugging) | ⏳ Needs a fully-completed interactive `gh auth login -h github.com` — confirm with `gh auth status` afterward |
-
-### Immediate next steps to close the backlog
-1. Run `railway login` locally to refresh CLI auth (issue #2)
-2. Either add `RAILWAY_DEPLOY_HOOK_URL`, or both `RAILWAY_TOKEN` + `RAILWAY_SERVICE_ID`, as repo secrets (issue #3):
-   ```bash
-   gh secret set RAILWAY_DEPLOY_HOOK_URL --repo justcallmepratt/personal-web-app
-   # or
-   gh secret set RAILWAY_TOKEN --repo justcallmepratt/personal-web-app
-   gh secret set RAILWAY_SERVICE_ID --repo justcallmepratt/personal-web-app
-   ```
-3. Push a trivial commit to `main` and confirm the `deploy-backend` job reports Tier 1 or Tier 2 success (not Tier 3 skip) in the Actions log
-4. Re-run `gh run list` once GitHub's API 503s clear, to audit recent CI history
+| Phase | Status | Priority | Est. Time |
+|-------|--------|----------|----------|
+| **1. Setup & Permissions** | 🟡 In Progress | HIGH | 15 min |
+| **2. Workflow Files** | 🔴 Blocked | HIGH | 20 min |
+| **3. Environment Configuration** | 🟡 Partial | HIGH | 10 min |
+| **4. Testing & Validation** | 🔴 Not Started | MEDIUM | 30 min |
+| **5. Deployment** | 🔴 Not Started | MEDIUM | Varies |
+| **6. Cleanup & Monitoring** | 🔴 Not Started | LOW | 15 min |
 
 ---
 
-## Phase 1 — Foundation ✅
-- [x] Spring Boot 3.5 + JPA + Postgres (Supabase), JWT auth, seed runner
-- [x] Next.js 16 + React 19 + Tailwind 4 + Framer Motion
-- [x] Docker Compose for local development
-- [x] supabase/init.sql schema initialisation
+## 🔴 Critical Issues Found
 
-## Phase 2 — Design system ✅
-- [x] CP2077 Neo Militarism palette: `cp-red`, `cp-teal`, `cp-yellow`
-- [x] Rajdhani + Orbitron + Share Tech Mono fonts
-- [x] All components aligned: HUDChrome, Navbar, NeonButton, NeonCard, SkillBar, TerminalInput, ContactForm
-- [x] TypeScript checks pass clean
+### Issue 1: YAML Indentation Error in `ci.yml` ✅ FIXED
+- **Location**: `.github/workflows/ci.yml`, line 27
+- **Problem**: `with:` keyword was incorrectly indented
+- **Status**: ✅ Fixed in commit a044045
+- **Action**: None needed
 
-## Phase 3 — Resilience & metadata ✅
-- [x] `error.tsx` global error boundary with reconnect
-- [x] Per-route `loading.tsx` skeleton loaders
-- [x] Open Graph + Twitter Card metadata
-- [x] `cv.pdf` + `og.png` placeholders in `public/`
+### Issue 2: GHCR Workflow Not Yet Created
+- **Location**: `.github/workflows/ghcr-deploy.yml`
+- **Problem**: File needs to be created manually (permission issue)
+- **Status**: 🔴 BLOCKED - Cannot push files directly
+- **Action**: User must create this file manually (see below)
 
-## Phase 4 — 12-Factor compliance ✅
-- [x] All 12 factors implemented and documented
+### Issue 3: Production Docker Compose Missing
+- **Location**: `docker-compose.prod.yml`
+- **Problem**: File needs to be created for production deployments
+- **Status**: 🔴 BLOCKED - Cannot push files directly
+- **Action**: User must create this file manually (see below)
 
-## Phase 5 — GitHub Actions ✅
-- [x] `ci.yml` — compile + test + deploy (Railway + Vercel) on push to main
-- [x] `docker-build.yml` — GHCR image builds
-- [x] `codeql.yml` + `release.yml` + `dependabot-auto-merge.yml`
-
-## Phase 6 — Quality & Ops ✅
-- [x] 95% test coverage: 42 backend tests (JaCoCo) + 66 frontend tests (Vitest)
-- [x] GlobalExceptionHandler, OpenAPI/Swagger, @Transactional
-- [x] Supabase: GIN indexes, updated_at trigger, pg_stat_statements, deny-all RLS
-- [x] Vercel: security headers, API proxy rewrite, pnpm pinned
-- [x] Railway: railway.toml, health check, restart policy
-- [x] Mobile + tablet responsive polish (44px touch targets, stacked buttons, etc.)
-- [x] Dependabot: auto-merge patch/minor, flag major
-
-## Connector Status (validated 2026-05-16)
-
-All MCP connectors probed and documented. Use this as the canonical reference.
-
-| Connector | Tool prefix | Status | Verified capability |
-|---|---|---|---|
-| **Supabase** | `mcp__supabase__*` | ✅ Live | Migrations, advisors, SQL, GIN indexes, RLS |
-| **Vercel** | `mcp__92c0163a__*` | ✅ Live | Deploy, env vars, runtime logs, domain check |
-| **Google Calendar** | `mcp__3a7aa2e0__*` | ✅ Live | Create/update/delete events, recurring events |
-| **Gmail** | `mcp__faebe781__*` | ✅ Live (read+label) | Search threads, list/create labels |
-| **Notion** | `mcp__fdd91680__*` | ✅ Live | Fetch, create, update pages + databases |
-| **Amplitude** | `mcp__47ca1c18__*` | ✅ Live | Tracking plan, dashboards, charts, events, session replay — org `cold-hall-104153`, project `814849` |
-| **Railway** | CLI `railway` | ✅ Live (permanent token) | Deploy, logs, env vars, service management |
-| **Chrome Preview** | `mcp__Claude_Preview__*` | ✅ Live | Screenshots at any viewport, click, fill |
-| **Figma** | `mcp__Figma__*` | ⚙️ Needs action | Enable Dev Mode MCP in Figma desktop app |
-| **Slack** | `mcp__plugin_design_slack__*` | 🔗 OAuth pending | OAuth URL generated — user must authorize |
-| **GitHub Copilot** | `mcp__plugin_engineering_github__*` | 🔗 OAuth pending | Needs Copilot subscription + OAuth |
-| **Google Drive** | `mcp__79b7446a__*` | ✅ Live (read) | List, read, search, metadata |
-| **Figma plugin** | `mcp__ae6d6b45__*` | ⚠️ Disconnected | Use `mcp__Figma__*` instead |
-
-### What each live connector adds to this project
-- **Amplitude** → create dashboards before Phase 8 SDK is wired (define schema now)
-- **Google Calendar** → deploy reminders, maintenance windows
-- **Gmail** → monitor contact form emails, verify SMTP config
-- **Notion** → living documentation, pitch deck, idea board
-- **Google Drive** → store CV PDF, OG images, design assets
-- **Supabase** → all DB work (migrations, performance, security)
-- **Vercel** → all frontend deploys + env var management
-- **Railway** → all backend deploys + service logs
-
-### Action needed to unlock remaining connectors
-- [ ] **Figma:** Open Figma desktop → Figma menu → Preferences → Enable Dev Mode MCP Server → restart Claude
-- [ ] **Slack:** Authorize at `https://slack.com/oauth/v2_user/authorize?...` (URL in session)
-- [ ] **GitHub Copilot:** Requires GitHub Copilot subscription + OAuth flow
+### Issue 4: Docker Build Workflow Has Auth Issues
+- **Location**: `.github/workflows/docker-build.yml`
+- **Problem**: Reports HTML error on GHCR push (likely permissions)
+- **Status**: 🟡 Likely fixed after permissions update
+- **Action**: Retest after enabling workflow permissions
 
 ---
 
-## Phase 7 — Polish (in progress)
-- [x] OLED background: pure black `#000000` + `#0A0A10` panels (neons pop on OLED)
-- [ ] Framer Motion scroll-reveal on ExperienceTimeline (stagger by index)
-- [ ] Hero typewriter boot animation (`init: night_city.exe ▍`)
-- [ ] Neon-pulse on active navbar link
-- [ ] Particle field canvas in hero background
-- [ ] Glitch-on-hover for NeonCard titles
-- [ ] Lighthouse audit + WCAG AA contrast fixes (`cp-red` on dark)
-- [ ] Replace `cv.pdf` + `og.png` placeholders with real assets
-- [ ] Add integration tests with Testcontainers (real Postgres)
+## ✅ Phase 1: Setup & Permissions
 
----
+### Action 1.1: Enable GitHub Actions Workflow Permissions
+**Difficulty**: ⭐ Very Easy | **Time**: 2 min | **Status**: 🔴 NOT DONE
 
-## Phase 8 — Analytics (Agent: analytics-agent)
-**Connector:** Amplitude (appId `814849`, 10k events/mo starter plan)
-
-- [ ] Install `@amplitude/analytics-browser` in frontend
-- [ ] Track: `page_viewed` (route + referrer), `cv_downloaded`, `contact_submitted`,
-      `project_link_clicked` (demo/repo), `skill_filter_changed`, `experience_viewed`
-- [ ] Create Amplitude dashboard: Unique visitors · Top pages · Contact conversion rate
-- [ ] Add `pnpm test:coverage` Amplitude event on CI pass (optional)
-- [ ] Backend: log structured JSON events for Railway health + contact submissions
-- [ ] Supabase: `analytics_events` table for server-side event mirror
-
----
-
-## Phase 9 — Spotify Integration (Agent: spotify-agent)
-**Track:** "The Rebel Path" by Refused (Cyberpunk 2077 OST) · Spotify track embed
-
-- [ ] Add `SpotifyPlayer` component — Spotify iframe embed (no auth required)
-- [ ] Mount in HeroSection below the buttons, collapsed by default
-- [ ] Expand on first user interaction (solves browser autoplay block)
-- [ ] Pulse animation synced to play state (CSS, no Web Audio needed)
-- [ ] `NEXT_PUBLIC_SPOTIFY_TRACK_ID` env var so track can be swapped
-
-**Note:** Full autoplay on page load is blocked by all major browsers. Embed widget
-lets user click ▶ once — stays collapsed until then.
-
----
-
-## Phase 10 — Citation / Credits Page (Agent: citation-agent)
-
-- [ ] New route `/credits` — `app/credits/page.tsx`
-- [ ] Add "CREDITS" link to Navbar
-- [ ] Sections:
-  - **Stack** — all libraries, frameworks, and tools with links + license
-  - **Design** — Cyberpunk 2077 CP2077 Neo Militarism design language credit
-  - **Music** — "The Rebel Path" · Refused · Cyberpunk 2077 OST · CD PROJEKT RED
-  - **Fonts** — Orbitron (Google Fonts), Share Tech Mono, Rajdhani
-  - **Hosting** — Vercel, Railway, Supabase
-  - **Inspiration** — developer portfolios referenced
-- [ ] HUDChrome-styled cards per section, cyberpunk aesthetic
-
----
-
-## Phase 11 — Job Application Tracker (Agent: job-tracker-agent)
-**Access:** Admin-protected (`/admin/jobs`)
-
-### Backend
-- [ ] Supabase migration: `job_applications` table
-  ```sql
-  id, company, role, url, source (LinkedIn/Referral/…), status
-  (Bookmarked/Applied/Phone Screen/Technical/Final/Offer/Rejected/Ghosted),
-  applied_at, last_updated, notes, salary_min, salary_max, currency
-  ```
-- [ ] Spring Boot: `JobApplication` entity + repo + service + controller (`/api/admin/jobs/**`)
-- [ ] CRUD endpoints: POST create · GET list (filterable by status) · PATCH update status · DELETE
-
-### Frontend
-- [ ] `/admin/jobs` page (admin-gated, client component)
-- [ ] Kanban-style status board using HUDChrome cards per column
-- [ ] Add/edit modal using TerminalInput components
-- [ ] Status badge with cp-red/cp-yellow/cp-teal colour coding
-- [ ] Export to CSV button
-
----
-
-## Phase 12 — Market Research Engine (Agent: market-research-agent)
-**API:** Adzuna Jobs API (free, 250 calls/day) · No scraping
-
-### Backend
-- [ ] Spring Boot `MarketResearchService`:
-  - Calls Adzuna `/v1/api/jobs/{country}/search` with role keywords from profile
-  - Extracts top N required skills from job descriptions (regex + keyword frequency)
-  - Stores results in Supabase `market_insights` table (TTL 24h)
-- [ ] Scheduled job (`@Scheduled(cron = "0 0 * * * *")`) refreshes every night
-- [ ] Endpoint: `GET /api/admin/market/insights` → top skills, avg salary, job count by role
-- [ ] Env vars: `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`
-
-### Frontend
-- [ ] `/admin/market` page — top skills radar chart vs your current skills
-- [ ] Salary band per role with market median overlay
-- [ ] "Skill gaps" section: skills in demand you don't list on your profile
-- [ ] "Resume suggestions" list auto-generated from gap analysis
-
----
-
-## Phase 13 — Resume Auto-Updater (Agent: resume-updater-agent)
-**Depends on:** Phase 12 (market insights)
-
-### Backend
-- [ ] `ResumeUpdateService`:
-  - Reads market insights (Phase 12) + current `profile` from Supabase
-  - Generates diff: missing skills, outdated tagline, under-represented highlights
-  - Returns structured `ResumeSuggestion` objects (field, current value, suggested value, confidence)
-- [ ] `POST /api/admin/resume/suggestions` — returns suggestions
-- [ ] `POST /api/admin/resume/apply` — applies approved suggestions to `profile` table
-- [ ] Audit log in Supabase `resume_change_log` (field, old, new, applied_at)
-
-### Frontend
-- [ ] `/admin/resume` page — split view: current profile left, suggestions right
-- [ ] Per-suggestion: Accept / Dismiss / Edit-then-Accept actions
-- [ ] Confidence score badge (High/Medium/Low) on each suggestion
-- [ ] "Apply All Accepted" bulk action → calls `/api/admin/resume/apply`
-- [ ] After apply: triggers Vercel redeploy via API so live site updates
-
----
-
-## Phase 14 — LinkedIn Sync (Agent: linkedin-agent)
-**Approach:** LinkedIn data export (no scraping) + manual OAuth import
-
-> **Why not full API?** LinkedIn's r_member_social scope (reading your own posts)
-> requires app review and is granted to very few developers. The data export
-> approach is ToS-compliant and gives full fidelity.
-
-- [ ] Supabase: `linkedin_snapshots` table (exported JSON blobs + parsed fields)
-- [ ] Backend `LinkedInParserService`:
-  - Accepts uploaded LinkedIn data export ZIP (from Settings → Data Privacy → Export)
-  - Parses `Profile.csv`, `Positions.csv`, `Skills.csv`, `Recommendations_Received.csv`
-  - Maps to `profile` + `experience` table updates
-  - Returns diff preview before applying
-- [ ] `POST /api/admin/linkedin/import` — multipart upload → parsed diff
-- [ ] `POST /api/admin/linkedin/apply` — applies diff to Supabase
-- [ ] Frontend `/admin/linkedin` page — upload zone + diff review
-
-### LinkedIn Share Output (auto-generate, not auto-post)
-- [ ] "Generate LinkedIn Post" button on each project/experience entry
-- [ ] Uses profile + project data to draft a LinkedIn-ready post (copyable)
-- [ ] "Generate Updated Summary" — drafts a new LinkedIn About section from current profile
-
----
-
-## Phase 15 — Developer Benchmarking (Agent: dev-benchmark-agent)
-**API:** GitHub public API (no auth needed, 60 req/hr · 5000 req/hr with token)
-
-### Data collected per developer
-- Public repos count · Stars received · Forks · Top languages (by bytes)
-- Contribution streak · Pinned repos · Account age
-
-### Backend
-- [ ] `GitHubBenchmarkService`: fetches your profile + compares against a curated
-      list of 20–50 target developers (stored in `benchmark_peers` table)
-- [ ] `BenchmarkResult`: percentile rank per language, repos, stars, contribution frequency
-- [ ] Cache results in Supabase `github_benchmarks` (TTL 7d)
-- [ ] `GET /api/profile/benchmark` — public endpoint (no auth)
-- [ ] Env var: `GITHUB_TOKEN` (optional, increases rate limit)
-
-### Frontend
-- [ ] Public `/benchmark` page — radar chart: your GitHub stats vs peer median
-- [ ] Language breakdown bar chart (your distribution vs peers)
-- [ ] "Top peers" leaderboard (anonymised by default, opt-in to show username)
-- [ ] "Add peer" widget (admin-only, adds GitHub handle to benchmark list)
-
----
-
-## Phase 16 — Professional Development Dashboard (Agent: pro-dev-agent)
-**Access:** Admin-only (`/admin/growth`)
-
-### Data sources
-- Your `profile.skills` + `experience` (Supabase)
-- Market insights (Phase 12)
-- GitHub benchmarks (Phase 15)
-- Manual learning log (new table)
-
-### Backend
-- [ ] Supabase migration: `learning_log` table
-  ```sql
-  id, resource_type (Course/Book/Cert/Project/Talk), title, provider,
-  url, status (In Progress/Completed/Planned), completed_at, notes
-  ```
-- [ ] `GET /api/admin/growth/summary` — aggregated snapshot (skills coverage %, learning velocity, next recommended skills)
-- [ ] `POST /api/admin/growth/log` + PATCH/DELETE — CRUD for learning log
-
-### Frontend
-- [ ] `/admin/growth` page with 4 panels:
-  1. **Skill coverage** — your skills vs top-10 market skills (filled radar)
-  2. **Learning log** — kanban: Planned → In Progress → Completed
-  3. **GitHub activity** — contribution calendar embed (github-readme-stats iframe)
-  4. **Next 3 recommended skills** — derived from market gaps + current trajectory
-
----
-
-## Agent Orchestration Plan
-
-```
-ORCHESTRATOR (root agent)
-│
-├─► analytics-agent         Phase 8   — Amplitude SDK + events + dashboard
-├─► spotify-agent           Phase 9   — SpotifyPlayer component + hero mount
-├─► citation-agent          Phase 10  — /credits route + data + styling
-│
-├─► job-tracker-agent       Phase 11  — DB migration + API + Kanban UI
-│
-├─► market-research-agent   Phase 12  — Adzuna integration + nightly scheduler
-│   └─► resume-updater-agent Phase 13 — depends on market insights
-│
-├─► linkedin-agent          Phase 14  — data export parser + diff UI
-│
-├─► dev-benchmark-agent     Phase 15  — GitHub API + radar chart
-│   └─► pro-dev-agent       Phase 16  — depends on benchmarks + market data
-│
-└─► polish-agent            Phase 7   — animations, Lighthouse, real assets
-```
-
-### Sub-agent contracts
-Each sub-agent receives:
-- Project root path: `/Users/prathamsachan/Desktop/personal-web-app`
-- Backend package root: `com.resume`
-- Frontend src root: `frontend/src`
-- Active Spring profile: `docker` (Railway) / `dev` (local)
-- Supabase project ID: `nxqiuqlwyjimioosaiio`
-- Coding standards: Java 21 records/sealed types where appropriate; TypeScript strict; Tailwind 4 CSS-first tokens; no inline styles except dynamic colour values
-- Test requirement: every new backend class ≥ 95% JaCoCo coverage; every new frontend component has a Vitest test file
-- Commit convention: `feat(phase-N): description` with Co-Authored-By trailer
-
-### Execution order
-```
-Parallel batch 1 (no dependencies):
-  analytics-agent · spotify-agent · citation-agent · polish-agent
-
-Sequential batch 2 (job tracker is standalone):
-  job-tracker-agent
-
-Sequential batch 3 (market research must finish first):
-  market-research-agent → resume-updater-agent
-
-Parallel batch 4 (independent of batch 3):
-  linkedin-agent · dev-benchmark-agent
-
-Sequential batch 5 (needs batch 3 + 4):
-  pro-dev-agent
-```
-
-### Environment variables needed (add to .env.example)
 ```bash
-# Phase 8 — Amplitude
-NEXT_PUBLIC_AMPLITUDE_API_KEY=
+# Option A: Using GitHub CLI (recommended)
+gh api -X PUT repos/justcallmepratt/personal-web-app/actions/permissions \
+  -f default_workflow_permissions=write \
+  -f can_approve_pull_request_reviews=true
 
-# Phase 9 — Spotify
-NEXT_PUBLIC_SPOTIFY_TRACK_ID=5HTHMQ8wMAlF6cEo6bx0aL   # The Rebel Path
+# Option B: Manual UI
+# 1. Go to: https://github.com/justcallmepratt/personal-web-app/settings/actions
+# 2. Under "Workflow permissions"
+# 3. Select "Read and write permissions"
+# 4. Check "Allow GitHub Actions to create and approve pull requests"
+# 5. Click "Save"
+```
 
-# Phase 12 — Adzuna
-ADZUNA_APP_ID=
-ADZUNA_APP_KEY=
-
-# Phase 15 — GitHub
-GITHUB_TOKEN=   # optional; increases rate limit from 60 to 5000 req/hr
-GITHUB_USERNAME=justcallmepratt
-
-# Phase 15 — Benchmark peers (comma-separated GitHub usernames)
-BENCHMARK_PEERS=torvalds,gaearon,addyosmani,kentcdodds,tj
+**Verification**:
+```bash
+gh api repos/justcallmepratt/personal-web-app/actions/permissions
+# Should return: "default_workflow_permissions": "write"
 ```
 
 ---
 
-## Deployment (live ✅)
-- **Frontend** → https://frontend-liard-theta-28.vercel.app
-- **Backend** → https://personal-web-app-backend-production.up.railway.app
-- **DB** → Supabase `nxqiuqlwyjimioosaiio` (Railway internal Postgres + Supabase analytics)
-- **Swagger UI** → `{backend-url}/swagger-ui/index.html`
+### Action 1.2: Check GHCR Package Settings
+**Difficulty**: ⭐ Very Easy | **Time**: 2 min | **Status**: 🔴 NOT DONE
 
-## How to run locally
+Navigate to: `https://github.com/justcallmepratt?tab=packages`
+
+Verify you can see:
+- Personal access tokens option
+- Package visibility settings
+- Connection to GHCR
+
+---
+
+## 🔴 Phase 2: Create Missing Workflow Files
+
+### Action 2.1: Create `.github/workflows/ghcr-deploy.yml`
+**Difficulty**: ⭐ Easy | **Time**: 5 min | **Status**: 🔴 NOT DONE
+
+**Steps**:
+1. Create file: `.github/workflows/ghcr-deploy.yml`
+2. Copy content from the file provided in this PR description
+3. Commit with message: `ci: add GHCR deployment workflow`
+
+**File Location**: See the workflow content in the section below or copy from the PR diff
+
+---
+
+### Action 2.2: Create `docker-compose.prod.yml`
+**Difficulty**: ⭐ Easy | **Time**: 5 min | **Status**: 🔴 NOT DONE
+
+**Steps**:
+1. Create file: `docker-compose.prod.yml` in repository root
+2. Copy content from the file provided in this PR description
+3. Commit with message: `devops: add production docker-compose configuration`
+
+**File Location**: See the docker-compose content in the section below or copy from the PR diff
+
+---
+
+## 🟡 Phase 3: Environment Configuration
+
+### Action 3.1: Create Repository Secrets
+**Difficulty**: ⭐⭐ Easy | **Time**: 5 min | **Status**: 🔴 NOT DONE
+
 ```bash
-# Manual dev (recommended)
-cd backend && ./run-dev.sh   # Spring Boot :8080, reads backend/.env
-cd frontend && pnpm dev      # Next.js :3000
+# Generate secure values first
+# JWT_SECRET: 32+ character random string
+# ADMIN_PASSWORD_HASH: Use online bcrypt tool or:
+#   $(echo 'your-password' | docker run --rm -i alpine/fluentd sh -c 'echo "require 'bcrypt'; puts BCrypt::Password.create(STDIN.read.chomp)"')
+
+# Then set secrets
+gh secret set JWT_SECRET --repo justcallmepratt/personal-web-app
+gh secret set ADMIN_PASSWORD_HASH --repo justcallmepratt/personal-web-app
+gh secret set MAIL_USER --repo justcallmepratt/personal-web-app
+gh secret set MAIL_PASS --repo justcallmepratt/personal-web-app
+gh secret set BACKEND_URL --repo justcallmepratt/personal-web-app
+gh secret set DB_PASSWORD --repo justcallmepratt/personal-web-app
 ```
 
-## How to run agents
+**Verification**:
 ```bash
-# From repo root — example: spin up analytics agent
-claude --agent analytics-agent "Implement Phase 8 per REMAINING_WORK.md"
-
-# Full orchestration run (run from repo root)
-claude "Read REMAINING_WORK.md agent orchestration plan and execute all phases
-        in the documented parallel/sequential batches. Report blockers."
+gh secret list --repo justcallmepratt/personal-web-app
 ```
+
+---
+
+### Action 3.2: Create Repository Variables
+**Difficulty**: ⭐⭐ Easy | **Time**: 3 min | **Status**: 🔴 NOT DONE
+
+```bash
+# Variables (non-sensitive)
+gh variable set NEXT_PUBLIC_SITE_NAME --repo justcallmepratt/personal-web-app -b "V // Night City Dev"
+gh variable set NEXT_PUBLIC_SITE_URL --repo justcallmepratt/personal-web-app -b "https://your-frontend-domain.com"
+gh variable set NEXT_PUBLIC_API_URL --repo justcallmepratt/personal-web-app -b "https://your-backend-domain.com"
+```
+
+---
+
+## 🔴 Phase 4: Testing & Validation
+
+### Action 4.1: Trigger Manual Workflow Run
+**Difficulty**: ⭐ Very Easy | **Time**: 2 min | **Status**: 🔴 NOT DONE
+
+```bash
+# Manually trigger the GHCR deploy workflow
+gh workflow run ghcr-deploy.yml --repo justcallmepratt/personal-web-app
+
+# Monitor the run
+gh run watch --repo justcallmepratt/personal-web-app
+```
+
+**Expected Results**:
+- ✅ Backend image builds successfully
+- ✅ Frontend image builds successfully
+- ✅ Both images push to GHCR without auth errors
+- ✅ Verification job pulls and validates images
+
+---
+
+### Action 4.2: Test Local Docker Compose
+**Difficulty**: ⭐⭐ Medium | **Time**: 10 min | **Status**: 🔴 NOT DONE
+
+```bash
+# Copy production env template
+cp .env.production.example .env.production
+
+# Edit with real values
+nano .env.production
+
+# Test locally
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up --detach
+
+# Verify services
+docker ps
+curl http://localhost:8080/health
+curl http://localhost:3000
+
+# Check logs
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# Cleanup
+docker compose -f docker-compose.prod.yml down
+```
+
+---
+
+### Action 4.3: Verify Images in GHCR
+**Difficulty**: ⭐ Very Easy | **Time**: 2 min | **Status**: 🔴 NOT DONE
+
+```bash
+# List your GHCR packages
+gh api user/packages --jq '.[] | select(.package_type=="container")'
+
+# Or visit: https://github.com/justcallmepratt?tab=packages
+```
+
+---
+
+## 🔴 Phase 5: Deployment
+
+### Action 5.1: Choose Deployment Strategy
+**Options**:
+- [ ] **Option A**: GitHub Pages (frontend only) - See `DEPLOYMENT_OPTIONS.md`
+- [ ] **Option B**: Docker Host on VPS - See `DEPLOYMENT_OPTIONS.md`
+- [ ] **Option C**: Render.com (PaaS) - See `DEPLOYMENT_OPTIONS.md`
+
+### Action 5.2: Follow Chosen Strategy
+See detailed guides in:
+- `DEPLOYMENT_OPTIONS.md` - Full deployment options
+- `docs/MIGRATION_TO_GITHUB_PAGES.md` - Step-by-step migration
+
+---
+
+## 🔴 Phase 6: Cleanup & Monitoring
+
+### Action 6.1: Remove Old Deployment Secrets
+**Difficulty**: ⭐ Very Easy | **Time**: 2 min | **Status**: 🔴 NOT DONE
+
+**Only after new deployment is stable for 48 hours**:
+
+```bash
+# Remove Railway secrets
+gh secret delete RAILWAY_DEPLOY_HOOK_URL --repo justcallmepratt/personal-web-app
+gh secret delete RAILWAY_TOKEN --repo justcallmepratt/personal-web-app
+gh secret delete RAILWAY_SERVICE_ID --repo justcallmepratt/personal-web-app
+
+# Remove Vercel secrets
+gh secret delete VERCEL_TOKEN --repo justcallmepratt/personal-web-app
+gh secret delete VERCEL_ORG_ID --repo justcallmepratt/personal-web-app
+gh secret delete VERCEL_PROJECT_ID --repo justcallmepratt/personal-web-app
+```
+
+---
+
+### Action 6.2: Disable Old Workflows
+**Difficulty**: ⭐ Easy | **Time**: 3 min | **Status**: 🔴 NOT DONE
+
+Once migration is complete, you may want to disable old deployment workflows:
+1. Go to `.github/workflows/ci.yml`
+2. Remove or comment out `deploy-backend` and `deploy-frontend` jobs
+
+---
+
+### Action 6.3: Set Up Monitoring
+**Difficulty**: ⭐⭐ Medium | **Time**: 5 min | **Status**: 🔴 NOT DONE
+
+Options for monitoring your deployments:
+- [ ] GitHub Actions notifications
+- [ ] Third-party monitoring (Datadog, New Relic, etc.)
+- [ ] Custom health check scripts
+- [ ] Status page (StatusPage.io, etc.)
+
+---
+
+## 📋 Quick Checklist
+
+Complete in this order:
+
+- [ ] **1.1** Enable GitHub Actions workflow permissions
+- [ ] **1.2** Check GHCR package settings
+- [ ] **2.1** Create `.github/workflows/ghcr-deploy.yml`
+- [ ] **2.2** Create `docker-compose.prod.yml`
+- [ ] **3.1** Create repository secrets
+- [ ] **3.2** Create repository variables
+- [ ] **4.1** Trigger manual workflow run
+- [ ] **4.2** Test local Docker Compose
+- [ ] **4.3** Verify images in GHCR
+- [ ] **5.1** Choose deployment strategy
+- [ ] **5.2** Follow chosen strategy
+- [ ] **6.1** Remove old deployment secrets (after 48h)
+- [ ] **6.2** Disable old workflows (after 48h)
+- [ ] **6.3** Set up monitoring
+
+---
+
+## 🆘 Troubleshooting Guide
+
+### Problem: Workflow Permissions Still Not Write
+```bash
+# Check current permissions
+gh api repos/justcallmepratt/personal-web-app/actions/permissions
+
+# If not write, try updating again
+gh api -X PUT repos/justcallmepratt/personal-web-app/actions/permissions \
+  -f default_workflow_permissions=write
+```
+
+### Problem: GHCR Push Still Failing
+```bash
+# Check workflow logs
+gh run list --repo justcallmepratt/personal-web-app
+
+# View full logs for a specific run
+gh run view RUN_ID --repo justcallmepratt/personal-web-app --log
+```
+
+### Problem: Docker Compose Won't Start
+```bash
+# Validate compose file
+docker compose -f docker-compose.prod.yml config
+
+# Check for required env vars
+grep -E '\$\{[A-Z_]+:' docker-compose.prod.yml
+
+# Verify all secrets are set
+gh secret list --repo justcallmepratt/personal-web-app
+```
+
+---
+
+## 📞 Need Help?
+
+- GitHub Docs: https://docs.github.com/en/packages/working-with-a-github-packages-registry
+- Docker Docs: https://docs.docker.com/compose/
+- Issue Tracker: Create an issue in this repo
