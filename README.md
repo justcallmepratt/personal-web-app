@@ -206,7 +206,7 @@ claude "Read docs/agents/ORCHESTRATOR.md then docs/agents/phase-08-analytics.md
 |---|---|---|
 | Backend runtime | Amazon Corretto JDK | 21 LTS |
 | Backend framework | Spring Boot | 4.1.0 |
-| Backend ORM | Spring Data JPA + Hibernate | 6.6 |
+| Backend ORM | Spring Data JPA + Hibernate | 7.4 |
 | Database (primary) | Railway Postgres | 17 |
 | Database (analytics) | Supabase Postgres | 17 |
 | JWT | jjwt | 0.13 |
