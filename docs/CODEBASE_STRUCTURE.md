@@ -137,6 +137,18 @@ Profiles: `dev` (Supabase Postgres via `SUPABASE_DB_PASSWORD`), `docker`
 (`SPRING_DATASOURCE_*`), `test` (H2 in memory). Hibernate runs with
 `ddl-auto: validate`, so the schema must already exist.
 
+Tests (`backend/src/test/`): Mockito unit tests for services and security,
+`@WebMvcTest` slices for controllers, and `ResumeApplicationTests`, which loads the
+context on the `test` profile. H2 cannot create the `JSONB` tables there (the failed
+DDL is only logged), so that profile never exercises the profile, project or experience
+tables. `persistence/PostgresPersistenceTest` covers them: Testcontainers starts
+PostgreSQL 15 (the major version in `docker-compose.yml`), `supabase/init.sql` is run
+unchanged, the application starts with Hibernate in `validate` mode, and the test
+round-trips each entity, checks the JSONB columns and indexes, and calls every
+repository query method. It needs Docker and is skipped with a message without it; CI
+fails if it is skipped. Any new table or entity should get a case there. `mvn verify`
+also enforces the JaCoCo gate (95% instructions).
+
 The `dev` profile's default datasource host is Supabase's direct host
 (`db.<ref>.supabase.co`), which is IPv6-only on the free plan. Production should set
 `SPRING_DATASOURCE_URL` to the Supabase session pooler instead (see
@@ -147,13 +159,15 @@ The `dev` profile's default datasource host is Supabase's direct host
 Schema: [`supabase/init.sql`](../supabase/init.sql), applied automatically by
 `docker compose`. Tables: `profile`, `projects`, `experience`, `messages`. List-like
 fields (`tech_stack`, `skills`, `tags`, `stack`, `highlights`, `technologies`,
-`socials`) are `JSONB`.
+`socials`) are `JSONB`; `tags`, `stack`, `technologies` and `skills` have GIN indexes.
+The `DEFAULT '[]'` on those columns does not apply to rows written through JPA
+(Hibernate inserts an explicit `NULL`, which `NOT NULL` rejects), so code must set them.
 
 ## Workflows — `.github/workflows/`
 
 | File | Trigger | Does |
 |---|---|---|
-| `ci.yml` | push / PR to `main` | Backend compile, test, package; frontend and admin type check, lint, test, build. No deploy. |
+| `ci.yml` | push / PR to `main` | Backend compile, then `mvn verify` (tests including PostgreSQL via Testcontainers, JAR, JaCoCo gate); frontend and admin type check, lint, test, build. No deploy. |
 | `docker-build.yml` | push to `main`, manual | Builds and pushes backend and frontend images to GHCR |
 | `release.yml` | `v*.*.*` tag | JAR + versioned images + GitHub release |
 | `codeql.yml` | schedule / push | Code scanning |

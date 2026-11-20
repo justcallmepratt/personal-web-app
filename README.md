@@ -55,7 +55,7 @@ this repo holds the page and the relay routes. See
 | Animation | Framer Motion | 12 |
 | Node.js | CI runs 22; `frontend/Dockerfile` uses `node:20-alpine` | 22 / 20 |
 | Package manager | pnpm | 9 |
-| Backend tests | JUnit 5 + Mockito + JaCoCo | — |
+| Backend tests | JUnit + Mockito + JaCoCo; Testcontainers (PostgreSQL 15) for persistence | — |
 | Frontend tests | Vitest + React Testing Library | — |
 | Container | Docker (multi-stage) | — |
 | Frontend hosting | Vercel | — |
@@ -104,8 +104,11 @@ See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for production configuration.
 # Backend — tests; JaCoCo report in backend/target/site/jacoco/
 cd backend && ./mvnw -B test
 
-# Backend — also enforces the JaCoCo coverage gate
+# Backend — also builds the JAR and enforces the JaCoCo coverage gate (what CI runs)
 cd backend && ./mvnw -B verify
+
+# Backend — only the PostgreSQL persistence tests (needs Docker)
+cd backend && ./mvnw -B test -Dtest=PostgresPersistenceTest
 
 # Frontend
 cd frontend && pnpm test
@@ -114,12 +117,25 @@ cd frontend && pnpm test
 cd frontend && pnpm test:coverage
 ```
 
-**Coverage gates.** Both exist in config but neither is enforced by CI:
+**What needs Docker.** Most backend tests are Mockito unit tests and `@WebMvcTest`
+slices and need only a JDK 21. `PostgresPersistenceTest` starts a throwaway
+`postgres:15-alpine` container with Testcontainers, creates the schema by running
+`supabase/init.sql` unchanged, and boots the application with Hibernate in `validate`
+mode; it then round-trips every entity and calls every repository query. It needs a
+running Docker daemon. Without one it is **skipped** with the reason "Docker is not
+available" and the rest of the suite still runs; CI fails the build if it is skipped
+there. To try another server version: `-Dpostgres.image=postgres:17-alpine`.
+
+The `test` profile's H2 database cannot create the `JSONB` tables (Hibernate logs the
+failed DDL and carries on), so `ResumeApplicationTests` only proves the context starts.
+Anything that must hold against the real schema belongs in `PostgresPersistenceTest`.
+
+**Coverage gates.**
 
 - Backend: `backend/pom.xml` fails the `verify` phase if bundle instruction coverage
-  is below 95% (`ResumeApplication` and `SeedRunner` excluded). CI runs `mvn test` and
-  `mvn package -DskipTests`, which never reach `verify`.
-- Frontend: `frontend/vitest.config.ts` sets thresholds of 95% lines, functions and
+  is below 95% (`ResumeApplication` and `SeedRunner` excluded). CI runs `mvn verify`,
+  so the gate is enforced on every pull request.
+- Frontend (not enforced by CI): `frontend/vitest.config.ts` sets thresholds of 95% lines, functions and
   statements and 90% branches. They apply only to `pnpm test:coverage`; CI runs
   `pnpm test`.
 
