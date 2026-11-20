@@ -17,6 +17,7 @@ frontend/src/
 │   ├── experience/page.tsx       → Career timeline
 │   ├── skills/page.tsx           → Skill bars by category
 │   ├── contact/page.tsx          → Contact form
+│   ├── credits/page.tsx          → Credits, licences and the unofficial-fan-work disclaimer (data in lib/credits.ts)
 │   ├── api/contact/route.ts      → POST handler: validate → rate-limit → send email
 │   ├── error.tsx, loading.tsx    → Error boundary and loading states
 │   └── globals.css               → Tailwind 4 theme (cp-* colours)
@@ -25,7 +26,7 @@ frontend/src/
 │   └── index.ts                  → profile, projects, experience — the site's content
 │
 ├── components/
-│   ├── layout/                   → Navbar, HUDChrome, ScanlineOverlay
+│   ├── layout/                   → Navbar, Footer, HUDChrome, ScanlineOverlay
 │   ├── sections/                 → HeroSection, ProjectsGrid, ExperienceTimeline,
 │   │                               SkillsChart, ContactForm
 │   └── ui/                       → GlitchText, NeonButton, NeonCard, SkillBar, TerminalInput

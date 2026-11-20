@@ -3,6 +3,7 @@ import { Rajdhani, Orbitron, Share_Tech_Mono } from 'next/font/google'
 import './globals.css'
 import ScanlineOverlay from '@/components/layout/ScanlineOverlay'
 import Navbar from '@/components/layout/Navbar'
+import Footer from '@/components/layout/Footer'
 import SkipLink, { MAIN_CONTENT_ID } from '@/components/layout/SkipLink'
 import { rootMetadata, websiteJsonLd } from '@/lib/site'
 
@@ -39,9 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 outline-none">
           {children}
         </main>
-        <footer className="border-t border-cp-border py-6 text-center text-xs uppercase tracking-widest text-cp-muted">
-          © {new Date().getFullYear()} · Compiled in Night City
-        </footer>
+        <Footer />
         {/* Structured data: the site only. `<` is escaped so the JSON cannot close the script tag. */}
         <script
           type="application/ld+json"

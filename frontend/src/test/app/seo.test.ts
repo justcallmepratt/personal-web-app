@@ -7,6 +7,7 @@ import { metadata as experienceMetadata } from '@/app/experience/page'
 import { metadata as projectsMetadata } from '@/app/projects/layout'
 import { metadata as skillsMetadata } from '@/app/skills/page'
 import { metadata as contactMetadata } from '@/app/contact/page'
+import { metadata as creditsMetadata } from '@/app/credits/page'
 import { publicRoutes, siteName } from '@/lib/site'
 
 const HOST = 'https://justcallmepratt.dev'
@@ -30,6 +31,7 @@ describe('sitemap.xml', () => {
       `${HOST}/projects`,
       `${HOST}/skills`,
       `${HOST}/contact`,
+      `${HOST}/credits`,
     ])
     expect(urls).toHaveLength(publicRoutes.length)
   })
@@ -48,6 +50,7 @@ describe('per-page metadata', () => {
     ['/projects', projectsMetadata, 'Projects // Night City Ops'],
     ['/skills', skillsMetadata, 'Skills // Loadout'],
     ['/contact', contactMetadata, 'Contact // Open Channel'],
+    ['/credits', creditsMetadata, 'Credits // Citations'],
   ]
 
   it.each(pages)('%s has its own title, description, canonical and social text', (path, meta, title) => {
