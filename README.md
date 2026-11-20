@@ -21,7 +21,15 @@ serves the content kept in the repo (`frontend/src/content`). When `BACKEND_URL`
 set, pages read the API on the server and fall back to that same content if it is
 unavailable.
 
+The site also hosts a **live Apache Kafka demo** at `/projects/kafka`: a visitor sends a
+record, it goes through a real broker and a Spring Boot consumer on Railway, is stored
+in Supabase, and shows up on the page. The service is a separate repo,
+[Kafka-Producer-Consumer-Demo](https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo);
+this repo holds the page and the relay routes. See
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#kafka-live-demo).
+
 **Live:** https://justcallmepratt.dev  
+**Kafka live demo:** https://justcallmepratt.dev/projects/kafka  
 **Deployment and configuration:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)  
 **Code layout:** [`docs/CODEBASE_STRUCTURE.md`](docs/CODEBASE_STRUCTURE.md)  
 **Roadmap (prioritised plan for the remaining phases):** [`docs/ROADMAP.md`](docs/ROADMAP.md)  
@@ -52,6 +60,7 @@ unavailable.
 | Container | Docker (multi-stage) | — |
 | Frontend hosting | Vercel | — |
 | Backend hosting | Railway (not live yet) | — |
+| Kafka demo service | Spring Boot + Apache Kafka (KRaft) on Railway, Supabase Postgres | separate repo |
 
 ---
 
@@ -174,6 +183,14 @@ Served by the Spring Boot backend (not deployed yet). Interactive docs at
 
 The frontend also has its own `POST /api/contact` route handler, which relays to the
 API when `BACKEND_URL` is set and otherwise sends mail itself.
+
+Two more route handlers serve the Kafka demo and relay to the Kafka demo service when
+`KAFKA_DEMO_URL` is set (503 otherwise):
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/kafka/produce` | Publish one record (`sid`, optional `key`, `message`) |
+| `GET` | `/api/kafka/messages?sid=…` | Records the consumer has stored for that browser session |
 
 ---
 
