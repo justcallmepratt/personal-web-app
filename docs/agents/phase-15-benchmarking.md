@@ -1,7 +1,8 @@
 # Phase 15 — Developer Benchmarking Agent
 
 > **Status and caveats (2026-11-20)**
-> Not started. `GITHUB_TOKEN`, `GITHUB_USERNAME` and `BENCHMARK_PEERS` were removed from `.env.example`.
+> **Superseded by WP-G (built):** the "my GitHub activity" section on the home page (`frontend/src/lib/github.ts`, `components/sections/GitHubActivity.tsx`). The plan below (peers, table, backend, `/benchmark`) is not being built.
+> Not started as written. `GITHUB_TOKEN`, `GITHUB_USERNAME` and `BENCHMARK_PEERS` were removed from `.env.example`.
 > No longer holds: admin endpoints reached from the public app, and Railway/`ddl-auto` schema assumptions.
 > **Roadmap (2026-11-20):** Redesign to a build-time "my GitHub activity" section in `frontend/`, no backend, no table, no peers (WP-G). See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 

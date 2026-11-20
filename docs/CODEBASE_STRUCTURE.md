@@ -28,12 +28,14 @@ frontend/src/
 ├── components/
 │   ├── layout/                   → Navbar, Footer, HUDChrome, ScanlineOverlay
 │   ├── sections/                 → HeroSection, ProjectsGrid, ExperienceTimeline,
-│   │                               SkillsChart, ContactForm
+│   │                               SkillsChart, ContactForm, GitHubActivity
 │   └── ui/                       → GlitchText, NeonButton, NeonCard, SkillBar, TerminalInput
 │
 ├── lib/
 │   ├── api.ts                    → Content source seam + sendContact
 │   ├── contact.ts                → Server-only: validation, rate limit, SMTP send
+│   ├── github.ts                 → Server-only: owner's public repos from the GitHub API
+│   │                               (hourly, 5 s timeout, never throws), language summary
 │   └── types.ts                  → Profile, Project, Experience, ContactPayload, ApiResponse
 │
 └── test/                         → Vitest + React Testing Library, mirrors src/
