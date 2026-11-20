@@ -1,4 +1,6 @@
-import type { Profile, Project, Experience, ContactPayload, ApiResponse } from './types'
+import type {
+  Profile, Project, Experience, ContactPayload, ApiResponse, KafkaMessagesResponse,
+} from './types'
 import { profile, projects, experience } from '@/content'
 
 // ── Content source ───────────────────────────────────────────────────────────
@@ -51,4 +53,15 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),
     }).then((r) => r.json()),
+
+  // Live Kafka demo, relayed by this app's /api/kafka routes (see lib/kafka.ts).
+  kafkaProduce: (body: { sid: string; key: string; message: string }): Promise<ApiResponse> =>
+    fetch('/api/kafka/produce', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    }).then((r) => r.json()),
+
+  kafkaMessages: (sid: string): Promise<KafkaMessagesResponse> =>
+    fetch(`/api/kafka/messages?sid=${sid}`, { cache: 'no-store' }).then((r) => r.json()),
 }

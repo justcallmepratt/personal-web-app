@@ -213,6 +213,8 @@ pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build
 | Variable | Required | Purpose |
 |---|---|---|
 | `BACKEND_URL` | for live data | Base URL of the API. Server-only. |
+| `KAFKA_DEMO_URL` | for the Kafka demo | Base URL of the Kafka demo service (see [Kafka live demo](#kafka-live-demo)). Server-only, read at build time and at request time. |
+| `KAFKA_DEMO_TOKEN` | when the service has `DEMO_API_TOKEN` set | The same secret, sent as `X-Demo-Token` on every relay call. Server-only. |
 | `NEXT_PUBLIC_SITE_NAME` | no | Site title |
 | `NEXT_PUBLIC_SITE_URL` | no | Canonical URL for metadata / Open Graph |
 | `MAIL_USER`, `MAIL_PASS`, `MAIL_HOST`, `MAIL_PORT`, `CONTACT_NOTIFY_TO` | only without `BACKEND_URL` | SMTP settings for the standalone contact handler |
@@ -229,6 +231,37 @@ pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build
 | Invalid or oversized contact payload | Rejected by `web` (400 / 413) without calling the API |
 | Too many submissions | The API's per-address limit applies (429); `web` forwards the visitor's address |
 | `BACKEND_URL` not set | Fully static site; contact handled by `web` over SMTP, or 503 if SMTP is not configured |
+| `KAFKA_DEMO_URL` not set | `/projects/kafka` renders with a "broker offline" notice and a disabled form; no function is called |
+| Kafka demo service down, cold or slower than 10 s | The send or read returns 502 and the page says the service is not responding |
+| Record produced but never consumed | The page polls 8 times (about 10 s), then stops and offers Refresh |
+| More than 20 sends or 120 reads a minute from one address | 429 (per instance, best effort) |
+
+## Kafka live demo
+
+`/projects/kafka` produces and consumes real records through the Spring Boot service in
+[Kafka-Producer-Consumer-Demo](https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo).
+The browser only talks to `web`: `POST /api/kafka/produce` and `GET /api/kafka/messages`
+relay to that service's endpoints of the same name.
+
+- **Where it runs.** Railway project `kafka-demo`: the `kafka-demo-api` service (that
+  repo's Dockerfile) and a single-node `kafka` broker on the private network. Consumed
+  records are stored in this site's Supabase project, in the `kafka_demo` schema, which
+  the Supabase API does not expose. Setup is in that repo's README ("Deploying to
+  Railway"). On Vercel, set `KAFKA_DEMO_URL` and `KAFKA_DEMO_TOKEN` and redeploy; the
+  page is static, so the offline notice only goes away on a new build.
+- **Visitors only see their own records.** The relay prefixes each Kafka key with a
+  random per-tab session id and filters reads by it, so nothing one visitor types is
+  shown to another. The service returns its latest 100 records overall, so on a busy
+  day a session's older records can drop out of view.
+- **The service is locked to the relay.** With `DEMO_API_TOKEN` set on the service,
+  its `/api/**` endpoints (including `DELETE /api/kafka/consume`) return 401 without
+  the matching `X-Demo-Token` header, which only the relay sends. If the two values
+  drift apart, sends and reads fail with 502.
+- **Function use:** nothing on page view (one read if the tab already produced
+  something), one call per send, then at most 8 reads while waiting for the consumer.
+
+To try it locally, run the demo service (it needs Kafka and Postgres, see its README) and
+start the site with `KAFKA_DEMO_URL=http://localhost:<port> pnpm dev`.
 
 ## Local development
 
