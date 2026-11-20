@@ -205,12 +205,12 @@ claude "Read docs/agents/ORCHESTRATOR.md then docs/agents/phase-08-analytics.md
 | Layer | Technology | Version |
 |---|---|---|
 | Backend runtime | Amazon Corretto JDK | 21 LTS |
-| Backend framework | Spring Boot | 3.5.0 |
+| Backend framework | Spring Boot | 4.1.0 |
 | Backend ORM | Spring Data JPA + Hibernate | 6.6 |
 | Database (primary) | Railway Postgres | 17 |
 | Database (analytics) | Supabase Postgres | 17 |
 | JWT | jjwt | 0.13 |
-| API docs | springdoc-openapi | 2.5 |
+| API docs | springdoc-openapi | 3.2 |
 | Frontend runtime | Node.js | 20 LTS |
 | Frontend framework | Next.js (App Router) | 16 |
 | Language | TypeScript | 5 |

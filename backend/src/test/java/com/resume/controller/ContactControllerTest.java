@@ -1,6 +1,6 @@
 package com.resume.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.resume.dto.ContactRequest;
 import com.resume.model.Message;
 import com.resume.security.JwtFilter;
@@ -10,9 +10,9 @@ import com.resume.service.EmailValidationService;
 import com.resume.service.RateLimitService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,11 +29,11 @@ class ContactControllerTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
-    @MockBean ContactService         contactService;
-    @MockBean EmailValidationService emailValidator;
-    @MockBean RateLimitService       rateLimiter;
-    @MockBean JwtUtil                jwtUtil;
-    @MockBean JwtFilter              jwtFilter;
+    @MockitoBean ContactService         contactService;
+    @MockitoBean EmailValidationService emailValidator;
+    @MockitoBean RateLimitService       rateLimiter;
+    @MockitoBean JwtUtil                jwtUtil;
+    @MockitoBean JwtFilter              jwtFilter;
 
     @Test
     void postContact_withValidBody_returns200WithSuccessTrue() throws Exception {

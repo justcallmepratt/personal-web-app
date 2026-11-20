@@ -6,9 +6,9 @@ import com.resume.security.JwtUtil;
 import com.resume.service.ProjectService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -23,9 +23,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProjectControllerTest {
 
     @Autowired MockMvc mockMvc;
-    @MockBean ProjectService projectService;
-    @MockBean JwtUtil jwtUtil;
-    @MockBean JwtFilter jwtFilter;
+    @MockitoBean ProjectService projectService;
+    @MockitoBean JwtUtil jwtUtil;
+    @MockitoBean JwtFilter jwtFilter;
 
     private Project makeProject(Long id, String title, boolean featured) {
         Project p = new Project();

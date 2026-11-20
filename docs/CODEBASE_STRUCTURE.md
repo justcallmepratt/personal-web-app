@@ -4,7 +4,7 @@ This document is **machine-readable** and designed for AI agents to understand t
 
 ---
 
-## Backend — Spring Boot 3.5 (Java 21)
+## Backend — Spring Boot 4.1 (Java 21)
 
 ### Package Layout
 

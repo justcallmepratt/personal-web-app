@@ -1,14 +1,14 @@
 package com.resume.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.resume.repository.MessageRepository;
 import com.resume.security.JwtFilter;
 import com.resume.security.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestPropertySource;
@@ -31,10 +31,10 @@ class AdminControllerNoHashTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
-    @MockBean MessageRepository messageRepository;
-    @MockBean JwtUtil jwtUtil;
-    @MockBean JwtFilter jwtFilter;
-    @MockBean PasswordEncoder passwordEncoder;
+    @MockitoBean MessageRepository messageRepository;
+    @MockitoBean JwtUtil jwtUtil;
+    @MockitoBean JwtFilter jwtFilter;
+    @MockitoBean PasswordEncoder passwordEncoder;
 
     @Test
     void login_whenAdminPassHashEmpty_returns503() throws Exception {
