@@ -11,15 +11,18 @@ What is actually in the repository. For how it is deployed, see
 ```
 frontend/src/
 ├── app/
-│   ├── layout.tsx                → Root layout: fonts, metadata, navbar, footer
-│   ├── page.tsx                  → Home: hero + featured projects
+│   ├── layout.tsx                → Root layout: fonts, metadata, JSON-LD, skip link, navbar, footer
+│   ├── page.tsx                  → Home: hero, featured projects, GitHub activity
 │   ├── projects/page.tsx         → All projects, then planned ones under "In the works"
+│   ├── projects/kafka/page.tsx   → Live Kafka demo (relays via api/kafka/*)
+│   ├── robots.ts, sitemap.ts, opengraph-image.tsx → Crawling and social-preview metadata
 │   ├── experience/page.tsx       → Career timeline
 │   ├── skills/page.tsx           → Skills by category (a bar only for skills with a `level`)
 │   ├── certifications/page.tsx   → Certifications, from the content file
 │   ├── contact/page.tsx          → Contact form
 │   ├── credits/page.tsx          → Credits, licences and the unofficial-fan-work disclaimer (data in lib/credits.ts)
-│   ├── api/contact/route.ts      → POST handler: validate → rate-limit → send email
+│   ├── api/contact/route.ts      → POST handler: validate → relay to API, else rate-limit → SMTP
+│   ├── api/kafka/{produce,messages}/route.ts → Relay to the Kafka demo service
 │   ├── error.tsx, loading.tsx    → Error boundary and loading states
 │   └── globals.css               → Tailwind 4 theme (cp-* colours)
 │
@@ -28,15 +31,19 @@ frontend/src/
 │                                   certifications — the site's content (the owner's real profile)
 │
 ├── components/
-│   ├── layout/                   → Navbar, Footer, HUDChrome, ScanlineOverlay
+│   ├── layout/                   → Navbar, Footer, SkipLink, HUDChrome, ScanlineOverlay
 │   ├── sections/                 → HeroSection, ProjectsGrid, ExperienceTimeline,
 │   │                               SkillsChart, CertificationsList, PlannedProjects, ContactForm,
-│   │                               GitHubActivity
+│   │                               GitHubActivity, KafkaDemo
 │   └── ui/                       → GlitchText, NeonButton, NeonCard, SkillBar, TerminalInput
 │
 ├── lib/
 │   ├── api.ts                    → Content source seam + sendContact
 │   ├── contact.ts                → Server-only: validation, rate limit, SMTP send
+│   ├── contactEmail.ts           → Public `mailto:` address from NEXT_PUBLIC_CONTACT_EMAIL
+│   ├── kafka.ts                  → Server-only: Kafka demo relay (session ids, limits, timeout)
+│   ├── site.ts                   → Site name, URL and description for metadata
+│   ├── credits.ts, theme.ts      → Credits page data, theme constants
 │   ├── github.ts                 → Server-only: owner's public repos from the GitHub API
 │   │                               (hourly, 5 s timeout, never throws), language summary
 │   └── types.ts                  → Profile, Project, PlannedProject, Experience, Certification,
@@ -45,8 +52,11 @@ frontend/src/
 └── test/                         → Vitest + React Testing Library, mirrors src/
 ```
 
-Outside `src/`: `frontend/vercel.json` sets the security headers (HSTS, X-Frame-Options, Referrer-Policy and others) and cache headers
-and build commands for Vercel.
+Outside `src/`: `frontend/vercel.json` sets the security headers (HSTS, X-Frame-Options,
+Referrer-Policy and others), cache headers and build commands for Vercel;
+`frontend/microfrontends.json` routes `/kafka` to `apps/kafka` and
+`frontend/next.config.ts` wraps the config in `withMicrofrontends` (this app is the
+default application of the Vercel microfrontends group).
 
 ### Rules
 
@@ -57,12 +67,13 @@ and build commands for Vercel.
 2. **The contact form always posts to this app's `/api/contact`**, which relays to the
    API when `BACKEND_URL` is set and otherwise sends mail itself. `lib/contact.ts`
    uses Node APIs and must only be imported from server code.
-3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` runs per request.
+3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` and the two
+   `/api/kafka/*` handlers run per request.
 4. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
 
 ### Content shape
 
-`content/index.ts` is what visitors see while the API is not deployed. The site is
+`content/index.ts` is what visitors see: the site does not read the API yet. The site is
 public, so it holds only facts the owner has confirmed; `test/content/content.test.ts`
 guards against placeholder links, an email address or a phone number coming back.
 
@@ -83,23 +94,28 @@ guards against placeholder links, an email address or a phone number coming back
   When one ships, move it into `projects`.
 - **New fields in `types.ts` stay optional** so the Spring API's responses (which do
   send `level`, and may send `email` and `cvUrl`) keep type-checking.
-- `backend/.../SeedRunner.java` and the seed rows in `supabase/init.sql` still hold the
-  old placeholder persona. They are not served anywhere public; replace them before
-  `BACKEND_URL` is pointed at a live API.
+- `backend/.../SeedRunner.java`, the seed rows in `supabase/init.sql` and the rows in
+  the Supabase database still hold the old placeholder persona, and the deployed API
+  serves it from its public endpoints. Replace all three before `BACKEND_URL` is
+  pointed at the API (see [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work)).
 
 ## `apps/kafka`
 
 A self-contained app like `apps/admin`, with its own `package.json` and lockfile: the
-live Kafka demo, served under `/kafka/*`. Not deployed yet; see
-[DEPLOYMENT.md](DEPLOYMENT.md#kafka-app). Its page, relay routes and helpers are copies
-of the ones in `frontend/` (`KafkaDemo.tsx`, `lib/kafka.ts`, `app/api/kafka/*`), which
-stay live until the cutover described there.
+live Kafka demo, served under `/kafka/*` (`src/app/kafka/page.tsx` and
+`src/app/kafka/api/{produce,messages}`). Not routable yet (the Vercel project and
+microfrontends group are missing); see
+[DEPLOYMENT.md](DEPLOYMENT.md#microfrontends-kafka-and-admin). Its page, relay routes and
+helpers are copies of the ones in `frontend/` (`KafkaDemo.tsx`, `lib/kafka.ts`,
+`app/api/kafka/*`), which stay live until the cutover described there. Checks as for
+the other apps.
 
 ## Admin — Next.js 16 (TypeScript, Tailwind 4)
 
 `apps/admin` is a self-contained app with its own `package.json` and lockfile: admin
 sign-in and the contact-message inbox, served under `/admin/*`. Not deployed yet; see
 [DEPLOYMENT.md](DEPLOYMENT.md#admin-app). `apps/admin/AGENTS.md` applies here too.
+`apps/kafka/AGENTS.md` likewise.
 
 ```
 apps/admin/src/
@@ -144,13 +160,15 @@ apps/admin/src/
 
 ## Backend — Spring Boot 4.1 (Java 21)
 
-The service layer: content, contact messages and admin auth. Intended for Railway from
-`backend/` (see `backend/railway.toml`); not live yet. Built and tested in CI.
+The service layer: content, contact messages and admin auth. Deployed on Railway from
+`backend/` (service `personal-web-app-api`, see `backend/railway.toml` and
+[DEPLOYMENT.md](DEPLOYMENT.md#railway-the-api)); the site does not call it yet. Built
+and tested in CI.
 
 ```
 backend/src/main/java/com/resume/
 ├── ResumeApplication.java        → Entry point
-├── SeedRunner.java               → Seeds placeholder data on the dev and docker profiles
+├── SeedRunner.java               → Seeds the (old placeholder) profile into empty tables on the dev and docker profiles
 ├── config/                       → SecurityConfig, CorsConfig, GlobalExceptionHandler, OpenApiConfig
 ├── controller/
 │   ├── ProfileController         → GET /api/profile
@@ -166,6 +184,11 @@ backend/src/main/java/com/resume/
 ├── dto/                          → ApiResponse, ContactRequest, LoginRequest
 └── security/                     → JwtFilter, JwtUtil
 ```
+
+Contact messages are guarded in layers: `EmailValidationService` rejects disposable
+providers (a blocklist) and domains with no MX record (422), and `RateLimitService`
+allows 3 submissions per hour per address by default (429; `CONTACT_RATE_LIMIT_MAX`,
+`CONTACT_RATE_LIMIT_WINDOW`). `GET /api/contact/validate-email` exposes the first two.
 
 Profiles: `dev` (Supabase Postgres via `SUPABASE_DB_PASSWORD`), `docker`
 (`SPRING_DATASOURCE_*`), `test` (H2 in memory). Hibernate runs with
@@ -191,7 +214,7 @@ The `dev` profile's default datasource host is Supabase's direct host
 ## Database — Postgres (backend only)
 
 Schema: [`supabase/init.sql`](../supabase/init.sql), applied automatically by
-`docker compose`. Tables: `profile`, `projects`, `experience`, `messages`. List-like
+`docker compose` and already applied to the Supabase project the API uses. Tables: `profile`, `projects`, `experience`, `messages`. List-like
 fields (`tech_stack`, `skills`, `tags`, `stack`, `highlights`, `technologies`,
 `socials`) are `JSONB`; `tags`, `stack`, `technologies` and `skills` have GIN indexes.
 The `DEFAULT '[]'` on those columns does not apply to rows written through JPA
@@ -201,18 +224,19 @@ The `DEFAULT '[]'` on those columns does not apply to rows written through JPA
 
 | File | Trigger | Does |
 |---|---|---|
-| `ci.yml` | push / PR to `main` | Backend compile, then `mvn verify` (tests including PostgreSQL via Testcontainers, JAR, JaCoCo gate); frontend and admin type check, lint, test, build. No deploy. |
+| `ci.yml` | push / PR to `main` | Backend compile, then `mvn verify` (tests including PostgreSQL via Testcontainers, JAR, JaCoCo gate); frontend, admin and kafka type check, lint, test, build. No deploy. The backend, frontend and admin jobs are required to merge. |
 | `docker-build.yml` | push to `main`, manual | Builds and pushes backend and frontend images to GHCR |
 | `release.yml` | `v*.*.*` tag | JAR + versioned images + GitHub release |
 | `codeql.yml` | schedule / push | Code scanning |
 | `dependabot-auto-merge.yml` | Dependabot PRs | Auto-merges patch/minor updates |
 | `stale.yml`, `summary.yml` | schedule / issues | Housekeeping |
 
-Deployment is done by Vercel's Git integration, not by a workflow.
+Deployment is done by Vercel's Git integration (site) and Railway's GitHub integration
+(API), not by a workflow.
 
 ## Other docs
 
-- `docs/agents/` — phase briefs for planned features. They assume the original
-  Railway-hosted backend and predate this structure; treat their deployment steps and
-  file lists as out of date.
-- `docs/VALIDATION.md` — validation report from 2026-05-18 against the old deployment.
+- `docs/agents/` — phase briefs. Each has a status block that agrees with
+  [ROADMAP.md](ROADMAP.md); they predate the current structure, so treat their
+  deployment steps and file lists as out of date.
+- [`HOW_IT_WAS_BUILT.md`](HOW_IT_WAS_BUILT.md) — historical build narrative (May 2026).

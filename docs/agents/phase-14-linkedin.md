@@ -3,7 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Not started. Upload page at `/admin/linkedin` would belong to the planned `admin` micro-frontend, not the public app.
 > No Railway CLI or `NEXT_PUBLIC_API_URL` use in this brief that still applies; the browser never calls the API directly.
-> **Roadmap (2026-11-20):** Drop as a feature; read the export once and update `content/index.ts` by hand (WP-E). See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
+> **Roadmap (2026-11-20):** Dropped; the content was updated by hand (WP-E). See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Import your LinkedIn data export (ToS-compliant) and sync it to your Supabase profile

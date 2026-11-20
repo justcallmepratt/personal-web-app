@@ -3,7 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Not started. Frontend-only; `NEXT_PUBLIC_SPOTIFY_TRACK_ID` was removed from `.env.example` and would need adding back.
 > No Railway assumptions.
-> **Roadmap (2026-11-20):** Drop for now. Logged-out visitors get a ~30 s preview, and the music and brand question is open. If revived: click-to-load only, after asking CD PROJEKT RED. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
+> **Roadmap (2026-11-20):** Dropped. Logged-out visitors get a ~30 s preview, and the music and brand question is open. If revived: click-to-load only, after asking CD PROJEKT RED. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Embed the Cyberpunk 2077 OST track "The Rebel Path" by Refused in the hero section.

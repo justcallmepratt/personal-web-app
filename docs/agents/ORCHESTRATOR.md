@@ -11,7 +11,7 @@ Read this first. Then read the phase file for your assigned task.
 | Layer | Tech | Live URL |
 |---|---|---|
 | Frontend | Next.js 16 · React 19 · Tailwind 4 | https://justcallmepratt.dev |
-| Backend | Spring Boot 4.1 · Java 21 · JPA | not live yet (planned: https://api.justcallmepratt.dev on Railway) |
+| Backend | Spring Boot 4.1 · Java 21 · JPA | deployed on Railway (https://personal-web-app-api-production.up.railway.app), not used by the site yet; `api.justcallmepratt.dev` not attached |
 | Database | Supabase Postgres (the only database; schema in `supabase/init.sql`) | nxqiuqlwyjimioosaiio.supabase.co |
 | Repo | GitHub | https://github.com/justcallmepratt/personal-web-app |
 
@@ -58,18 +58,18 @@ Batch D (run last):     17
 ## Phase index
 Status as of 2026-11-20. Briefs predate the current hosting; see the status block at the top of each phase file.
 
-> **Roadmap (2026-11-20):** the dependency graph and parallel batches above are superseded by [`docs/ROADMAP.md`](../ROADMAP.md) (evidence in [`docs/RESEARCH.md`](../RESEARCH.md)). In short: do 7, 10 and the ops part of 17 now; redesign 8 (Vercel Web Analytics) and 15 (GitHub activity section); build 11 and 12 only after the backend is live and the owner wants them; drop 9, 13, 14 and 16. Real content and the Railway backend come before any of it.
+> **Roadmap (2026-11-20):** the dependency graph and parallel batches above are superseded by [`docs/ROADMAP.md`](../ROADMAP.md), which holds the status of every phase and the owner's decisions (evidence in [`docs/RESEARCH.md`](../RESEARCH.md)).
 
 | File | Phase | Status |
 |---|---|---|
-| `phase-07-polish.md` | Visual polish | partly done |
-| `phase-08-analytics.md` | Amplitude analytics | not started |
-| `phase-09-spotify.md` | Spotify player | not started |
-| `phase-10-citations.md` | Credits page | not started |
+| `phase-07-polish.md` | Visual polish | partly done (WP-A, WP-B shipped; real CV, custom 404, Lighthouse open) |
+| `phase-08-analytics.md` | Amplitude analytics | decided (Vercel Web Analytics instead of Amplitude), not started |
+| `phase-09-spotify.md` | Spotify player | dropped |
+| `phase-10-citations.md` | Credits page | done (WP-C) |
 | `phase-11-job-tracker.md` | Job application tracker | dropped (JobSync is used instead) |
-| `phase-12-market-research.md` | Market research engine | not started |
-| `phase-13-resume-updater.md` | Resume auto-updater | not started |
-| `phase-14-linkedin.md` | LinkedIn sync | not started |
-| `phase-15-benchmarking.md` | GitHub benchmarking | not started |
-| `phase-16-pro-dev.md` | Pro dev dashboard | not started |
-| `phase-17-production.md` | Cloud production deploy | partly done by other means (Vercel Git integration, domain, CI hardening; see `docs/DEPLOYMENT.md`) |
+| `phase-12-market-research.md` | Market research engine | wanted, not started |
+| `phase-13-resume-updater.md` | Resume auto-updater | dropped |
+| `phase-14-linkedin.md` | LinkedIn sync | dropped |
+| `phase-15-benchmarking.md` | GitHub benchmarking | done as the GitHub activity section (WP-G); the brief itself is superseded |
+| `phase-16-pro-dev.md` | Pro dev dashboard | dropped |
+| `phase-17-production.md` | Cloud production deploy | reduced, partly done (domain, Git deploys, CI, Railway deployment; keep-alive, uptime, backups and admin deploy open; see `docs/DEPLOYMENT.md`) |

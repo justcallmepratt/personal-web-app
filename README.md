@@ -9,31 +9,33 @@
 [![Vercel](https://img.shields.io/badge/Frontend-Vercel-000?style=flat&logo=vercel)](https://vercel.com)
 
 
-A full-stack personal portfolio styled after the **CP2077 Neo Militarism** aesthetic.
+The personal portfolio of Pratham Sachan, a backend developer, in a **CP2077 Neo
+Militarism** visual style (unofficial fan styling; see `/credits` on the site).
 
-Today one Next.js app (`frontend/`) is deployed on Vercel. A second one, the `admin`
-micro-frontend in `apps/admin` (login and message inbox), is built but not deployed
-yet; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#admin-app). A third, `apps/kafka`, is
-the live Kafka demo as its own micro-frontend, also built but not deployed; the demo
-currently runs from `frontend/` ([details](docs/DEPLOYMENT.md#kafka-app)). The Spring Boot REST API
-in `backend/` is built and tested in CI but **is not deployed yet**, so the live site
-serves the content kept in the repo (`frontend/src/content`). When `BACKEND_URL` is
-set, pages read the API on the server and fall back to that same content if it is
-unavailable.
+The repository holds three Next.js apps and a Spring Boot API:
+
+| Part | Path | State |
+|---|---|---|
+| Public site | `frontend/` | Live on Vercel at https://justcallmepratt.dev. Home, projects (with an "In the works" list), experience, skills, certifications, contact and credits pages, and a GitHub activity section. Content comes from `frontend/src/content/index.ts`. |
+| REST API | `backend/` | Deployed on Railway and healthy, but **the site does not use it yet**: the database still holds old placeholder content. See [Outstanding work](docs/DEPLOYMENT.md#outstanding-work). |
+| Kafka demo page | `apps/kafka/` | Built as a micro-frontend for `/kafka`; not routable yet. The demo runs from `frontend/` at `/projects/kafka`. |
+| Admin app | `apps/admin/` | Sign-in and contact-message inbox; not deployed. |
+
+When `BACKEND_URL` is set, `frontend` reads the API on the server and falls back to the
+repository content if the API is unavailable.
 
 The site also hosts a **live Apache Kafka demo** at `/projects/kafka`: a visitor sends a
 record, it goes through a real broker and a Spring Boot consumer on Railway, is stored
 in Supabase, and shows up on the page. The service is a separate repo,
 [Kafka-Producer-Consumer-Demo](https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo);
-this repo holds the page and the relay routes. See
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#kafka-live-demo).
+this repo holds the page and the relay routes.
 
 **Live:** https://justcallmepratt.dev  
 **Kafka live demo:** https://justcallmepratt.dev/projects/kafka  
-**Deployment and configuration:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)  
+**Deployment, configuration and outstanding work:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)  
 **Code layout:** [`docs/CODEBASE_STRUCTURE.md`](docs/CODEBASE_STRUCTURE.md)  
-**Roadmap (prioritised plan for the remaining phases):** [`docs/ROADMAP.md`](docs/ROADMAP.md)  
-**Research behind the roadmap (site review, third-party limits):** [`docs/RESEARCH.md`](docs/RESEARCH.md)  
+**Roadmap and decisions:** [`docs/ROADMAP.md`](docs/ROADMAP.md)  
+**Research behind the roadmap:** [`docs/RESEARCH.md`](docs/RESEARCH.md)  
 **How the original version was built (historical):** [`docs/HOW_IT_WAS_BUILT.md`](docs/HOW_IT_WAS_BUILT.md)
 
 ---
@@ -50,16 +52,16 @@ this repo holds the page and the relay routes. See
 | API docs | springdoc-openapi | 3.2 |
 | Frontend framework | Next.js (App Router) | 16 |
 | UI library | React | 19 |
-| Language | TypeScript | 5 |
+| Language | TypeScript | 5 (`frontend`), 6 (`apps/*`) |
 | Styling | Tailwind CSS | 4 |
-| Animation | Framer Motion | 12 |
+| Animation | Framer Motion | 14 |
 | Node.js | CI runs 22; `frontend/Dockerfile` uses `node:20-alpine` | 22 / 20 |
 | Package manager | pnpm | 9 |
 | Backend tests | JUnit + Mockito + JaCoCo; Testcontainers (PostgreSQL 15) for persistence | — |
 | Frontend tests | Vitest + React Testing Library | — |
 | Container | Docker (multi-stage) | — |
 | Frontend hosting | Vercel | — |
-| Backend hosting | Railway (not live yet) | — |
+| Backend hosting | Railway (deployed; not used by the site yet) | — |
 | Kafka demo service | Spring Boot + Apache Kafka (KRaft) on Railway, Supabase Postgres | separate repo |
 
 ---
@@ -75,6 +77,11 @@ cd personal-web-app/frontend
 pnpm install
 pnpm dev                            # Next.js on :3000
 ```
+
+The other apps run the same way from their own directories: `apps/admin`
+(`BACKEND_URL=http://localhost:8080 pnpm dev`, <http://localhost:3001/admin>) and
+`apps/kafka` (`KAFKA_DEMO_URL=http://localhost:<port> pnpm dev`,
+<http://localhost:3002/kafka>).
 
 Full stack (Postgres + API + frontend reading from the API):
 
@@ -110,7 +117,7 @@ cd backend && ./mvnw -B verify
 # Backend — only the PostgreSQL persistence tests (needs Docker)
 cd backend && ./mvnw -B test -Dtest=PostgresPersistenceTest
 
-# Frontend
+# Frontend (and likewise apps/admin, apps/kafka)
 cd frontend && pnpm test
 
 # Frontend with coverage (report in frontend/coverage/index.html)
@@ -157,21 +164,25 @@ personal-web-app/
 │   ├── src/test/           JUnit tests
 │   ├── railway.toml        Railway build and health check
 │   └── Dockerfile          Multi-stage: Maven build → Corretto 21 runtime
-├── frontend/
-│   ├── src/app/            App Router pages; api/contact/route.ts is the contact handler
+├── frontend/               The public site (Vercel project `frontend`)
+│   ├── src/app/            App Router pages; api/contact and api/kafka are route handlers
 │   ├── src/components/     layout/, sections/, ui/
-│   ├── src/content/        Profile, projects, experience (edit to update the site)
-│   ├── src/lib/            api.ts (content source), contact.ts (validation, rate limit, SMTP), types.ts
+│   ├── src/content/        Profile, projects, experience, certifications (edit to update the site)
+│   ├── src/lib/            api.ts (content source), contact.ts, github.ts, kafka.ts, site.ts, types.ts
 │   ├── src/test/           Vitest + RTL tests
+│   ├── microfrontends.json Routes /kafka to apps/kafka (once the Vercel group exists)
 │   ├── vercel.json         Security headers
 │   └── Dockerfile          Multi-stage: pnpm build → standalone output
+├── apps/
+│   ├── admin/              Admin sign-in and message inbox (/admin/*), not deployed
+│   └── kafka/              Kafka demo page (/kafka), not routable yet
 ├── docs/
-│   ├── DEPLOYMENT.md       How the site is deployed and configured (current)
+│   ├── DEPLOYMENT.md       How the site is deployed, configured, and what is outstanding
+│   ├── ROADMAP.md, RESEARCH.md
 │   ├── CODEBASE_STRUCTURE.md
 │   ├── HOW_IT_WAS_BUILT.md Historical build narrative (May 2026)
-│   ├── VALIDATION.md       Old validation snapshot (May 2026)
-│   └── agents/             Unbuilt design briefs
-├── supabase/init.sql       Schema for local Docker dev
+│   └── agents/             Phase design briefs, each with a status block
+├── supabase/init.sql       Database schema (local Docker dev; applied to Supabase)
 ├── .github/workflows/      ci, codeql, docker-build, release, dependabot-auto-merge, stale, summary
 ├── docker-compose.yml      Local Postgres + API + frontend
 ├── .env.example            Environment variables, documented
@@ -182,8 +193,9 @@ personal-web-app/
 
 ## API Reference
 
-Served by the Spring Boot backend (not deployed yet). Interactive docs at
-`/swagger-ui/index.html` on a running instance.
+Served by the Spring Boot backend (deployed on Railway, not yet called by the site).
+Interactive docs at `/swagger-ui/index.html` on a running instance; health at
+`/actuator/health`.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
@@ -212,16 +224,10 @@ Two more route handlers serve the Kafka demo and relay to the Kafka demo service
 
 ## Roadmap
 
-From [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md#roadmap):
-
-1. Live on the domain: done.
-2. Backend on Railway, using the existing Supabase project as its database.
-3. Monorepo: move `frontend/` to `apps/web`, extract shared UI and API types.
-4. `admin` micro-frontend: login and inbox are built (`apps/admin`); deploying it remains.
-
-[`docs/agents/`](docs/agents/) holds design briefs for further features (analytics,
-credits page, job tracker, market research and others). They are unbuilt, mostly
-predate the current hosting setup, and carry a status note at the top of each file.
+Status of every phase, the work still to do and the owner's decisions are in
+[`docs/ROADMAP.md`](docs/ROADMAP.md); the operations steps still outstanding are in
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md#outstanding-work). [`docs/agents/`](docs/agents/)
+holds the original phase briefs, each with a status block; several are dropped.
 
 ---
 
@@ -231,8 +237,10 @@ predate the current hosting setup, and carry a status note at the top of each fi
 2. Create a feature branch: `git checkout -b feat/your-feature`
 3. Run the checks before pushing:
    - Backend: `cd backend && ./mvnw -B verify`
-   - Frontend: `cd frontend && pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`
-4. Open a PR against `main`. The CI jobs `Backend — Java 21 / Maven` and
-   `Frontend — Node 22 / pnpm` are required and must pass before merging.
+   - Frontend, and likewise `apps/admin` and `apps/kafka`:
+     `cd frontend && pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`
+4. Open a PR against `main`. The CI jobs `Backend — Java 21 / Maven`,
+   `Frontend — Node 22 / pnpm` and `Admin — Node 22 / pnpm` are required and must pass
+   before merging.
 
 Report security issues as described in [`SECURITY.md`](SECURITY.md), not in public issues.

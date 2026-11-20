@@ -1,164 +1,94 @@
 # Roadmap
 
-Prioritised plan for the site, written 2026-11-20 after reviewing the live site and the
-remaining phase briefs (7 to 17). Evidence and sources are in [RESEARCH.md](RESEARCH.md);
-how things are deployed is in [DEPLOYMENT.md](DEPLOYMENT.md); the original briefs are in
-[`docs/agents/`](agents/ORCHESTRATOR.md) and are **not** rewritten, only annotated.
+Plan and status for the site, last updated 2026-11-20. Evidence and sources are in
+[RESEARCH.md](RESEARCH.md); how things are deployed, and the ordered list of outstanding
+operations steps, is in [DEPLOYMENT.md](DEPLOYMENT.md); the original phase briefs are in
+[`docs/agents/`](agents/ORCHESTRATOR.md) and are not rewritten, only given a status block.
 
-## Summary
+The site is a portfolio: its job is to make a recruiter or hiring manager think "this
+person can ship, and I can reach them". Work is judged against that.
 
-The site is a portfolio, so its job is to make a recruiter or hiring manager think "this
-person can ship, and I can reach them". Today it fails that for reasons that have nothing
-to do with the phase list: all content is placeholder (fictional employers, fake project
-links, a blank CV), the contact form is offline, and link previews point at the wrong
-domain. Most of the remaining phases (11 to 16) are private tooling or comparison
-features that add no visitor value, and several rest on assumptions that no longer hold
-(Railway Postgres, Amplitude, an upload-and-diff LinkedIn flow, ranking against famous
-developers).
+## Done
 
-So the plan is: **fix the foundation first, ship the small high-value items that need no
-backend and no new accounts, deploy the backend, then decide whether any of the private
-tools are worth building.** Of the eleven phases, three are worth doing now (7, 10, and 17
-in reduced form), two are worth doing in a redesigned form (8 as Vercel Web Analytics, 15
-as a build-time GitHub section), two are worth doing only after the backend is live and
-the owner confirms they want them (11, 12), and four should be dropped or folded into
-something simpler (9, 13, 14, 16).
+- **Live on the domain** `justcallmepratt.dev` (Vercel, `www` redirects to it).
+- **Phase 10 / WP-C:** `/credits`, the unofficial-fan-work disclaimer and a footer.
+- **WP-A SEO and social, WP-B accessibility and motion** (PR #61): canonical URLs,
+  `robots.txt`, `sitemap.xml`, generated Open Graph image, per-page metadata, minimal
+  JSON-LD; reduced motion, focus styles, AA contrast, skip link, live regions. Not done
+  from the package: a custom `not-found` page, and no Lighthouse scores were recorded.
+- **WP-E real content** (PR #67): the owner's real profile in `frontend/src/content/index.ts`,
+  `/certifications`, and an "In the works" list of planned projects on `/projects`.
+- **Phase 15 / WP-G:** replaced by a GitHub activity section on the home page.
+- **Contact fallback** (PR #66): SMTP fallback when the API is down, `mailto:` path,
+  delivery logs. Needs the Vercel variables in [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Kafka live demo** at `/projects/kafka`, plus the `apps/kafka` micro-frontend (built,
+  not routable yet) and the `admin` micro-frontend `apps/admin` (built, not deployed).
+- **Backend deployed on Railway** (`personal-web-app-api`), healthy, not used by the site yet.
+- **Backend persistence tests** against real PostgreSQL in the required backend CI job;
+  branch protection requires the backend, frontend and admin jobs.
 
-### Recommended order
+## Next, in order
 
-1. **Owner, no code (this week):** set `NEXT_PUBLIC_SITE_URL`, leave `BACKEND_URL` unset
-   until the API is live, delete the two dead Vercel projects, and hand over the real
-   content and CV (see [Decisions](#decisions-needed-from-the-owner)).
-2. **Start today, in parallel, frontend only, no backend, no new accounts:** WP-A SEO and
-   social metadata, WP-B accessibility and motion, WP-C credits page and disclaimer, WP-D
-   Vercel Web Analytics (if the owner agrees). Details in [Work packages](#independent-work-packages).
-3. **When real content arrives:** WP-E real content and CV, then WP-F case-study projects,
-   and WP-G the GitHub activity section.
-4. **Deploy the backend on Railway** (owner, using the DEPLOYMENT.md steps), then WP-H
-   (keep-alive and uptime check) and WP-I (admin Vercel project and microfrontends group).
-5. **Monorepo move (WP-J):** in a quiet window, after steps 2 and 3 have merged, and
-   before any shared-package work or new admin pages.
-6. **Only then**, if wanted: market research (phase 12, with an optional Databricks
-   learning exercise).
-7. **Drop:** phases 9 (as a feature), 11, 13, 14 and 16 as written. Phase 11 (job
-   tracker) was dropped on 2026-11-20: the owner will run the open-source
-   [JobSync](https://github.com/Gsync/jobsync) on their own machine instead.
+1. The operations checklist in [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work): real
+   profile into the database and `SeedRunner`, then `BACKEND_URL`, the API domain,
+   `ADMIN_PASSWORD_HASH`, contact email, the Vercel `kafka` and `admin` projects and
+   group, and deleting two unused Vercel projects.
+2. **WP-E leftovers:** the owner's real `cv.pdf` (none exists; the button is hidden until
+   `profile.cvUrl` is set).
+3. **WP-D Vercel Web Analytics** (decided; not added).
+4. **WP-H ops hardening** once the site uses the API (Supabase keep-alive, uptime check,
+   backup of the `messages` table, secret-rotation notes, Lighthouse baseline).
+5. **WP-F case-study projects.**
+6. **WP-J monorepo move**, in a quiet window.
+7. **WP-L market research (phase 12)**, wanted, after the backend and admin are live.
 
-### Top five recommendations
+## Phases
 
-1. Replace placeholder content with real content and a real CV before building anything else.
-2. Fix social previews and crawlability now: set `NEXT_PUBLIC_SITE_URL`, add a real OG
-   image, `robots`, `sitemap`, per-page metadata (WP-A).
-3. Fix accessibility basics: reduced-motion support, focus styles, contrast of `cp-red`
-   and `cp-muted`, skip link, form status announcements (WP-B).
-4. Use Vercel Web Analytics instead of Amplitude (smaller footprint, no cookies), and
-   drop the Spotify, benchmark-against-celebrities, resume-auto-updater and LinkedIn-upload features.
-5. Deploy the backend on Railway and create the `admin` Vercel project before building any
-   admin feature; keep new admin features inside the existing `admin` app (a third
-   Vercel microfrontends project is probably a paid extra).
-
-## Decisions needed from the owner
-
-| # | Decision | Why it matters | My recommendation |
-|---|---|---|---|
-| 1 | Is the site your real portfolio under your real name, or a persona ("V")? | Drives all content, metadata and the legal posture. A persona with fake employers cannot be used for job hunting. | Real name and real history; keep the Cyberpunk look as styling only. |
-| 2 | Provide real content: bio, roles, 3 to 5 projects (with problem, your role, outcome, links), real links, a CV PDF, optionally a photo | Blocks WP-E, WP-F and every claim on the site | Do this first. A rough draft in `frontend/src/content/index.ts` is enough to start. |
-| 3 | Analytics: Vercel Web Analytics, Amplitude, or none | Phase 8 | Vercel Web Analytics. Confirm Pro pricing for events in the dashboard. |
-| 4 | Cyberpunk branding: keep the look and "Night City" copy? Keep game-corp names anywhere? Keep or drop the soundtrack? | Brand and fan-guideline risk (see RESEARCH.md 2.6) | Keep the look, add the unofficial-fan-work disclaimer, remove game-corp names once real jobs are in, drop the soundtrack (phase 9). |
-| 5 | Do you want private tools (job tracker, market research) at all? | Phases 11 to 16 are tools for you, not for visitors, and each adds backend, schema, admin pages and upkeep | Job tracker: **decided 2026-11-20, no** (phase 11 dropped; an existing open-source tracker, JobSync, is used instead). Market research: decide after the backend is live. |
-| 6 | Railway: go ahead with the Hobby plan and deploy the backend? Cost of an always-on JVM is unconfirmed (RESEARCH.md 2.4) | Unblocks the contact form, admin app and all later phases | Yes, but check Railway's usage estimate first and set a spend limit. |
-| 7 | Contact fallback while the API is offline: show your email address (or a `mailto:`) on the contact page? | A recruiter currently has no way to reach you | Yes; it is a one-line change in WP-E. |
-| 8 | Monorepo move timing (`frontend/` to `apps/web`) | It renames every frontend path and conflicts with anyone else editing `frontend/src` | After WP-A to WP-G merge, announced in advance. |
-| 9 | Databricks for phase 12's analysis? | Free Edition is non-commercial, has no SLA and its apps stop every 24 h | Yes as an optional learning exercise after phase 12 works without it; never on the path of a public page. |
-| 10 | Spotify: drop, or keep as a click-to-load embed? | Logged-out visitors get a 30 s preview; third-party music; the fan-guideline music paragraph is ambiguous | Drop. Revisit only if you want it for personality, and ask `legal@cdprojektred.com` first. |
-| 11 | Public GitHub comparison page (phase 15) | Ranking yourself against famous developers is unflattering and not a hiring signal | Replace with a "my GitHub activity" section (WP-G). |
-| 12 | Make `Admin — Node 22 / pnpm` a required CI check? | It is the only CI job not required for merge | Yes, once the admin app is deployed. |
-
-## Prerequisites that are not phases
-
-These block value. Several are manual and only the owner can do them.
-
-| Prerequisite | Who | Effort | Notes |
-|---|---|---|---|
-| **Real content** replacing the placeholder in `frontend/src/content/index.ts`; real `cv.pdf`; real OG image | Owner provides, session implements (WP-E) | S for code, owner time for writing | The single biggest value item. `cv.pdf` is currently a blank page (RESEARCH.md Part 1). |
-| **Vercel env fixes on `frontend`:** set `NEXT_PUBLIC_SITE_URL=https://justcallmepratt.dev`; remove `NEXT_PUBLIC_API_URL`; leave `BACKEND_URL` unset until the API is live (saves a 5 s timeout per page per build) | Owner (dashboard) | 5 minutes | Fixes the wrong `og:image` host immediately. Already listed in DEPLOYMENT.md. |
-| **Delete the Vercel projects `personal-web-app` and `backend`** and the matching GitHub environments | Owner | 5 minutes | Footprint and clutter. |
-| **Deploy the backend on Railway** | Owner, following DEPLOYMENT.md "Railway setup" | M | Needed for the contact form, admin app and phases 11 to 16. Until then the contact form says "channel offline". |
-| **Create the `admin` Vercel project and microfrontends group**, then add `frontend/microfrontends.json` and `withMicrofrontends` | Owner (dashboard) then a session (WP-I) | M | Order and steps are in DEPLOYMENT.md "Vercel setup (by hand, in this order)". Needs the backend live to be useful. |
-| **Monorepo move:** `frontend/` to `apps/web`, shared UI package, shared API types | A session (WP-J) | M to L | Collides with every concurrent change under `frontend/`; do it in a quiet window. Also settle the TypeScript version (6 in admin, 5 in frontend) and update Vercel's root directory. |
-| ~~**Backend test gap:** H2 cannot create `JSONB` tables, so profile/projects/experience entities are not exercised against a real schema in CI~~ **Done** | A session | S to M | `PostgresPersistenceTest` runs the app against PostgreSQL 15 (Testcontainers) with `supabase/init.sql` and `ddl-auto: validate` in the required backend CI job. Add a case there with every new table. |
-| **Supabase pause protection** and a note on backups | Owner/session (WP-H) | S | Free projects pause after about 7 days of inactivity and have no automatic backups (RESEARCH.md 2.4). |
-
-## Per-phase plan
-
-Value is judged against the site's purpose: helping a recruiter or hiring manager decide
-and contact. Effort: S under a day, M one to three days, L about a week or more.
-
-| Phase | Goal (one line) | Value | Effort | Depends on | Where it lives now | What changes from the May brief | Recommendation |
-|---|---|---|---|---|---|---|---|
-| **7 Polish** | Finish visual animations and run a Lighthouse audit | **High** for the audit, real CV/OG and accessibility; **low** for typewriter, particle field and hover glitch, which add motion cost and need reduced-motion handling | M | Nothing. 7-G needs the real CV from the owner. | `frontend/` only | Reframe as quality work: accessibility (contrast, focus, reduced motion), Lighthouse before/after, real OG image. Skip 7-B, 7-D, 7-E (typewriter, hover glitch, canvas particles) or ship them only behind `prefers-reduced-motion: no-preference`. 7-A (timeline reveal) is cheap but also needs reduced-motion care. | **Do now**, as WP-A and WP-B (and WP-E for 7-G). Drop the particle field. |
-| **8 Analytics** | Know who visits and what they click | **Medium**: tells you whether a recruiter opened the link; little else is needed | S | A Vercel dashboard toggle | `frontend/` layout (one component) | Replace Amplitude with Vercel Web Analytics: no key, no cookies, no extra project (RESEARCH.md 2.2). No `NEXT_PUBLIC_AMPLITUDE_API_KEY`, no dashboard to build, no consent-banner logic. | **Redesign, then do now** (WP-D). Drop Amplitude. |
-| **9 Spotify** | Click-to-play Cyberpunk soundtrack in the hero | **Low**: logged-out visitors get a 30 s preview; adds a third-party iframe and a brand/licensing question | S | Nothing technical; legal question open | `frontend/` hero | The track ID in the brief is unverified. | **Drop** for now. If revived: click-to-load iframe only, credited on the credits page, after the owner asks CD PROJEKT RED. |
-| **10 Credits** (done: WP-C) | Credits and citations page for tech, design, fonts, hosting | **Medium**: cheap trust signal, and the place for the unofficial-fan-work disclaimer, font licences and third-party notices | S | Nothing | `frontend/` new page, footer | List what is actually used today (Vercel, Supabase; Railway only once live; Spring Boot 4.1 not 3.5; Framer Motion version from `package.json`). Add the disclaimer and a note on third-party embeds. Put the link in a footer, not the navbar, so it does not touch `Navbar.tsx` while WP-B edits it. | **Do now** (WP-C). |
-| **11 Job tracker** | Admin-only Kanban of job applications | **Low for visitors**, **medium for the owner** if used daily | L | Backend live; `admin` project deployed; microfrontends group; Supabase table | `backend/` (entity, service, controller), `apps/admin` (pages), `supabase/init.sql` plus a migration | Not Railway Postgres, not Flyway, not `ddl-auto: update`: add the table to `supabase/init.sql` and apply it with the Supabase migration tool. Pages go in `apps/admin`, not the public app. Fix the H2/JSONB test gap or test on Postgres. A spreadsheet does the same job with no code, so build it only if the owner commits to using it. | **Dropped (2026-11-20).** Work on WP-K was started and abandoned before anything was committed: open-source trackers already cover it. The owner uses [JobSync](https://github.com/Gsync/jobsync) (MIT, self-hosted with Docker), run separately from this site; it is not part of this repository or the `admin` app. |
-| **12 Market research** | Scheduled Adzuna pull, skill-frequency insights | **Low for visitors**, **medium for the owner** (informs what to learn; a good Databricks exercise) | L | Backend live; Adzuna account and keys; a way to run a schedule (RESEARCH.md 2.4) | `backend/` service, controller, scheduler; `supabase/init.sql`; admin page in `apps/admin` | Nightly is overkill: pull weekly. Scheduler per RESEARCH.md 2.4 (`@Scheduled` with sleeping off, or a Railway cron service), never Vercel Cron. Adzuna's free tier is for evaluation and its rate limit is unconfirmed, so keep it admin-only and cache. Optional: analysis in Databricks Free Edition (offline only). Re-check the 250 calls/day assumption on the Adzuna dashboard. | **Redesign; do after the backend and only if wanted** (WP-L). |
-| **13 Resume auto-updater** | Turn market insights into suggested edits to your profile and apply them | **Low**, and risky: suggestions to add skills to a public résumé because the market wants them invite overstating | L | Phase 12 | `backend/` and `apps/admin` | The Vercel redeploy hook is unnecessary: the site re-renders hourly from the API. The apply flow adds change-log tables and audit code for an edit you can make in one commit. | **Drop.** If wanted later, fold "edit profile in admin" into the admin app as a plain editor with no market-driven suggestions. |
-| **14 LinkedIn sync** | Import a LinkedIn data export into profile and experience | **Low to medium**: a one-off convenience | M | Backend live; admin app | `backend/` (parser), `apps/admin` (upload page) | ToS-safe (it uses the user's own export), but the upload, ZIP parsing, diff and approve flow is far more machinery than a few copy-pastes a year. CSV columns change (RESEARCH.md 2.2). | **Drop** as a feature. The owner (or a session) reads the export once and updates `content/index.ts` by hand in WP-E. |
-| **15 Benchmarking** | Compare you to peer developers via GitHub on a public page | **Low as written**: ranking against famous developers is unflattering and not a hiring signal. **Medium** as "my GitHub activity" (recent repos, languages, pinned work) | M | None (public GitHub API; optional read-only token) | As written: `backend/` plus a Supabase table plus a public page. Redesign: `frontend/` server code only | Drop peers, `BENCHMARK_PEERS`, the table, the backend endpoints and the database. Fetch the owner's public repos in the frontend with a one-hour revalidate (one request, far below the 60/hour unauthenticated limit; see RESEARCH.md 2.2). Fall back to repo content if GitHub is slow. | **Redesign; do now** (WP-G), after real content exists so there is something worth showing. |
-| **16 Pro-dev dashboard** | Skill gaps and learning velocity from market and GitHub data | **Low** | L | Phases 12 and 15 (as written) | `backend/`, `apps/admin`, Supabase | Built on two phases that are being dropped or redesigned. | **Drop.** Revisit only after 11 and 12 have been used for months. |
-| **17 Production** | Harden the deployed system | **High** for the ops items; much of the brief is obsolete | S to M | Backend live for the monitoring items | Mostly settings, docs, and small workflows | Already done by other means: custom domain, Vercel Git deploys, CI. Obsolete: Railway CLI deploys, Railway Postgres and backups, `NEXT_PUBLIC_API_URL`, deploy-hook and smoke-test jobs that need secrets. Still valuable: uptime check, Supabase keep-alive, backup of the messages table, secret-rotation notes, Lighthouse baseline. | **Do in reduced form** as WP-H and WP-I, once the backend is live. |
-
-### Phases that can start today with no backend and no new accounts
-
-| Item | Package | Notes |
+| Phase | Status | Notes |
 |---|---|---|
-| 7 (accessibility, motion, Lighthouse, real OG) | WP-A, WP-B | Frontend only. The OG image can be generated in code until the owner has a design. |
-| 10 Credits | WP-C | Static page. |
-| 8 Analytics as Vercel Web Analytics | WP-D | Uses the existing Vercel account; the owner switches it on in the dashboard and confirms cost. |
-| 15 as a GitHub activity section | WP-G | Public API, no token needed at this scale; best after real content. |
+| 7 Polish | Partly done | Accessibility, reduced motion, SEO and real OG image shipped (WP-A, WP-B). Still open: real CV (7-G), custom 404, Lighthouse baseline. Typewriter, hover glitch and particle field are skipped. |
+| 8 Analytics | Decided, not started | Vercel Web Analytics instead of Amplitude (no key, no cookies, no extra project). WP-D. |
+| 9 Spotify | Dropped | Third-party music and brand question; logged-out visitors get a 30 s preview. |
+| 10 Credits | Done | WP-C. |
+| 11 Job tracker | Dropped | Owner uses the external tool [JobSync](https://github.com/Gsync/jobsync), run separately; nothing from this phase is in the repository. |
+| 12 Market research | Wanted, not started | Weekly Adzuna pull, admin-only, simple scheduler (RESEARCH.md 2.4). Needs backend and admin deployed, Adzuna keys. WP-L. |
+| 13 Resume updater | Dropped | The redeploy hook is unnecessary and market-driven edits invite overstating. |
+| 14 LinkedIn sync | Dropped | Content was updated by hand in WP-E. |
+| 15 Benchmarking | Done, redesigned | Built as the GitHub activity section (WP-G); peers, table and backend endpoints were never built. |
+| 16 Pro-dev dashboard | Dropped | Depended on 12 and 15 as written. |
+| 17 Production | Reduced, partly done | Domain, Git deploys, CI and the Railway deployment exist. Open: WP-H items and the admin deploy (WP-I). |
 
-Everything else needs the backend (11, 12, 14, 16, 17's monitoring), a third-party
-account (12: Adzuna), or the owner's decision (9, 13).
+## Work packages
 
-## Independent work packages
+| Pkg | Status | Remaining scope |
+|---|---|---|
+| WP-A SEO and social | Done (PR #61) | Custom `not-found`; Lighthouse before/after. |
+| WP-B Accessibility and motion | Done (PR #61) | Check `GlitchText` with VoiceOver (unconfirmed); 24 px minimum targets for small links; no form honeypot. |
+| WP-C Credits and disclaimer | Done | none |
+| WP-D Vercel Web Analytics | Decided, not started | Add `@vercel/analytics` once to the layout; owner turns it on in the dashboard and confirms plan cost. |
+| WP-E Real content and CV | Mostly done | Real `cv.pdf` and `cvUrl`; real content in the database and `SeedRunner` (see DEPLOYMENT.md). |
+| WP-F Case-study projects | Not started | Problem, role, decisions, outcome per project; `/projects/[slug]`; a "How this site is built" entry. New fields optional in `types.ts`. |
+| WP-G GitHub activity | Done | none |
+| WP-H Ops hardening | Not started | Weekly keep-alive touching the database, uptime check, `messages` export, secret-rotation notes, Lighthouse baseline. Needs the site on the API. |
+| WP-I Admin deploy | Partly done | `withMicrofrontends` and the `kafka` route are in `frontend`. Remaining: the `admin` route in `frontend/microfrontends.json` after the owner creates the project and group; verify `/admin/login` against the real API. |
+| WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
+| WP-K Job tracker | Dropped | Replaced by JobSync. |
+| WP-L Market research | Wanted, not started | Adzuna client, weekly scheduler, table in `supabase/init.sql` and `PostgresPersistenceTest`, admin insights page. Databricks is deferred. |
 
-Each package is sized for one pull request. They are chosen so that no two touch the same
-files, with the exceptions noted. Where two packages must change one file they touch
-different hunks and should merge in the order shown.
+## Decisions
 
-| Pkg | Scope | Files it owns | Needs | Effort |
-|---|---|---|---|---|
-| **WP-A SEO and social** | `site.ts` constants (name, URL, description) so metadata is not duplicated; page-level `generateMetadata` for every page with its own `og:title` and description; canonical URLs; `robots.ts` and `sitemap.ts`; a generated `opengraph-image` replacing the blank `og.png`; JSON-LD `Person`; custom `not-found.tsx`; `theme-color`; correct fallback site URL. Run Lighthouse before and after and record the scores in the PR. | New `frontend/src/lib/site.ts`, `frontend/src/app/robots.ts`, `sitemap.ts`, `opengraph-image.tsx`, `not-found.tsx`; metadata exports in the five `page.tsx` files and the metadata block of `layout.tsx`; tests | Nothing. The owner sets `NEXT_PUBLIC_SITE_URL` for it to take effect. | S |
-| **WP-B Accessibility and motion** | `prefers-reduced-motion` for glitch, cursor blink, scanlines and Framer Motion (`MotionConfig reducedMotion="user"` or CSS); `:focus-visible` styles; lift `cp-red` and `cp-muted` text to AA (a lighter red for text, keep the dark red for fills and large text); stronger input borders; skip link and `<main id>`; `aria-live` on the contact status; Escape and focus handling in the mobile menu; `aria-pressed` on skill filters; 24 px minimum targets for links; check `GlitchText` with VoiceOver. | `globals.css`, `Navbar.tsx`, `ContactForm.tsx`, `TerminalInput.tsx`, `SkillBar.tsx`, `SkillsChart.tsx`, `NeonButton.tsx`, `NeonCard.tsx`, the skip-link hunk of `layout.tsx`; tests | Nothing | M |
-| **WP-C Credits and disclaimer** (done 2026-11-20) | `/credits` page listing the stack as it is, the hosting actually in use, fonts, the unofficial-fan-work disclaimer and third-party notices; a `Footer` component with the disclaimer and the credits link. | New `frontend/src/app/credits/page.tsx`, new `components/layout/Footer.tsx`, the footer hunk of `layout.tsx`; tests | Owner approves the disclaimer wording | S |
-| **WP-D Vercel Web Analytics** | Add `@vercel/analytics`, mount once in the layout, document the dashboard toggle and the plan cost; add custom events (CV download, contact click) only if the plan includes them. | `frontend/package.json` and lockfile, one line in `layout.tsx`; a short DEPLOYMENT.md note | Owner enables Web Analytics on the project | S |
-| **WP-E Real content and CV** (content, copy and `/certifications` done 2026-11-20; still open: the owner's real `cv.pdf`, the `mailto:` fallback and contact-page copy, the footer line, and the backend seed data) | Replace `content/index.ts` with the real profile, roles, links and skills grouped by area (drop the percentages or relabel as "daily / comfortable / familiar"); real `cv.pdf`; `mailto:` fallback on the contact page; remove game-corp names. | `frontend/src/content/index.ts`, `frontend/public/cv.pdf`, the contact page copy | **Owner's real content and CV** | S for code |
-| **WP-F Case-study projects** | Each project gets problem, role, decisions, outcome and links; a `/projects/[slug]` page; a "How this site is built" project with the architecture diagram from DEPLOYMENT.md. Keep new fields optional so the Spring API and `types.ts` stay compatible; a Supabase column change only if content moves to the database. | `types.ts`, `ProjectsGrid`, `NeonCard`, new `projects/[slug]/page.tsx`, the content file (after WP-E) | WP-E | M |
-| **WP-G GitHub activity** | Server-side fetch of the owner's public repos with `revalidate: 3600`, a small section on the home page or a `/github` page, graceful fallback if GitHub is slow or rate-limited, optional read-only `GITHUB_TOKEN`. Replaces phase 15. **Done:** section on the home page, optional `GITHUB_USERNAME` and `GITHUB_TOKEN`. | New `frontend/src/lib/github.ts`, new `components/sections/GitHubActivity.tsx`, one hunk in the home page or a new page; tests | Real GitHub username in the content (WP-E) | M |
-| **WP-H Ops hardening (phase 17, reduced)** | Weekly keep-alive that touches the database (a scheduled GitHub Action calling a query-running endpoint, or a Railway cron), an uptime check, a documented export of the `messages` table, secret-rotation notes, Lighthouse baseline recorded in docs. | `.github/workflows/` (new file), `docs/`; maybe one small backend endpoint | Backend live | S to M |
-| **WP-I Admin deploy** | After the owner creates the `admin` Vercel project and microfrontends group: add `frontend/microfrontends.json` and wrap `frontend/next.config.ts` in `withMicrofrontends`; verify `/admin/login` end to end against the real API; make the admin CI job required. | `frontend/microfrontends.json`, `frontend/next.config.ts`, `frontend/package.json`; docs | Backend live; Vercel project and group created by hand | S |
-| **WP-J Monorepo move** | `frontend/` to `apps/web`, a shared UI package and shared API types, one TypeScript version, update workflows, Dockerfile, Vercel root directory and docs. | Almost everything under `frontend/`, `apps/admin`, `.github/workflows/`, docs | Quiet window; WP-A to WP-G merged | M to L |
-| ~~**WP-K Job tracker (phase 11)**~~ | **Dropped 2026-11-20** (owner decision 5): JobSync is used instead. Nothing was merged. | none | n/a | n/a |
-| **WP-L Market research (phase 12)** | Adzuna client, weekly scheduler, table, admin insights page; optional Databricks exercise on exported data. Add the new table to `PostgresPersistenceTest`. | `backend/`, `supabase/`, `apps/admin` | Backend and admin deployed; Adzuna keys; owner decisions 5 and 9 | L |
-
-Overlap notes: WP-A, WP-B and WP-C each touch a different hunk of `layout.tsx`, and WP-A
-and WP-E both touch page-level files; merge in the order A, B, C, D, then E, F, G. WP-J
-must wait for all of them. WP-H and WP-I touch files disjoint from the frontend packages
-(WP-I edits `frontend/next.config.ts` and `package.json`, so it also goes after WP-D). WP-L
-adds backend classes and edits `supabase/init.sql` and `apps/admin`.
-
-## Status of the phases after this roadmap
-
-| Phase | Recommendation |
-|---|---|
-| 7 | Do now (WP-A, WP-B; 7-G via WP-E); drop the particle field |
-| 8 | Redesign to Vercel Web Analytics; do now (WP-D) |
-| 9 | Drop (optional click-to-load later) |
-| 10 | Done (WP-C) |
-| 11 | Dropped (2026-11-20); JobSync is used instead |
-| 12 | Redesign (weekly, simple scheduler, admin-only); after the backend (WP-L) |
-| 13 | Drop |
-| 14 | Drop as a feature; one-off manual update (WP-E) |
-| 15 | Redesign to a GitHub activity section; **built as WP-G** (home page section) |
-| 16 | Drop |
-| 17 | Reduced; do after the backend is live (WP-H, WP-I) |
+| # | Decision | Status | Answer |
+|---|---|---|---|
+| 1 | Real portfolio under the real name, or a persona? | **Answered** | Real name and history; Cyberpunk look as styling only. |
+| 2 | Real content, links and CV | **Answered** (CV open) | Content and certifications are in. The CV file has not been provided. |
+| 3 | Analytics | **Answered** | Vercel Web Analytics, not Amplitude. Not added yet. |
+| 4 | Cyberpunk branding | **Answered** | Look kept with the unofficial-fan-work disclaimer on `/credits` and in the footer; game-corp names gone with the real content; soundtrack dropped. |
+| 5 | Private tools | **Answered** | Job tracker: no (JobSync). Market research: wanted (phase 12). |
+| 6 | Railway Hobby plan for the backend | **Answered** | Deployed. Cost of an always-on JVM is unconfirmed (RESEARCH.md 2.4); check Railway's usage estimate and set a spend limit. |
+| 7 | Contact fallback while the API is offline | **Answered** | Built (`mailto:` plus SMTP fallback). Needs `NEXT_PUBLIC_CONTACT_EMAIL` and the mail variables set on Vercel. |
+| 8 | Monorepo move timing | **Answered** | Later, in a quiet window (WP-J). |
+| 9 | Databricks for phase 12 | **Answered** | Deferred; never on the path of a public page. |
+| 10 | Spotify | **Answered** | Dropped. |
+| 11 | Public GitHub comparison page | **Answered** | Replaced by the GitHub activity section (done). |
+| 12 | `Admin — Node 22 / pnpm` as a required check | **Answered** | Already required. |
+| 13 | Make `Kafka — Node 22 / pnpm` a required check | **Open** | Runs on every PR but is not required. |
