@@ -3,7 +3,7 @@ import GlitchText from '@/components/ui/GlitchText'
 import NeonButton from '@/components/ui/NeonButton'
 import { kafkaDemoUrl } from '@/lib/kafka'
 
-export const metadata = { title: 'Kafka Live Demo // Night City Ops' }
+export const metadata = { title: 'Kafka Live Demo' }
 
 const REPO_URL = 'https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo'
 

@@ -15,15 +15,15 @@ vi.mock('next/link', () => ({
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
   return {
     id: 1,
-    name: 'V',
-    tagline: 'Night City Developer',
+    name: 'Test Person',
+    tagline: 'Backend Developer',
     bio: 'Full-stack engineer',
-    email: 'v@nightcity.dev',
-    location: 'Night City, NC',
+    email: 'person@example.test',
+    location: 'Testville, TS',
     avatarUrl: '',
     cvUrl: '/cv.pdf',
     techStack: ['Java', 'React'],
-    socials: { github: 'https://github.com/v' },
+    socials: { linkedin: 'https://linkedin.example.test/in/person' },
     skills: [],
     updatedAt: '2024-01-01T00:00:00',
     ...overrides,
@@ -38,12 +38,12 @@ describe('HeroSection', () => {
 
   it('renders profile name when profile is given', () => {
     render(<HeroSection profile={makeProfile()} />)
-    expect(screen.getByText('V')).toBeInTheDocument()
+    expect(screen.getByText('Test Person')).toBeInTheDocument()
   })
 
   it('renders profile tagline', () => {
     render(<HeroSection profile={makeProfile()} />)
-    expect(screen.getByText(/Night City Developer/)).toBeInTheDocument()
+    expect(screen.getByText(/Backend Developer/)).toBeInTheDocument()
   })
 
   it('renders all 3 action buttons', () => {
@@ -53,8 +53,34 @@ describe('HeroSection', () => {
     expect(screen.getByRole('link', { name: /contact/i })).toBeInTheDocument()
   })
 
+  it('links the CV button to the configured file', () => {
+    render(<HeroSection profile={makeProfile({ cvUrl: '/cv.pdf' })} />)
+    expect(screen.getByRole('link', { name: /download cv/i })).toHaveAttribute('href', '/cv.pdf')
+  })
+
+  it('hides the CV button when no CV is configured, keeping the other two', () => {
+    render(<HeroSection profile={makeProfile({ cvUrl: '' })} />)
+    expect(screen.queryByRole('link', { name: /download cv/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /view projects/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /contact/i })).toBeInTheDocument()
+  })
+
+  it('shows the email row only when an email is set', () => {
+    const { unmount } = render(<HeroSection profile={makeProfile()} />)
+    expect(screen.getByText('Comm')).toBeInTheDocument()
+    expect(screen.getByText('person@example.test')).toBeInTheDocument()
+    unmount()
+    render(<HeroSection profile={makeProfile({ email: '' })} />)
+    expect(screen.queryByText('Comm')).not.toBeInTheDocument()
+  })
+
   it('renders social links when socials present', () => {
-    render(<HeroSection profile={makeProfile({ socials: { github: 'https://github.com/v' } })} />)
-    expect(screen.getByRole('link', { name: /github/i })).toBeInTheDocument()
+    render(<HeroSection profile={makeProfile()} />)
+    expect(screen.getByRole('link', { name: /linkedin/i })).toHaveAttribute('href', 'https://linkedin.example.test/in/person')
+  })
+
+  it('carries no persona copy', () => {
+    const { container } = render(<HeroSection profile={makeProfile()} />)
+    expect(container.textContent).not.toMatch(/night.?city/i)
   })
 })

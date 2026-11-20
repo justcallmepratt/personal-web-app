@@ -1,12 +1,16 @@
 import Link from 'next/link'
+import PlannedProjects from '@/components/sections/PlannedProjects'
 import ProjectsGrid from '@/components/sections/ProjectsGrid'
 import GlitchText from '@/components/ui/GlitchText'
 import { api } from '@/lib/api'
 
-export const metadata = { title: 'Projects // Night City Ops' }
+export const metadata = { title: 'Projects' }
 
 export default async function ProjectsPage() {
-  const projects = await api.getProjects().catch(() => [])
+  const [projects, planned] = await Promise.all([
+    api.getProjects().catch(() => []),
+    api.getPlannedProjects().catch(() => []),
+  ])
   return (
     <section className="max-w-6xl mx-auto px-4 py-10 md:py-16">
       <h1 className="font-[var(--font-display)] text-2xl sm:text-3xl mb-6 sm:mb-8 tracking-wider">
@@ -23,6 +27,7 @@ export default async function ProjectsPage() {
       ) : (
         <ProjectsGrid projects={projects} />
       )}
+      <PlannedProjects items={planned} />
     </section>
   )
 }

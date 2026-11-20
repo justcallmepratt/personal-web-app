@@ -5,8 +5,8 @@ import { pageMetadata } from '@/lib/site'
 // they sit beside the page without changing page.tsx; the page's own `title`
 // export still wins for the document title, and it matches this one.
 export const metadata = pageMetadata({
-  title: 'Projects // Night City Ops',
-  description: 'Selected projects, with the stack behind each one and links to demos and source code.',
+  title: 'Projects',
+  description: 'Projects by Pratham Sachan, with the stack behind each one and links to demos and source code where they exist.',
   path: '/projects',
 })
 

@@ -1,37 +1,49 @@
-import type { Profile, Project, Experience } from '@/lib/types'
+import type { Profile, Project, Experience, Certification, PlannedProject } from '@/lib/types'
 
 // Site content. Edit this file and push to update the site — no database or
-// backend is involved. The values below are the original placeholder seed
-// data (ported from backend SeedRunner.java); replace them with real ones.
+// backend is involved. The site is public: publish only facts the owner has
+// confirmed, and leave a field empty rather than guessing.
+//
+// - `email` is empty on purpose: no email address is published.
+// - `cvUrl` is empty until a real CV exists. To turn the "Download CV" button
+//   on, add the file as `public/cv.pdf` and set `cvUrl: '/cv.pdf'`.
+// - `socials` holds LinkedIn only (owner decision, 2026-11-20).
+// - Skills carry no `level`: the page lists them by area without ratings.
 
 export const profile: Profile = {
   id: 1,
-  name: 'V',
-  tagline: 'Night City Developer',
-  bio: 'Full-stack engineer wiring chrome to silicon. Java on the back, React on the front, neon all over.',
-  email: 'v@nightcity.dev',
-  location: 'Night City, NC',
+  name: 'Pratham Sachan',
+  tagline: 'Backend Software Developer at Raymond James',
+  bio:
+    'Backend developer in Tampa, FL, working with Java, Spring Boot and Kafka at Raymond James since July 2024. ' +
+    'I studied Computer Science (B.S.) with a minor in Business Management at the University of Massachusetts Amherst, ' +
+    'where I co-founded the UMass F1 club and was its vice president.',
+  email: '',
+  location: 'Tampa, FL',
   avatarUrl: '',
-  cvUrl: '/cv.pdf',
-  techStack: ['Java', 'Spring Boot', 'TypeScript', 'Next.js', 'Postgres', 'Docker'],
+  cvUrl: '',
+  techStack: ['Java', 'Spring Boot', 'Kafka', 'Microsoft SQL Server', 'Splunk', 'Dynatrace'],
   socials: {
-    github: 'https://github.com/yourhandle',
-    linkedin: 'https://linkedin.com/in/yourhandle',
-    twitter: 'https://twitter.com/yourhandle',
+    linkedin: 'https://linkedin.com/in/prathamsachan',
   },
   skills: [
-    { name: 'React', category: 'Frontend', level: 90 },
-    { name: 'Next.js', category: 'Frontend', level: 85 },
-    { name: 'TypeScript', category: 'Frontend', level: 88 },
-    { name: 'Tailwind CSS', category: 'Frontend', level: 92 },
-    { name: 'Java', category: 'Backend', level: 90 },
-    { name: 'Spring Boot', category: 'Backend', level: 85 },
-    { name: 'Postgres', category: 'Backend', level: 78 },
-    { name: 'REST APIs', category: 'Backend', level: 88 },
-    { name: 'Docker', category: 'DevOps', level: 72 },
-    { name: 'AWS', category: 'DevOps', level: 65 },
-    { name: 'CI/CD', category: 'DevOps', level: 70 },
-    { name: 'Figma', category: 'Other', level: 60 },
+    { name: 'Java', category: 'Backend' },
+    { name: 'Spring', category: 'Backend' },
+    { name: 'Spring Boot', category: 'Backend' },
+    { name: 'Kafka', category: 'Backend' },
+    { name: 'Confluent Kafka', category: 'Backend' },
+    { name: 'Python', category: 'Backend' },
+    { name: 'Microsoft SQL Server', category: 'Backend' },
+    { name: 'Oracle SQL Developer', category: 'Backend' },
+    { name: 'JavaScript', category: 'Frontend' },
+    { name: 'CSS', category: 'Frontend' },
+    { name: 'ReactJS', category: 'Frontend' },
+    { name: 'Angular', category: 'Frontend' },
+    { name: 'Flutter', category: 'Frontend' },
+    { name: 'Splunk', category: 'DevOps' },
+    { name: 'Dynatrace', category: 'DevOps' },
+    { name: 'C', category: 'Other' },
+    { name: 'Swift', category: 'Other' },
   ],
   updatedAt: '2026-11-20',
 }
@@ -39,14 +51,15 @@ export const profile: Profile = {
 export const projects: Project[] = [
   {
     id: 1,
-    title: 'Neon Dashboard',
-    description: 'Real-time metrics with cyberpunk flair',
+    title: 'justcallmepratt.dev',
+    description:
+      'This site: a static Next.js app on Vercel that renders from content kept in its repository.',
     longDescription:
-      'A reactive admin console pulling from Kafka streams, with WebGL particle effects on every alert.',
-    tags: ['React', 'WebSockets', 'WebGL'],
-    stack: ['Next.js', 'TypeScript', 'Three.js'],
-    demoUrl: 'https://example.com/demo1',
-    repoUrl: 'https://github.com/you/neon-dash',
+      'The public pages are static and served from Vercel. A Spring Boot API backed by Postgres is in the same repository, built and tested in CI but not deployed yet; until it is, pages render from the content file in the repo.',
+    tags: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Spring Boot'],
+    stack: ['Next.js', 'React', 'TypeScript', 'Tailwind CSS', 'Spring Boot', 'Postgres'],
+    demoUrl: '',
+    repoUrl: 'https://github.com/justcallmepratt/personal-web-app',
     imageUrl: '',
     featured: true,
     sortOrder: 1,
@@ -54,127 +67,139 @@ export const projects: Project[] = [
   },
   {
     id: 2,
-    title: 'Quickhack CLI',
-    description: 'Encrypted ops tool for the wired',
+    title: 'Kafka Producer & Consumer Demo',
+    description:
+      'A modular Spring Boot application demonstrating a Kafka producer and consumer with PostgreSQL persistence. The live demo sends a record through a real broker.',
     longDescription:
-      'Rust-based CLI for managing encrypted secrets across machines. Uses age + signed manifests.',
-    tags: ['Rust', 'CLI', 'Security'],
-    stack: ['Rust', 'Tokio', 'age'],
-    demoUrl: '',
-    repoUrl: 'https://github.com/you/quickhack',
+      'A Maven multi-module Spring Boot application: a producer publishes records to a Kafka topic, a consumer reads them back and stores them in PostgreSQL, and a REST API exposes them.',
+    tags: ['Java', 'Spring Boot', 'Kafka', 'PostgreSQL'],
+    stack: ['Java 21', 'Spring Boot', 'Spring Kafka', 'PostgreSQL', 'Docker'],
+    demoUrl: '/projects/kafka',
+    repoUrl: 'https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo',
     imageUrl: '',
     featured: true,
     sortOrder: 2,
-    createdAt: '2026-05-02',
+    createdAt: '2026-02-08',
   },
   {
     id: 3,
-    title: 'Braindance Player',
-    description: 'Spatial audio web experience',
+    title: 'MinuteBoard',
+    description:
+      'A social platform for the UMass community to share images and videos. Built February to May 2023.',
     longDescription:
-      'Immersive audio-visual demo running entirely in the browser with WebAudio + Three.js.',
-    tags: ['WebAudio', 'Three.js'],
-    stack: ['Vite', 'TypeScript', 'Three.js'],
-    demoUrl: 'https://example.com/demo3',
-    repoUrl: 'https://github.com/you/braindance',
+      'A social platform for the UMass community to share images and videos, built with Flutter, Firebase, React and OpenAI.',
+    tags: ['Flutter', 'Firebase', 'React', 'OpenAI'],
+    stack: ['Flutter', 'Firebase', 'React', 'OpenAI'],
+    demoUrl: '',
+    repoUrl: '',
     imageUrl: '',
-    featured: false,
+    featured: true,
     sortOrder: 3,
-    createdAt: '2026-05-02',
+    createdAt: '2023-02-01',
   },
   {
     id: 4,
-    title: 'Trauma Team API',
-    description: 'On-call rotation manager',
+    title: 'Smart Course Selection App',
+    description:
+      'A prototype guiding high-school students through course selection. Built May 2019 to February 2020.',
     longDescription:
-      'Spring Boot service managing on-call schedules with PagerDuty + Slack integration.',
-    tags: ['Spring Boot', 'Java', 'Integrations'],
-    stack: ['Java 21', 'Spring Boot', 'Postgres'],
+      'A prototype application guiding high-school students through course selection.',
+    tags: ['Prototype'],
+    stack: [],
     demoUrl: '',
-    repoUrl: 'https://github.com/you/trauma-team',
+    repoUrl: '',
     imageUrl: '',
     featured: false,
     sortOrder: 4,
-    createdAt: '2026-05-02',
+    createdAt: '2019-05-01',
+  },
+]
+
+// Ideas with no code yet, shown under "In the works" on /projects, below the
+// real projects. Keep them out of `projects`: no links, no dates, never featured.
+// When one ships, move it to `projects` and delete it here.
+export const plannedProjects: PlannedProject[] = [
+  {
+    id: 1,
+    name: 'Elgato Stream Deck plugin pack',
+    goal: 'A set of Stream Deck plugins and profiles for common setups: office, gaming, streaming and development.',
+  },
+  {
+    id: 2,
+    name: 'Athlink Upscale',
+    goal: 'Upscaling race and event photos.',
+  },
+  {
+    id: 3,
+    name: 'Google Email Sorter',
+    goal: 'Sorting Gmail with AI-suggested labels, with a dry-run review step and no deletion.',
+  },
+  {
+    id: 4,
+    name: 'Google Drive Sorter',
+    goal: 'Organising Google Drive into a sensible folder structure, with preview and rollback.',
   },
   {
     id: 5,
-    title: 'Scanner Net',
-    description: 'Distributed port scanner',
-    longDescription:
-      'Go-powered concurrent scanner with rate-limited probing and Slack alerts on new exposures.',
-    tags: ['Go', 'Networking'],
-    stack: ['Go', 'Cobra', 'Slack API'],
-    demoUrl: '',
-    repoUrl: 'https://github.com/you/scanner-net',
-    imageUrl: '',
-    featured: false,
-    sortOrder: 5,
-    createdAt: '2026-05-02',
+    name: 'Google Bookmark Sorter',
+    goal: 'Categorising and de-duplicating browser bookmarks and finding dead links.',
   },
 ]
 
 export const experience: Experience[] = [
   {
     id: 1,
-    company: 'Arasaka',
-    role: 'Senior Engineer',
-    location: 'Night City',
-    startDate: '2024-03-01',
+    company: 'Raymond James',
+    role: 'Backend Software Developer',
+    location: 'Tampa, FL',
+    startDate: '2024-07-01',
     endDate: null,
     current: true,
-    description: 'Leading core platform team building zero-trust infrastructure.',
-    highlights: [
-      'Cut deploy time 40% via Spinnaker pipeline overhaul',
-      'Designed cross-region failover for a fleet of 200 services',
-      'Mentored 4 mid-level engineers',
+    description:
+      'Entry-level backend developer role, working with Spring Boot and Java (Amazon Corretto), Kafka and Confluent Kafka, SQL databases, and Splunk and Dynatrace.',
+    highlights: [],
+    technologies: [
+      'Java (Amazon Corretto)', 'Spring', 'Spring Boot', 'Kafka', 'Confluent Kafka',
+      'Oracle SQL Developer', 'Microsoft SQL Server', 'Splunk', 'Dynatrace',
     ],
-    technologies: ['Java', 'Kubernetes', 'AWS', 'Spring Boot'],
     sortOrder: 1,
   },
   {
     id: 2,
-    company: 'Militech',
-    role: 'Backend Engineer',
-    location: 'Watson',
-    startDate: '2022-01-01',
-    endDate: '2024-02-28',
+    company: 'Raymond James',
+    role: 'Software Engineering Intern',
+    location: 'Tampa, FL',
+    startDate: '2023-06-01',
+    // End date not confirmed by the owner: with `current: false` and no end
+    // date the timeline shows the start month only.
+    endDate: null,
     current: false,
-    description: 'Built and maintained internal trading APIs handling 10k req/sec.',
-    highlights: [
-      'Reduced p99 latency from 800ms to 120ms',
-      'Migrated legacy SOAP services to gRPC',
-    ],
-    technologies: ['Go', 'Postgres', 'gRPC', 'Redis'],
+    description:
+      'Built an OpenAI GPT-4 based AngularJS application that applies codebase improvements suggested by a third-party code-quality API.',
+    highlights: [],
+    technologies: ['OpenAI GPT-4', 'AngularJS'],
     sortOrder: 2,
   },
   {
     id: 3,
-    company: 'Kang Tao',
-    role: 'Software Engineer',
-    location: 'Westbrook',
-    startDate: '2020-06-01',
-    endDate: '2021-12-31',
+    company: 'Blackstraw AI',
+    role: 'Data Science Intern',
+    location: 'Tampa, FL',
+    startDate: '2021-06-01',
+    endDate: '2021-08-01',
     current: false,
-    description: 'Frontend lead on consumer-facing storefront serving 2M MAUs.',
-    highlights: [
-      'Shipped React-Native app rated 4.8 on App Store',
-      'Set up Storybook + visual regression CI',
-    ],
-    technologies: ['React', 'TypeScript', 'GraphQL'],
+    description:
+      'Built a Python machine-learning application using reinforcement learning and GAN models for resume shortlisting.',
+    highlights: ['75% less shortlisting time and 60% better shortlisting accuracy'],
+    technologies: ['Python', 'Reinforcement Learning', 'GANs'],
     sortOrder: 3,
   },
-  {
-    id: 4,
-    company: 'NetWatch',
-    role: 'Junior Developer',
-    location: 'Pacifica',
-    startDate: '2019-08-01',
-    endDate: '2020-05-31',
-    current: false,
-    description: 'First role. Built internal tooling for incident response.',
-    highlights: ['Authored Slack bot used by 30+ analysts daily'],
-    technologies: ['Python', 'Django', 'Slack API'],
-    sortOrder: 4,
-  },
+]
+
+// Shown on /certifications. Only `name` and `issuer` are required; add `date`
+// (ISO: '2023', '2023-05' or '2023-05-14'), `credentialId` and `url` when known.
+export const certifications: Certification[] = [
+  { id: 1, name: 'Microsoft Technology Associate', issuer: 'Microsoft', sortOrder: 1 },
+  { id: 2, name: 'Java Programming Masterclass', issuer: 'Udemy', sortOrder: 2 },
+  { id: 3, name: 'TensorFlow', issuer: 'Udemy', sortOrder: 3 },
 ]

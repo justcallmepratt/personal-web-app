@@ -1,7 +1,8 @@
 export interface Skill {
   name: string
   category: 'Frontend' | 'Backend' | 'DevOps' | 'Other'
-  level: number
+  /** 0–100 rating. Optional: the repo content lists skills without one. */
+  level?: number
 }
 
 export interface Profile {
@@ -46,6 +47,30 @@ export interface Experience {
   highlights: string[]
   technologies: string[]
   sortOrder: number
+}
+
+/** A certification or course certificate. Repo content only: the API has no endpoint for it yet. */
+export interface Certification {
+  id: number
+  name: string
+  issuer: string
+  /** ISO date, as precise as is known: '2023', '2023-05' or '2023-05-14'. */
+  date?: string
+  credentialId?: string
+  /** Link to the credential or its verification page. */
+  url?: string
+  sortOrder?: number
+}
+
+/**
+ * An idea with no code yet. Deliberately not a Project: it has no links, dates
+ * or `featured` flag, and the Spring API never returns it.
+ */
+export interface PlannedProject {
+  id: number
+  name: string
+  /** One line on what it is meant to do. */
+  goal: string
 }
 
 export interface ContactPayload {

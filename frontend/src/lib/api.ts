@@ -1,7 +1,7 @@
 import type {
-  Profile, Project, Experience, ContactPayload, ApiResponse, KafkaMessagesResponse,
+  Profile, Project, Experience, Certification, PlannedProject, ContactPayload, ApiResponse, KafkaMessagesResponse,
 } from './types'
-import { profile, projects, experience } from '@/content'
+import { profile, projects, experience, certifications, plannedProjects } from '@/content'
 
 // ── Content source ───────────────────────────────────────────────────────────
 //
@@ -37,8 +37,8 @@ async function load<T>(path: string, local: () => T): Promise<T> {
   }
 }
 
-const bySortOrder = <T extends { sortOrder: number }>(items: T[]) =>
-  [...items].sort((a, b) => a.sortOrder - b.sortOrder)
+const bySortOrder = <T extends { sortOrder?: number }>(items: T[]) =>
+  [...items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 
 export const api = {
   getProfile:    ()               => load<Profile>('/api/profile', () => profile),
@@ -46,6 +46,12 @@ export const api = {
     load<Project[]>(`/api/projects${featured ? '?featured=true' : ''}`, () =>
       bySortOrder(featured ? projects.filter((p) => p.featured) : projects)),
   getExperience: ()               => load<Experience[]>('/api/experience', () => bySortOrder(experience)),
+  // The Spring API has no certifications endpoint yet, so this always reads the
+  // repo content. When one exists, wrap it in load() like the getters above.
+  getCertifications: (): Promise<Certification[]> => Promise.resolve(bySortOrder(certifications)),
+  // Ideas with no code yet. Repo content only, like certifications, and kept
+  // apart from getProjects() so they can never show up as shipped or featured.
+  getPlannedProjects: (): Promise<PlannedProject[]> => Promise.resolve([...plannedProjects]),
 
   sendContact: (body: ContactPayload): Promise<ApiResponse> =>
     fetch('/api/contact', {

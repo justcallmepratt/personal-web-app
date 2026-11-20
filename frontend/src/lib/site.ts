@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 // the Open Graph image and JSON-LD so they cannot drift apart.
 
 export const DEFAULT_SITE_URL = 'https://justcallmepratt.dev'
-export const DEFAULT_SITE_NAME = 'V // Night City Dev'
+export const DEFAULT_SITE_NAME = 'Pratham Sachan'
 
 /**
  * Normalises NEXT_PUBLIC_SITE_URL to an origin without a trailing slash.
@@ -26,10 +26,10 @@ export function resolveSiteUrl(raw: string | undefined): string {
 export const siteUrl = resolveSiteUrl(process.env.NEXT_PUBLIC_SITE_URL)
 export const siteName = process.env.NEXT_PUBLIC_SITE_NAME?.trim() || DEFAULT_SITE_NAME
 export const siteDescription =
-  'Full-stack engineer — Java, Spring Boot, React, Next.js. Night City protocols.'
+  'Pratham Sachan — backend software developer in Tampa, FL. Java, Spring Boot and Kafka.'
 
 /** Public, indexable routes. `/api/*` is deliberately absent. */
-export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/contact', '/credits'] as const
+export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/certifications', '/contact', '/credits'] as const
 export type PublicRoute = (typeof publicRoutes)[number]
 
 /** Absolute URL for a site path; the home page has no trailing slash. */
@@ -85,7 +85,7 @@ export const rootMetadata: Metadata = {
   ...pageMetadata({ description: siteDescription, path: '/' }),
 }
 
-/** Minimal structured data: the site itself, no person details (content is placeholder). */
+/** Minimal structured data: the site itself, no Person entry yet. */
 export const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',

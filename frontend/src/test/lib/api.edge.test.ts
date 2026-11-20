@@ -52,7 +52,7 @@ describe('api — edge cases', () => {
   // ── Successful responses return correct types ─────────────────────────────
 
   it('getProfile returns profile with correct shape', async () => {
-    const profile = { id: 1, name: 'V', tagline: 'Night City', bio: '', email: '',
+    const profile = { id: 1, name: 'Remote Name', tagline: 'From the API', bio: '', email: '',
       location: '', avatarUrl: '', cvUrl: '', techStack: [], socials: {}, skills: [],
       updatedAt: '2024-01-01' }
     vi.mocked(fetch).mockResolvedValue({
@@ -60,7 +60,7 @@ describe('api — edge cases', () => {
       json: () => Promise.resolve(profile)
     } as never)
     const result = await api.getProfile()
-    expect(result.name).toBe('V')
+    expect(result.name).toBe('Remote Name')
     expect(result.skills).toEqual([])
   })
 

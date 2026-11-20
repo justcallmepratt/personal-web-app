@@ -21,6 +21,33 @@ const skills: Skill[] = [
   { name: 'Docker', category: 'DevOps', level: 72 },
 ]
 
+describe('SkillsChart — skills without a level', () => {
+  const unrated: Skill[] = [
+    { name: 'Java', category: 'Backend' },
+    { name: 'Kafka', category: 'Backend' },
+    { name: 'CSS', category: 'Frontend' },
+  ]
+
+  it('lists them by category with no percentage anywhere', () => {
+    const { container } = render(<SkillsChart skills={unrated} />)
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['CSS', 'Java', 'Kafka'])
+    expect(container.textContent).not.toContain('%')
+  })
+
+  it('still filters by category', async () => {
+    render(<SkillsChart skills={unrated} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Backend' }))
+    expect(screen.queryByText('CSS')).not.toBeInTheDocument()
+    expect(screen.getByText('Java')).toBeInTheDocument()
+  })
+
+  it('shows a bar only for the skills that have a level', () => {
+    render(<SkillsChart skills={[...unrated, { name: 'Rated', category: 'Backend', level: 50 }]} />)
+    expect(screen.getByText('050%')).toBeInTheDocument()
+    expect(screen.getAllByText(/%$/)).toHaveLength(1)
+  })
+})
+
 describe('SkillsChart', () => {
   it('renders all skill categories present in the data', () => {
     render(<SkillsChart skills={skills} />)
