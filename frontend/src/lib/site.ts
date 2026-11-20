@@ -29,7 +29,7 @@ export const siteDescription =
   'Pratham Sachan — backend software developer in Tampa, FL. Java, Spring Boot and Kafka.'
 
 /** Public, indexable routes. `/api/*` is deliberately absent. */
-export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/certifications', '/contact'] as const
+export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/certifications', '/contact', '/credits'] as const
 export type PublicRoute = (typeof publicRoutes)[number]
 
 /** Absolute URL for a site path; the home page has no trailing slash. */

@@ -39,13 +39,23 @@ jobs:
       - name: Compile
         run: mvn -B compile -q
 
-      - name: Test (H2 in-memory via test profile)
-        run: mvn -B test
+      # One Maven run: unit and slice tests (H2 via the test profile), the PostgreSQL
+      # integration tests (Testcontainers, using the runner's Docker), the JAR, and the
+      # JaCoCo coverage gate, which is bound to the verify phase.
+      - name: Test, package and coverage gate
+        run: mvn -B verify
         env:
           SPRING_PROFILES_ACTIVE: test
 
-      - name: Package
-        run: mvn -B package -DskipTests -q
+      # Testcontainers skips the PostgreSQL tests when Docker is missing, which is right
+      # on a laptop and wrong here: a skip must not look like a pass.
+      - name: Check the PostgreSQL tests ran
+        run: |
+          report=target/surefire-reports/TEST-com.resume.persistence.PostgresPersistenceTest.xml
+          test -f "$report" || { echo "::error::$report is missing: the PostgreSQL tests did not run"; exit 1; }
+          head -n 5 "$report" | grep -o '<testsuite [^>]*' | tee /dev/stderr | grep -q ' skipped="0"' \
+            || { echo "::error::PostgreSQL tests were skipped (is Docker available on the runner?)"; exit 1; }
+          if head -n 5 "$report" | grep -q ' tests="0"'; then echo "::error::No PostgreSQL tests ran"; exit 1; fi
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v7
