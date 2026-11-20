@@ -11,8 +11,9 @@
 
 A full-stack personal portfolio styled after the **CP2077 Neo Militarism** aesthetic.
 
-Today there is one Next.js app (`frontend/`), deployed on Vercel. A planned `admin`
-micro-frontend (login, inbox, job tracker) does not exist yet. The Spring Boot REST API
+Today one Next.js app (`frontend/`) is deployed on Vercel. A second one, the `admin`
+micro-frontend in `apps/admin` (login and message inbox), is built but not deployed
+yet; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#admin-app). The Spring Boot REST API
 in `backend/` is built and tested in CI but **is not deployed yet**, so the live site
 serves the content kept in the repo (`frontend/src/content`). When `BACKEND_URL` is
 set, pages read the API on the server and fall back to that same content if it is
@@ -179,7 +180,7 @@ From [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md#roadmap):
 1. Live on the domain: done.
 2. Backend on Railway, using the existing Supabase project as its database.
 3. Monorepo: move `frontend/` to `apps/web`, extract shared UI and API types.
-4. `admin` micro-frontend for login, inbox and job tracker.
+4. `admin` micro-frontend: login and inbox are built (`apps/admin`); deploying it and the job tracker remain.
 
 [`docs/agents/`](docs/agents/) holds design briefs for further features (analytics,
 credits page, job tracker, market research and others). They are unbuilt, mostly

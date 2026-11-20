@@ -35,6 +35,20 @@ updates:
       tailwind:
         patterns: ["tailwindcss", "@tailwindcss/*"]
 
+  # npm/pnpm — apps/admin/package.json
+  - package-ecosystem: npm
+    directory: /apps/admin
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      next-react:
+        patterns: ["next", "react", "react-dom"]
+      types:
+        patterns: ["@types/*"]
+      tailwind:
+        patterns: ["tailwindcss", "@tailwindcss/*"]
+
   # Dev containers
   - package-ecosystem: devcontainers
     directory: /
