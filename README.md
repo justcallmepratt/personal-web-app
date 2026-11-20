@@ -13,7 +13,9 @@ A full-stack personal portfolio styled after the **CP2077 Neo Militarism** aesth
 
 Today one Next.js app (`frontend/`) is deployed on Vercel. A second one, the `admin`
 micro-frontend in `apps/admin` (login and message inbox), is built but not deployed
-yet; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#admin-app). The Spring Boot REST API
+yet; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#admin-app). A third, `apps/kafka`, is
+the live Kafka demo as its own micro-frontend, also built but not deployed; the demo
+currently runs from `frontend/` ([details](docs/DEPLOYMENT.md#kafka-app)). The Spring Boot REST API
 in `backend/` is built and tested in CI but **is not deployed yet**, so the live site
 serves the content kept in the repo (`frontend/src/content`). When `BACKEND_URL` is
 set, pages read the API on the server and fall back to that same content if it is
