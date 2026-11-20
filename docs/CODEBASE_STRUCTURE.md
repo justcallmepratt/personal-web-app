@@ -38,6 +38,9 @@ frontend/src/
 └── test/                         → Vitest + React Testing Library, mirrors src/
 ```
 
+Outside `src/`: `frontend/vercel.json` sets the security headers (HSTS, X-Frame-Options, Referrer-Policy and others) and cache headers
+and build commands for Vercel.
+
 ### Rules
 
 1. **Pages get data through `lib/api.ts`**, never by importing `content/` directly.
@@ -99,8 +102,8 @@ apps/admin/src/
 
 ## Backend — Spring Boot 4.1 (Java 21)
 
-The service layer: content, contact messages and admin auth. Deployed to Railway from
-`backend/` (see `backend/railway.toml`); built and tested in CI.
+The service layer: content, contact messages and admin auth. Intended for Railway from
+`backend/` (see `backend/railway.toml`); not live yet. Built and tested in CI.
 
 ```
 backend/src/main/java/com/resume/
@@ -125,6 +128,11 @@ backend/src/main/java/com/resume/
 Profiles: `dev` (Supabase Postgres via `SUPABASE_DB_PASSWORD`), `docker`
 (`SPRING_DATASOURCE_*`), `test` (H2 in memory). Hibernate runs with
 `ddl-auto: validate`, so the schema must already exist.
+
+The `dev` profile's default datasource host is Supabase's direct host
+(`db.<ref>.supabase.co`), which is IPv6-only on the free plan. Production should set
+`SPRING_DATASOURCE_URL` to the Supabase session pooler instead (see
+[DEPLOYMENT.md](DEPLOYMENT.md)).
 
 ## Database — Postgres (backend only)
 

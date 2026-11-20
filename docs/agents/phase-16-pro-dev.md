@@ -1,5 +1,9 @@
 # Phase 16 — Professional Development Dashboard Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started; depends on Phases 12 and 15. Admin pages belong in the planned `admin` micro-frontend, not the public app.
+> No longer holds: Railway Postgres and `ddl-auto: update` (the repo uses `validate`).
+
 ## Objective
 Admin-only dashboard surfacing skill gaps, learning velocity, and recommended next steps
 by combining market data (Phase 12) and GitHub benchmarks (Phase 15).

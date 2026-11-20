@@ -1,5 +1,9 @@
 # Phase 9 — Spotify Integration Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started. Frontend-only; `NEXT_PUBLIC_SPOTIFY_TRACK_ID` was removed from `.env.example` and would need adding back.
+> No Railway assumptions.
+
 ## Objective
 Embed the Cyberpunk 2077 OST track "The Rebel Path" by Refused in the hero section.
 User clicks once to play — browser autoplay policy means we cannot autoplay on load.

@@ -14,7 +14,7 @@ How the site is built, deployed and configured. This replaces the earlier
                        └───────────────┬──────────────────────────┘
                                        │ server-side only (BACKEND_URL)
                                        ▼
-                       api.justcallmepratt.dev (Railway)
+                       api.justcallmepratt.dev (Railway)  — not live yet
                        Spring Boot API (backend/) ──▶ Supabase Postgres
 ```
 
@@ -22,8 +22,8 @@ How the site is built, deployed and configured. This replaces the earlier
   (login and inbox; job tracker later) is a second Next.js app in `apps/admin`, to be
   routed under `/admin/*` with Vercel Microfrontends. The code is in the repository
   but not deployed yet. See [Admin app](#admin-app).
-- **Services on Railway.** The Spring Boot API owns content, contact messages and
-  admin auth, backed by Postgres.
+- **Services on Railway (not live yet).** The Spring Boot API owns content, contact messages and
+  admin auth, backed by Postgres. Until it is deployed, the live site serves the repo content.
 - **The browser only talks to Vercel.** Pages fetch content from the API on the server;
   the contact form posts to `web`'s own `/api/contact`, which relays to the API. No CORS
   and no API URL in the client bundle.
@@ -250,8 +250,7 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
 ## Roadmap
 
 1. **Live on the domain:** done.
-2. **Backend on Railway:** apply the Railway setup above. Land the Spring Boot 4.1
-   upgrade (PR #32) first so the redeploy starts from the current framework version.
+2. **Backend on Railway:** apply the Railway setup above.
 3. **Monorepo:** move `frontend/` to `apps/web`, extract shared UI and API types into
    packages.
 4. **`admin` micro-frontend:** login and inbox are built (`apps/admin`). Still to do:
@@ -273,11 +272,8 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
 
 ## Cleanup still to do by hand
 
-- **GitHub secrets no longer used by any workflow:** `RAILWAY_DEPLOY_HOOK_URL`,
-  `RAILWAY_SERVICE_ID`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`,
-  `BACKEND_URL`, `AMPLITUDE_API_KEY`, and the old `RAILWAY_TOKEN` value.
 - **GitHub environments:** the `… – backend` and `… – personal-web-app` environments
   were created by the two unused Vercel projects and can be deleted once those are gone.
 - **Supabase:** nothing outstanding. Its security advisors reported no issues on
   2026-11-20; re-check them after any schema change.
-- **Dependabot PRs:** triaged; see PR #32 for the Spring Boot 4.1 + springdoc 3.2 upgrade.
+- **Dependabot PRs:** triaged; the Spring Boot 4.1 + springdoc 3.2 upgrade is merged.

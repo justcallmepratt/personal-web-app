@@ -1,3 +1,5 @@
+> **Historical snapshot (2026-05-18).** This reports on a deployment that no longer exists (old Railway backend and Vercel setup). [DEPLOYMENT.md](DEPLOYMENT.md) is current; do not rely on the figures below.
+
 # End-to-End Validation Report
 
 **Last run:** 2026-05-18
