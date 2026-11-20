@@ -27,13 +27,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # One PR per run for all minor and patch bumps, so lockfile changes land
+    # together instead of as several PRs that each rewrite pnpm-lock.yaml.
+    # Major bumps still arrive one per dependency for manual review.
     groups:
-      next-react:
-        patterns: ["next", "react", "react-dom"]
-      types:
-        patterns: ["@types/*"]
-      tailwind:
-        patterns: ["tailwindcss", "@tailwindcss/*"]
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # npm/pnpm — apps/admin/package.json
   - package-ecosystem: npm
@@ -41,13 +41,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # One PR per run for all minor and patch bumps, so lockfile changes land
+    # together instead of as several PRs that each rewrite pnpm-lock.yaml.
+    # Major bumps still arrive one per dependency for manual review.
     groups:
-      next-react:
-        patterns: ["next", "react", "react-dom"]
-      types:
-        patterns: ["@types/*"]
-      tailwind:
-        patterns: ["tailwindcss", "@tailwindcss/*"]
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # Dev containers
   - package-ecosystem: devcontainers
