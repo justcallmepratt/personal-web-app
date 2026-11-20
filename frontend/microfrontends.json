@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/microfrontends.json",
+  "applications": {
+    "frontend": {
+      "development": { "fallback": "justcallmepratt.dev" }
+    },
+    "kafka": {
+      "routing": [{ "paths": ["/kafka", "/kafka/:path*"] }]
+    }
+  }
+}
