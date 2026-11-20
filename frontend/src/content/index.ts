@@ -1,4 +1,4 @@
-import type { Profile, Project, Experience, Certification } from '@/lib/types'
+import type { Profile, Project, Experience, Certification, PlannedProject } from '@/lib/types'
 
 // Site content. Edit this file and push to update the site — no database or
 // backend is involved. The site is public: publish only facts the owner has
@@ -112,6 +112,37 @@ export const projects: Project[] = [
     featured: false,
     sortOrder: 4,
     createdAt: '2019-05-01',
+  },
+]
+
+// Ideas with no code yet, shown under "In the works" on /projects, below the
+// real projects. Keep them out of `projects`: no links, no dates, never featured.
+// When one ships, move it to `projects` and delete it here.
+export const plannedProjects: PlannedProject[] = [
+  {
+    id: 1,
+    name: 'Elgato Stream Deck plugin pack',
+    goal: 'A set of Stream Deck plugins and profiles for common setups: office, gaming, streaming and development.',
+  },
+  {
+    id: 2,
+    name: 'Athlink Upscale',
+    goal: 'Upscaling race and event photos.',
+  },
+  {
+    id: 3,
+    name: 'Google Email Sorter',
+    goal: 'Sorting Gmail with AI-suggested labels, with a dry-run review step and no deletion.',
+  },
+  {
+    id: 4,
+    name: 'Google Drive Sorter',
+    goal: 'Organising Google Drive into a sensible folder structure, with preview and rollback.',
+  },
+  {
+    id: 5,
+    name: 'Google Bookmark Sorter',
+    goal: 'Categorising and de-duplicating browser bookmarks and finding dead links.',
   },
 ]
 

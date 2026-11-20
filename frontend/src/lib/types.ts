@@ -62,6 +62,17 @@ export interface Certification {
   sortOrder?: number
 }
 
+/**
+ * An idea with no code yet. Deliberately not a Project: it has no links, dates
+ * or `featured` flag, and the Spring API never returns it.
+ */
+export interface PlannedProject {
+  id: number
+  name: string
+  /** One line on what it is meant to do. */
+  goal: string
+}
+
 export interface ContactPayload {
   name: string
   email: string

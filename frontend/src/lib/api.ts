@@ -1,7 +1,7 @@
 import type {
-  Profile, Project, Experience, Certification, ContactPayload, ApiResponse, KafkaMessagesResponse,
+  Profile, Project, Experience, Certification, PlannedProject, ContactPayload, ApiResponse, KafkaMessagesResponse,
 } from './types'
-import { profile, projects, experience, certifications } from '@/content'
+import { profile, projects, experience, certifications, plannedProjects } from '@/content'
 
 // ── Content source ───────────────────────────────────────────────────────────
 //
@@ -49,6 +49,9 @@ export const api = {
   // The Spring API has no certifications endpoint yet, so this always reads the
   // repo content. When one exists, wrap it in load() like the getters above.
   getCertifications: (): Promise<Certification[]> => Promise.resolve(bySortOrder(certifications)),
+  // Ideas with no code yet. Repo content only, like certifications, and kept
+  // apart from getProjects() so they can never show up as shipped or featured.
+  getPlannedProjects: (): Promise<PlannedProject[]> => Promise.resolve([...plannedProjects]),
 
   sendContact: (body: ContactPayload): Promise<ApiResponse> =>
     fetch('/api/contact', {

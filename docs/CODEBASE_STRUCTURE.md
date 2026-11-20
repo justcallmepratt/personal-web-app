@@ -13,7 +13,7 @@ frontend/src/
 ├── app/
 │   ├── layout.tsx                → Root layout: fonts, metadata, navbar, footer
 │   ├── page.tsx                  → Home: hero + featured projects
-│   ├── projects/page.tsx         → All projects
+│   ├── projects/page.tsx         → All projects, then planned ones under "In the works"
 │   ├── experience/page.tsx       → Career timeline
 │   ├── skills/page.tsx           → Skills by category (a bar only for skills with a `level`)
 │   ├── certifications/page.tsx   → Certifications, from the content file
@@ -24,13 +24,13 @@ frontend/src/
 │   └── globals.css               → Tailwind 4 theme (cp-* colours)
 │
 ├── content/
-│   └── index.ts                  → profile, projects, experience, certifications — the
-│                                   site's content (the owner's real profile)
+│   └── index.ts                  → profile, projects, plannedProjects, experience,
+│                                   certifications — the site's content (the owner's real profile)
 │
 ├── components/
 │   ├── layout/                   → Navbar, Footer, HUDChrome, ScanlineOverlay
 │   ├── sections/                 → HeroSection, ProjectsGrid, ExperienceTimeline,
-│   │                               SkillsChart, CertificationsList, ContactForm,
+│   │                               SkillsChart, CertificationsList, PlannedProjects, ContactForm,
 │   │                               GitHubActivity
 │   └── ui/                       → GlitchText, NeonButton, NeonCard, SkillBar, TerminalInput
 │
@@ -39,7 +39,7 @@ frontend/src/
 │   ├── contact.ts                → Server-only: validation, rate limit, SMTP send
 │   ├── github.ts                 → Server-only: owner's public repos from the GitHub API
 │   │                               (hourly, 5 s timeout, never throws), language summary
-│   └── types.ts                  → Profile, Project, Experience, Certification,
+│   └── types.ts                  → Profile, Project, PlannedProject, Experience, Certification,
 │                                   ContactPayload, ApiResponse
 │
 └── test/                         → Vitest + React Testing Library, mirrors src/
@@ -76,6 +76,11 @@ guards against placeholder links, an email address or a phone number coming back
 - **Certifications** are `{ id, name, issuer, date?, credentialId?, url?, sortOrder? }`.
   `date` is ISO at whatever precision is known (`'2023'`, `'2023-05'`). The Spring API
   has no certifications endpoint, so `api.getCertifications()` always reads this file.
+- **Planned projects** are `{ id, name, goal }` in their own `plannedProjects` array,
+  read by `api.getPlannedProjects()` (repo content only). They are ideas with no code:
+  `/projects` lists them under "In the works" below the real projects, with no links,
+  dates or featured styling, and they never reach `getProjects()` or the home page.
+  When one ships, move it into `projects`.
 - **New fields in `types.ts` stay optional** so the Spring API's responses (which do
   send `level`, and may send `email` and `cvUrl`) keep type-checking.
 - `backend/.../SeedRunner.java` and the seed rows in `supabase/init.sql` still hold the
