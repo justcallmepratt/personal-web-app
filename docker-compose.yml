@@ -32,6 +32,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://supabase-db:5432/postgres
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${SUPABASE_DB_PASSWORD:-password}
+      # The fallback JWT secret and admin password hash below are for local use only.
+      # The hash is a publicly known sample; never use either in a deployed environment.
       JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-here}
       ADMIN_PASSWORD_HASH: '${ADMIN_PASSWORD_HASH:-$$2a$$12$$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj8lLxKQZK.}'
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}

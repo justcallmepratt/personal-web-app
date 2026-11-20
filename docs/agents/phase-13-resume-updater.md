@@ -1,5 +1,9 @@
 # Phase 13 — Resume Auto-Updater Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started; depends on Phase 12. Admin pages would live in the planned `admin` micro-frontend, not the public app.
+> No longer holds: the Vercel redeploy hook (deployment is Vercel's Git integration; no CI deploy jobs or secrets) and Railway-based apply flow.
+
 ## Objective
 Compare your current `profile` in Supabase against market skill insights from Phase 12.
 Generate structured suggestions, let you review them, then apply accepted ones directly

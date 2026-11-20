@@ -1,5 +1,9 @@
 # Phase 7 — Visual Polish Agent
 
+> **Status and caveats (2026-11-20)**
+> Partly done: some visual polish landed directly in the public app; the brief's checklist was not tracked. Check the current UI before redoing items.
+> Still valid: animation and Lighthouse goals. No Railway or deploy assumptions.
+
 ## Objective
 Complete the remaining visual animations and polish from the original design spec.
 Run a Lighthouse audit and fix any failures.

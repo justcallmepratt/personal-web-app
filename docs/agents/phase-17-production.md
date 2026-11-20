@@ -1,5 +1,9 @@
 # Phase 17 — Cloud Production Deployment Agent
 
+> **Status and caveats (2026-11-20)**
+> Partly done by other means: the custom domain is live on Vercel, CI only verifies, and Vercel's Git integration deploys. The backend is not deployed yet.
+> No longer holds: Railway CLI deploys, Railway Postgres and its backups (Supabase is the only database), `NEXT_PUBLIC_API_URL` (unused; the server reads `BACKEND_URL`), the Railway deploy-hook and post-deploy smoke-test jobs in `ci.yml` (CI has no deploy jobs and the repo has no secrets), and the `*.up.railway.app` URL. See `docs/DEPLOYMENT.md`.
+
 ## Objective
 Fully harden the existing Railway + Vercel + Supabase deployment for production traffic.
 No new hosting platforms — optimise what exists. Document every manual step precisely.

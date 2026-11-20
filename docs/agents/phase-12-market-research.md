@@ -1,5 +1,9 @@
 # Phase 12 — Market Research Engine Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started. Needs the `ADZUNA_*` variables, which were removed from `.env.example`.
+> No longer holds: admin pages inside the public app (planned `admin` micro-frontend instead) and any Railway/`ddl-auto` assumptions about the schema.
+
 ## Objective
 Nightly job pulls real job listings via Adzuna API, extracts required skills,
 stores insights in Supabase, and exposes a `/api/admin/market/insights` endpoint.
