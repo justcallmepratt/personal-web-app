@@ -42,6 +42,30 @@ person can ship, and I can reach them". Work is judged against that.
 6. **WP-J monorepo move**, in a quiet window.
 7. **WP-L market research (phase 12)**, wanted, after the backend and admin are live.
 
+## Security follow-ups
+
+Not started; no owner yet. Noted 2026-11-20 and checked against the repository and the
+live API that day.
+
+1. **API surface.** On the Railway API, the Swagger UI (`/swagger-ui/index.html`, answers
+   200) and `POST /api/admin/auth/login` are public (`SecurityConfig` permits both), and
+   login attempts are not rate limited. Add a rate limiter (in the Spring app, or an edge
+   or load-balancer layer) in front of admin login **before** `ADMIN_PASSWORD_HASH` is
+   set. Options: rate limiting in the app; hiding Swagger in production; requiring a
+   shared secret from the site so only Vercel can call the API; an edge proxy such as
+   Cloudflare in front of the API only, not the Vercel site.
+2. **No Content-Security-Policy** header on the site; the other standard security headers
+   are sent from `frontend/vercel.json`.
+3. **Contact-form rate limiting is per server instance** (in-memory in both the API and
+   the site), so it slows casual abuse but is not a hard cap.
+4. **Code scanning.** Five `java/log-injection` alerts (`RateLimitService`,
+   `EmailValidationService`) are still open after the fix in PR #56. Two expected alerts,
+   `java/spring-disabled-csrf-protection` (stateless JWT API) and
+   `js/empty-password-in-configuration-file` (test profile), are candidates to dismiss
+   with a reason.
+5. **Two unused Vercel projects** (`personal-web-app`, `backend`) still build on every
+   pull request; delete them ([DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work)).
+
 ## Phases
 
 | Phase | Status | Notes |
