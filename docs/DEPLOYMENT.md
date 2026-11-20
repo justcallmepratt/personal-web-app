@@ -7,103 +7,151 @@ How the site is built, deployed and configured. This replaces the earlier
 ## Architecture
 
 ```
-GitHub (main) ──push──▶ Vercel Git integration ──▶ Next.js site
-                                                    ├─ pages: static, content from frontend/src/content
-                                                    └─ POST /api/contact: route handler → SMTP email
+                       justcallmepratt.dev (Vercel)
+  browser ───────────▶ ┌──────────────────────────────────────────┐
+                       │ web   (frontend/)  public pages, static   │
+                       │ admin (planned)    /admin/* micro-frontend│
+                       └───────────────┬──────────────────────────┘
+                                       │ server-side only (BACKEND_URL)
+                                       ▼
+                       api.justcallmepratt.dev (Railway)
+                       Spring Boot API (backend/) ──▶ Postgres
 ```
 
-- **Content** (profile, projects, experience, skills) lives in
-  [`frontend/src/content/index.ts`](../frontend/src/content/index.ts). Edit, push, done.
-- **Contact form** posts to the app's own `/api/contact` route handler
-  ([`frontend/src/app/api/contact/route.ts`](../frontend/src/app/api/contact/route.ts)),
-  which validates, rate-limits and sends an email over SMTP.
-- **No backend host and no database are needed at runtime.** Railway is gone and
-  nothing in the deployed site depends on Supabase.
-- The **Spring Boot API** in `backend/` is kept, tested in CI and published as a
-  container image, but it is not deployed. See [Optional: full stack](#optional-full-stack).
+- **Micro-frontends on Vercel.** `web` is the public site and the default app. `admin`
+  (login, inbox, job tracker) is planned as a second Next.js app routed under
+  `/admin/*` with Vercel Microfrontends. See [Roadmap](#roadmap).
+- **Services on Railway.** The Spring Boot API owns content, contact messages and
+  admin auth, backed by Postgres.
+- **The browser only talks to Vercel.** Pages fetch content from the API on the server;
+  the contact form posts to `web`'s own `/api/contact`, which relays to the API. No CORS
+  and no API URL in the client bundle.
+- **The site survives a backend outage.** If the API is unreachable, slow (5 s limit)
+  or erroring, pages render from the snapshot in
+  [`frontend/src/content/index.ts`](../frontend/src/content/index.ts). Keep that file
+  roughly in step with the real content. Without `BACKEND_URL` the site runs entirely
+  from that file and emails contact messages itself over SMTP.
 
-## One-time Vercel setup
+## Keeping the Vercel footprint small
+
+- **Two projects at most:** `web` now, `admin` later. No Vercel projects for services.
+- **Pages are static** and re-rendered at most once an hour (`REVALIDATE_SECONDS` in
+  `frontend/src/lib/api.ts`), so visitors are served from the CDN and the API sees
+  about one request per page per hour, not one per visit.
+- **One function:** `POST /api/contact`. It rejects bodies over 16 KB before reading
+  them, validates before doing any network call, and stops waiting for the backend
+  after 10 s.
+- **CI does not deploy.** Vercel's Git integration builds once per push.
+- **Settings worth turning on** (dashboard, not in the repo): skip builds when nothing
+  under the project's root directory changed, so backend-only and Dependabot Maven
+  pushes cost no build; and a spend limit under Billing → Spend Management.
+
+## Vercel setup (one time)
 
 Three Vercel projects (`frontend`, `personal-web-app`, `backend`) are connected to this
-repository, and every push currently produces three failed deployments because none
-of them builds from `frontend/`. To fix:
+repository and every push produces three failed deployments, because none of them
+builds from `frontend/`.
 
-1. **Project `frontend` → Settings → Build and Deployment → Root Directory:** `frontend`.
-2. **Project `frontend` → Settings → Environment Variables:**
-   - remove `BACKEND_URL` and `NEXT_PUBLIC_API_URL` (they point at the dead Railway
-     backend; while `BACKEND_URL` is set the pages try to fetch from it and render empty);
-   - add the contact form variables below.
-3. **Projects `personal-web-app` and `backend`:** disconnect from Git or delete — they
+1. **Project `frontend`** (this is `web`; rename it if you like):
+   - Settings → Build and Deployment → Root Directory: `frontend`.
+   - Environment variables: remove `NEXT_PUBLIC_API_URL`; set `BACKEND_URL` to the
+     Railway URL once the backend is up (remove it until then — it currently points at
+     a dead host); keep `NEXT_PUBLIC_SITE_NAME`; set `NEXT_PUBLIC_SITE_URL` to
+     `https://justcallmepratt.dev`.
+   - Domains: add `justcallmepratt.dev` (already registered with Vercel, on Vercel DNS).
+2. **Projects `personal-web-app` and `backend`:** delete, or disconnect from Git. They
    have never had a working deployment.
-4. Confirm which project owns the public domain (`frontend-liard-theta-28.vercel.app`)
-   and keep it on `frontend`.
 
-After that, every push to `main` deploys production and every PR gets a preview.
-CI (`.github/workflows/ci.yml`) only verifies; it no longer deploys anything.
+After that every push to `main` deploys production and every PR gets a preview.
 
-## Environment variables (Vercel)
+## Railway setup (one time)
+
+1. **New service from the GitHub repo**, root directory `backend`. The build and health
+   check come from [`backend/railway.toml`](../backend/railway.toml) (Dockerfile build,
+   `/actuator/health`). Railway redeploys on every push to `main`; no CI job or deploy
+   hook is involved.
+2. **Add a Postgres database** to the project and apply
+   [`supabase/init.sql`](../supabase/init.sql) to it once. The API runs with
+   `ddl-auto: validate` and will not start against an empty database.
+3. **Service variables:**
+
+   | Variable | Value |
+   |---|---|
+   | `SPRING_PROFILES_ACTIVE` | `docker` |
+   | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://<host>:<port>/<database>` |
+   | `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | from the Postgres service |
+   | `JWT_SECRET` | `openssl rand -base64 32` |
+   | `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password |
+   | `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT` if not Gmail) | SMTP credentials for contact notifications |
+   | `CORS_ORIGIN` | `https://justcallmepratt.dev` |
+
+   On the `docker` profile `SeedRunner` fills empty tables with placeholder content.
+4. **Domain:** add `api.justcallmepratt.dev` as a custom domain on the service, then
+   create the CNAME record Railway shows in the Vercel DNS zone for
+   `justcallmepratt.dev`.
+5. **Tell `web` about it:** set `BACKEND_URL=https://api.justcallmepratt.dev` on the
+   Vercel project and redeploy.
+
+The Railway token is only needed for CLI or API automation. Do not commit it; if a
+workflow ever needs it, store it with `gh secret set RAILWAY_TOKEN`.
+
+## Environment variables for `web`
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `MAIL_USER` | for contact form | SMTP username; also the sender and default recipient |
-| `MAIL_PASS` | for contact form | SMTP password (for Gmail, an app password) |
-| `MAIL_HOST` | no (default `smtp.gmail.com`) | SMTP host |
-| `MAIL_PORT` | no (default `587`) | SMTP port; `465` switches to implicit TLS |
-| `CONTACT_NOTIFY_TO` | no | Recipient, if different from `MAIL_USER` |
-| `CONTACT_RATE_LIMIT_MAX` | no (default `3`) | Submissions allowed per address per window |
-| `CONTACT_RATE_LIMIT_WINDOW` | no (default `3600`) | Window in seconds |
+| `BACKEND_URL` | for live data | Base URL of the API. Server-only. |
 | `NEXT_PUBLIC_SITE_NAME` | no | Site title |
 | `NEXT_PUBLIC_SITE_URL` | no | Canonical URL for metadata / Open Graph |
-| `BACKEND_URL` | no — leave unset | Read content from an HTTP API instead of `src/content` |
+| `MAIL_USER`, `MAIL_PASS`, `MAIL_HOST`, `MAIL_PORT`, `CONTACT_NOTIFY_TO` | only without `BACKEND_URL` | SMTP settings for the standalone contact handler |
+| `CONTACT_RATE_LIMIT_MAX`, `CONTACT_RATE_LIMIT_WINDOW` | no | Standalone handler limits (default 3 per 3600 s, per instance, best effort) |
 
-Without `MAIL_USER` / `MAIL_PASS` the form answers `503` with a "channel offline"
-message; the rest of the site is unaffected.
+## Edge cases and what happens
 
-The rate limiter keeps its counters in memory per server instance, so on Vercel it
-slows casual abuse rather than enforcing a hard cap.
+| Situation | Behaviour |
+|---|---|
+| API down, erroring, or returning bad JSON | Pages render from `src/content`; a warning is logged |
+| API slower than 5 s (cold start) | Same fallback; the next hourly re-render tries again |
+| API down when the contact form is submitted | Form shows "channel offline" (HTTP 502); nothing is lost silently |
+| Contact relay slower than 10 s | Treated as down (502) |
+| Invalid or oversized contact payload | Rejected by `web` (400 / 413) without calling the API |
+| Too many submissions | The API's per-address limit applies (429); `web` forwards the visitor's address |
+| `BACKEND_URL` not set | Fully static site; contact handled by `web` over SMTP, or 503 if SMTP is not configured |
 
 ## Local development
 
 ```bash
 cd frontend
 pnpm install
-pnpm dev          # http://localhost:3000
+pnpm dev          # http://localhost:3000, content from src/content
 pnpm test && pnpm lint && pnpm exec tsc --noEmit && pnpm build
 ```
 
-No backend is needed. To try the contact form locally, put `MAIL_USER` / `MAIL_PASS`
-in `frontend/.env.local`.
+Full stack locally: `docker compose up --build` (Postgres + API + frontend reading from
+the API). Running the API outside Docker on an Apple Silicon Mac needs an arm64 JDK 21;
+the Corretto 21 referenced by `backend/run-dev.sh` is an x86_64 build and fails with
+"Bad CPU type in executable".
 
-## Optional: full stack
+Container images are also published to GHCR by `docker-build.yml` (every push to
+`main`) and `release.yml` (`v*.*.*` tags), for hosting somewhere other than Railway.
 
-The Spring Boot API still works as an alternative content source.
+## Roadmap
 
-- **Local:** `docker compose up --build` starts Postgres, the API and the frontend,
-  with the frontend reading from the API (`BACKEND_URL=http://backend:8080`).
-- **Images:** `.github/workflows/docker-build.yml` publishes
-  `ghcr.io/justcallmepratt/personal-web-app-backend` and `-frontend` on every push to
-  `main`; `release.yml` does the same for `v*.*.*` tags.
-- **Hosting it:** run the backend image on any container host with the variables in
-  [`.env.example`](../.env.example) and a Postgres database, then set `BACKEND_URL`
-  on the frontend. The frontend only needs `GET /api/profile`, `/api/projects`
-  (`?featured=true`) and `/api/experience`.
-- **Running the API outside Docker on an Apple Silicon Mac** needs an arm64 JDK 21.
-  The Corretto 21 currently referenced by `backend/run-dev.sh` is an x86_64 build and
-  fails with "Bad CPU type in executable".
-
-`frontend/src/lib/api.ts` is the single place that decides where content comes from;
-a future data store only has to be wired in there.
+1. **Live on the domain:** merge, apply the Vercel setup above.
+2. **Backend on Railway:** apply the Railway setup above. Land the Spring Boot 4.1
+   upgrade (PR #32) first so the redeploy starts from the current framework version.
+3. **Monorepo:** move `frontend/` to `apps/web`, extract shared UI and API types into
+   packages.
+4. **`admin` micro-frontend:** new Next.js app for login, inbox and job tracker against
+   the existing `/api/admin/*` endpoints; `microfrontends.json` in `web` routes
+   `/admin/*` to it.
 
 ## Cleanup still to do by hand
 
-These need account access and were left untouched:
-
 - **GitHub secrets no longer used by any workflow:** `RAILWAY_DEPLOY_HOOK_URL`,
-  `RAILWAY_TOKEN`, `RAILWAY_SERVICE_ID`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
-  `VERCEL_PROJECT_ID`, `BACKEND_URL`, `AMPLITUDE_API_KEY`.
-- **GitHub variable** `NEXT_PUBLIC_API_URL` (points at Railway; unused).
-- **Supabase project:** not used by the deployed site. Free projects pause after about
-  a week without activity; pause or delete it deliberately, or keep it for the
-  full-stack setup.
-- **Dependabot PRs:** ten are open. The Spring Boot 4 and springdoc 3 bumps are major
-  upgrades (the springdoc one fails the backend tests on Spring Boot 3.5).
+  `RAILWAY_SERVICE_ID`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`,
+  `BACKEND_URL`, `AMPLITUDE_API_KEY`, and the old `RAILWAY_TOKEN` value.
+- **GitHub variables:** `NEXT_PUBLIC_API_URL` (unused); update `NEXT_PUBLIC_SITE_URL`
+  to the new domain.
+- **Supabase project:** not used in production. It serves the backend's `dev` profile
+  only and pauses after about a week without activity.
+- **Dependabot PRs:** triaged; see PR #32 for the Spring Boot 4.1 + springdoc 3.2 upgrade.

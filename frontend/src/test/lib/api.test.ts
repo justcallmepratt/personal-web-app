@@ -73,10 +73,14 @@ describe('api — remote source (BACKEND_URL set)', () => {
     )
   })
 
-  it('throws on non-ok response from GET', async () => {
+  it('falls back to repo content on a non-ok response from GET', async () => {
     vi.stubGlobal('fetch', mockFetch({ error: 'not found' }, false))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    await expect(api.getProfile()).rejects.toThrow()
+    const result = await api.getProfile()
+    expect(result.skills.length).toBeGreaterThan(0)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('/api/profile → 500'))
+    warn.mockRestore()
   })
 })
 

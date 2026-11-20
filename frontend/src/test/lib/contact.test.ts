@@ -111,6 +111,17 @@ describe('POST /api/contact', () => {
     expect(sendMail).not.toHaveBeenCalled()
   })
 
+  it('returns 413 for an oversized request without reading it', async () => {
+    const res = await POST(
+      new Request('http://localhost/api/contact', {
+        method: 'POST',
+        headers: { 'content-length': '5000000' },
+        body: '{}',
+      }),
+    )
+    expect(res.status).toBe(413)
+  })
+
   it('returns 429 after three submissions from one address', async () => {
     for (let i = 0; i < 3; i++) expect((await post(valid)).status).toBe(200)
     expect((await post(valid)).status).toBe(429)
@@ -128,5 +139,46 @@ describe('POST /api/contact', () => {
   it('returns 502 when SMTP delivery fails', async () => {
     sendMail.mockRejectedValue(new Error('smtp down'))
     expect((await post(valid)).status).toBe(502)
+  })
+})
+
+describe('POST /api/contact with BACKEND_URL', () => {
+  beforeEach(() => {
+    vi.stubEnv('BACKEND_URL', 'http://backend.test')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('relays the validated payload and client address, and returns the backend reply', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({ success: false, message: 'Too many submissions.' }, { status: 429 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await post({ ...valid, name: '  Alice ' }, '198.51.100.9')
+
+    expect(res.status).toBe(429)
+    expect(await res.json()).toEqual({ success: false, message: 'Too many submissions.' })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://backend.test/api/contact')
+    expect(init.headers['X-Forwarded-For']).toBe('198.51.100.9')
+    expect(JSON.parse(init.body)).toEqual(valid)
+    expect(sendMail).not.toHaveBeenCalled()
+  })
+
+  it('still rejects invalid payloads without calling the backend', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await post({ ...valid, email: 'nope' })).status).toBe(400)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('returns 502 when the backend is unreachable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')))
+    const res = await post(valid)
+    expect(res.status).toBe(502)
+    expect(await res.json()).toMatchObject({ success: false })
   })
 })

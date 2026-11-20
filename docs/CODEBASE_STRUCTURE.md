@@ -41,16 +41,19 @@ frontend/src/
 ### Rules
 
 1. **Pages get data through `lib/api.ts`**, never by importing `content/` directly.
-   `api.ts` returns the repo content unless `BACKEND_URL` is set, in which case it
-   fetches `/api/profile`, `/api/projects`, `/api/experience` from that host.
-2. **The contact form always posts to this app's `/api/contact`.** `lib/contact.ts`
+   With `BACKEND_URL` set it fetches `/api/profile`, `/api/projects`, `/api/experience`
+   from the Spring Boot API and falls back to the repo content if that fails; without
+   it, it returns the repo content.
+2. **The contact form always posts to this app's `/api/contact`**, which relays to the
+   API when `BACKEND_URL` is set and otherwise sends mail itself. `lib/contact.ts`
    uses Node APIs and must only be imported from server code.
-3. **Pages are static.** Only `/api/contact` runs per request.
+3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` runs per request.
 4. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
 
-## Backend — Spring Boot 3.5 (Java 21), optional
+## Backend — Spring Boot 3.5 (Java 21)
 
-Not deployed. Kept as an alternative content source and built/tested in CI.
+The service layer: content, contact messages and admin auth. Deployed to Railway from
+`backend/` (see `backend/railway.toml`); built and tested in CI.
 
 ```
 backend/src/main/java/com/resume/

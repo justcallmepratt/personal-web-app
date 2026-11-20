@@ -15,46 +15,38 @@ describe('api — edge cases', () => {
     vi.unstubAllEnvs()
   })
 
-  // ── Non-2xx responses must throw ──────────────────────────────────────────
+  // ── API failures fall back to repo content, with a warning ────────────────
 
-  it('getProfile throws on 404', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(null, { status: 404 }) as never
-    )
-    await expect(api.getProfile()).rejects.toThrow('API /api/profile → 404')
+  it.each([
+    ['getProfile', 404, '/api/profile → 404'],
+    ['getProfile', 500, '/api/profile → 500'],
+    ['getProjects', 503, '/api/projects → 503'],
+    ['getExperience', 401, '/api/experience → 401'],
+  ] as const)('%s falls back on HTTP %i', async (method, status, logged) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status }) as never)
+
+    const result = await api[method]()
+
+    expect(Array.isArray(result) ? result.length : Object.keys(result).length).toBeGreaterThan(0)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(logged))
+    warn.mockRestore()
   })
 
-  it('getProfile throws on 500', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(null, { status: 500 }) as never
-    )
-    await expect(api.getProfile()).rejects.toThrow('API /api/profile → 500')
-  })
+  it.each([
+    ['network failure', new TypeError('Failed to fetch')],
+    ['ECONNREFUSED', new Error('ECONNREFUSED')],
+    ['malformed JSON', null],
+  ])('getProjects falls back on %s', async (_label, error) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    if (error) vi.mocked(fetch).mockRejectedValue(error)
+    else vi.mocked(fetch).mockResolvedValue(new Response('{not json', { status: 200 }) as never)
 
-  it('getProjects throws on 503', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(null, { status: 503 }) as never
-    )
-    await expect(api.getProjects()).rejects.toThrow('API /api/projects → 503')
-  })
+    const result = await api.getProjects()
 
-  it('getExperience throws on 401', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(null, { status: 401 }) as never
-    )
-    await expect(api.getExperience()).rejects.toThrow('API /api/experience → 401')
-  })
-
-  // ── Network-level failures ────────────────────────────────────────────────
-
-  it('getProfile throws on network failure', async () => {
-    vi.mocked(fetch).mockRejectedValue(new TypeError('Failed to fetch'))
-    await expect(api.getProfile()).rejects.toThrow()
-  })
-
-  it('getProjects throws on ECONNREFUSED', async () => {
-    vi.mocked(fetch).mockRejectedValue(new Error('ECONNREFUSED'))
-    await expect(api.getProjects()).rejects.toThrow()
+    expect(result.length).toBeGreaterThan(0)
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
   })
 
   // ── Successful responses return correct types ─────────────────────────────

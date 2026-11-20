@@ -1,0 +1,14 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Spring Boot graceful shutdown needs a generous check timeout
+healthcheckPath    = "/actuator/health"
+healthcheckTimeout = 60          # seconds to wait for 200 before marking unhealthy
+
+restartPolicyType       = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+# Give the JVM + DB connection time to warm up before accepting traffic
+startCommand = "java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom -jar app.jar"

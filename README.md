@@ -9,16 +9,15 @@
 [![Vercel](https://img.shields.io/badge/Frontend-Vercel-000?style=flat&logo=vercel)](https://vercel.com)
 
 A full-stack personal portfolio styled after the **CP2077 Neo Militarism** aesthetic.
-Next.js App Router frontend deployed on Vercel, with site content kept in the repo
-(`frontend/src/content`) and the contact form handled by a Next.js route handler.
-A Spring Boot REST API (`backend/`) is included as an optional content source and is
-tested in CI, but is not deployed.
+Next.js micro-frontends on Vercel in front of a Spring Boot REST API on Railway.
+Pages are static and fall back to content kept in the repo (`frontend/src/content`)
+whenever the API is unavailable.
 
-**Live:** https://frontend-liard-theta-28.vercel.app  
+**Live:** https://justcallmepratt.dev  
 **Deployment and configuration:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
-> Sections below that describe the original build (Railway backend, CLI deploys from
-> CI) are historical. The backend moved off Railway in November 2026.
+> Sections below that describe the original build (deploy hooks and CLI deploys from
+> CI) are historical; `docs/DEPLOYMENT.md` is current.
 
 ---
 
@@ -225,7 +224,7 @@ claude "Read docs/agents/ORCHESTRATOR.md then docs/agents/phase-08-analytics.md
 | Frontend tests | Vitest + React Testing Library | 95% gate |
 | Container | Docker (multi-stage) | — |
 | Frontend hosting | Vercel | — |
-| Backend hosting | none (optional; GHCR image) | — |
+| Backend hosting | Railway | — |
 | Analytics | Amplitude | — |
 
 ---

@@ -3,21 +3,36 @@ import { profile, projects, experience } from '@/content'
 
 // ── Content source ───────────────────────────────────────────────────────────
 //
-//  Default: the typed files in src/content. Pages are fully static and the
-//  site has no runtime dependency on a backend or database.
+//  With BACKEND_URL set (server-only): the Spring Boot API in /backend, which
+//  exposes /api/profile, /api/projects and /api/experience. Pages are static
+//  and re-rendered at most once per REVALIDATE_SECONDS, so the API (and a
+//  Vercel function) is hit about hourly per page rather than per visitor.
 //
-//  Optional: set BACKEND_URL (server-only) to read from an HTTP API exposing
-//  /api/profile, /api/projects and /api/experience — e.g. the Spring Boot
-//  service in /backend. This is the one seam to change if the data moves.
+//  Without it, or whenever the API is unreachable or errors: the typed files
+//  in src/content, so the site always renders. Keep those files a reasonable
+//  snapshot of the real content.
 //
-//  The contact form always posts to this app's own /api/contact route handler.
+//  The contact form posts to this app's own /api/contact route handler, which
+//  relays to the API. This is the one seam to change if the data moves.
 // ────────────────────────────────────────────────────────────────────────────
+const REVALIDATE_SECONDS = 3600
+// A cold or hung backend must not hold a render open; fall back instead.
+const API_TIMEOUT_MS = 5000
+
 async function load<T>(path: string, local: () => T): Promise<T> {
   const base = process.env.BACKEND_URL
   if (!base) return local()
-  const res = await fetch(`${base}${path}`, { next: { revalidate: 60 } })
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`)
-  return res.json() as Promise<T>
+  try {
+    const res = await fetch(`${base}${path}`, {
+      next: { revalidate: REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    })
+    if (!res.ok) throw new Error(`API ${path} → ${res.status}`)
+    return (await res.json()) as T
+  } catch (e) {
+    console.warn(`Content API unavailable, serving repo content instead. ${e}`)
+    return local()
+  }
 }
 
 const bySortOrder = <T extends { sortOrder: number }>(items: T[]) =>
