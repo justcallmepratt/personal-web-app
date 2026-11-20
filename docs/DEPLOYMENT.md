@@ -335,6 +335,7 @@ pnpm test && pnpm lint && pnpm exec tsc --noEmit && pnpm build
 | `BACKEND_URL` | for live data | Base URL of the API. Server-only. |
 | `KAFKA_DEMO_URL` | for the Kafka demo | Base URL of the Kafka demo service (see [Kafka live demo](#kafka-live-demo)). Server-only, read at build time and at request time. |
 | `KAFKA_DEMO_TOKEN` | when the service has `DEMO_API_TOKEN` set | The same secret, sent as `X-Demo-Token` on every relay call. Server-only. |
+| `GITHUB_TOKEN`, `GITHUB_USERNAME` | no | Optional, server-only. The home page's GitHub activity section makes one request an hour to `api.github.com` (60/hour per IP unauthenticated); a read-only token only raises that limit. `GITHUB_USERNAME` overrides the default account (`DEFAULT_GITHUB_USERNAME` in `frontend/src/lib/github.ts`). |
 | `NEXT_PUBLIC_SITE_NAME` | no | Site title |
 | `NEXT_PUBLIC_SITE_URL` | no | Canonical URL for metadata / Open Graph |
 | `MAIL_USER`, `MAIL_PASS` | to receive contact mail without the API | SMTP login for the direct path and the fallback. For Gmail, `MAIL_PASS` is an app password. Server-only. |
@@ -349,6 +350,7 @@ pnpm test && pnpm lint && pnpm exec tsc --noEmit && pnpm build
 |---|---|
 | API down, erroring, or returning bad JSON | Pages render from `src/content`; a warning is logged |
 | API slower than 5 s (cold start) | Same fallback; the next hourly re-render tries again |
+| GitHub unreachable, slow (5 s), rate limited (403/429), 404, 5xx, bad JSON or no public repos | The GitHub activity section shrinks to a link to the profile; a warning is logged; the build and the page still succeed |
 | API down when the contact form is submitted | Falls back to SMTP if `MAIL_USER` / `MAIL_PASS` are set (message delivered, warning logged); otherwise 503 and the form offers the `mailto:` link |
 | Contact relay slower than 4 s, or answering 5xx / non-JSON | Treated as down: same fallback as above |
 | API answers 4xx (validation, 429) | Passed to the visitor; no fallback, no SMTP |
