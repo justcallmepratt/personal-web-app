@@ -11,6 +11,9 @@ jobs:
     name: Auto-approve and merge patch/minor updates
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
+    env:
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Fetch Dependabot metadata
@@ -19,32 +22,35 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Safe: patch and minor — approve + enable auto-merge ───────────────
+      # ── Safe: patch and minor — approve, then merge once CI is green ──────
+      # Values from the PR go through env, never straight into the script.
       - name: Approve patch/minor update
         if: |
           steps.meta.outputs.update-type == 'version-update:semver-patch' ||
           steps.meta.outputs.update-type == 'version-update:semver-minor'
-        run: gh pr review "$PR_URL" --approve --body "✅ Auto-approved: ${{ steps.meta.outputs.update-type }} update for \`${{ steps.meta.outputs.dependency-names }}\`"
         env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          DEPENDENCIES: ${{ steps.meta.outputs.dependency-names }}
+        run: |
+          gh pr review "$PR_URL" --approve \
+            --body "Auto-approved: $UPDATE_TYPE update for \`$DEPENDENCIES\`"
 
-      - name: Squash-merge patch/minor (no branch protection required)
+      # --auto merges only after the required status checks on main pass.
+      # It needs branch protection with required checks; without it this step
+      # fails and nothing is merged.
+      - name: Squash-merge patch/minor
         if: |
           steps.meta.outputs.update-type == 'version-update:semver-patch' ||
           steps.meta.outputs.update-type == 'version-update:semver-minor'
-        run: gh pr merge "$PR_URL" --squash --delete-branch
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge "$PR_URL" --squash --auto --delete-branch
 
-      # ── Risky: major version — label + comment, do NOT merge ─────────────
+      # ── Risky: major version — comment and label, do NOT merge ───────────
       - name: Flag major update for manual review
         if: steps.meta.outputs.update-type == 'version-update:semver-major'
-        run: |
-          gh pr comment "$PR_URL" --body "⚠️ **Major version bump detected** for \`${{ steps.meta.outputs.dependency-names }}\`. This requires manual review before merging — check the changelog for breaking changes."
-          gh pr edit "$PR_URL" --add-label "major-update"
+        continue-on-error: true  # the label may not exist yet
         env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true  # label may not exist yet; don't fail the job
+          DEPENDENCIES: ${{ steps.meta.outputs.dependency-names }}
+        run: |
+          gh pr comment "$PR_URL" \
+            --body "**Major version bump** for \`$DEPENDENCIES\`. This needs manual review before merging: check the changelog for breaking changes."
+          gh pr edit "$PR_URL" --add-label "major-update"
