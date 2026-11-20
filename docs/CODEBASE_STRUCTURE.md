@@ -73,8 +73,9 @@ default application of the Vercel microfrontends group).
 
 ### Content shape
 
-`content/index.ts` is what visitors see: the site does not read the API yet. The site is
-public, so it holds only facts the owner has confirmed; `test/content/content.test.ts`
+`content/index.ts` is the fallback for the API content and the only source of
+certifications and planned projects; in production the database is what visitors see for
+profile, projects and experience, so keep the two in step. The site is public, so it holds only facts the owner has confirmed; `test/content/content.test.ts`
 guards against placeholder links, an email address or a phone number coming back.
 
 - **Optional means "leave it out".** `Skill.level` is optional and unset, so the skills
@@ -94,10 +95,10 @@ guards against placeholder links, an email address or a phone number coming back
   When one ships, move it into `projects`.
 - **New fields in `types.ts` stay optional** so the Spring API's responses (which do
   send `level`, and may send `email` and `cvUrl`) keep type-checking.
-- `backend/.../SeedRunner.java`, the seed rows in `supabase/init.sql` and the rows in
-  the Supabase database still hold the old placeholder persona, and the deployed API
-  serves it from its public endpoints. Replace all three before `BACKEND_URL` is
-  pointed at the API (see [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work)).
+- `backend/.../SeedRunner.java` and the seed rows in `supabase/init.sql` still hold the old
+  placeholder persona; the Supabase database was loaded with the real content separately.
+  `Skill.level` is optional in the API and omitted from the JSON when absent. Update the
+  seed (see [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work)).
 
 ## `apps/kafka`
 
@@ -162,13 +163,13 @@ apps/admin/src/
 
 The service layer: content, contact messages and admin auth. Deployed on Railway from
 `backend/` (service `personal-web-app-api`, see `backend/railway.toml` and
-[DEPLOYMENT.md](DEPLOYMENT.md#railway-the-api)); the site does not call it yet. Built
+[DEPLOYMENT.md](DEPLOYMENT.md#railway-the-api)); the production site calls it. Built
 and tested in CI.
 
 ```
 backend/src/main/java/com/resume/
 ├── ResumeApplication.java        → Entry point
-├── SeedRunner.java               → Seeds the (old placeholder) profile into empty tables on the dev and docker profiles
+├── SeedRunner.java               → Seeds the old placeholder profile into empty tables (stale) on the dev and docker profiles
 ├── config/                       → SecurityConfig, CorsConfig, GlobalExceptionHandler, OpenApiConfig
 ├── controller/
 │   ├── ProfileController         → GET /api/profile
