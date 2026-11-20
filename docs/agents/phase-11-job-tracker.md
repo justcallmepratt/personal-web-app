@@ -1,6 +1,9 @@
 # Phase 11 — Job Application Tracker Agent
 
-> **Status and caveats (2026-11-20)**
+> **Dropped (2026-11-20). Do not build this.**
+> The owner decided to use an existing open-source tracker, [JobSync](https://github.com/Gsync/jobsync) (MIT, self-hosted with Docker), instead of a custom one. It runs separately from this site and is not part of this repository. Work on this phase was started and abandoned the same day; nothing was committed, so no job controller, model, table or `/admin` pages exist. The brief below is kept for the record only.
+>
+> **Earlier status and caveats (2026-11-20)**
 > Not started. No job controller, model or `/admin` pages exist.
 > No longer holds: Railway Postgres (the only database is Supabase), Flyway, `ddl-auto: update` (the repo uses `validate`; add tables to `supabase/init.sql`), and admin pages inside the public app (the plan is a separate `admin` micro-frontend).
 > **Roadmap (2026-11-20):** After the backend is live, and only if the owner will use it (WP-K). Table goes in `supabase/init.sql`; pages go in `apps/admin`; fix the H2/JSONB test gap first. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
