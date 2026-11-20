@@ -50,6 +50,53 @@ frontend/src/
 3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` runs per request.
 4. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
 
+## Admin — Next.js 16 (TypeScript, Tailwind 4)
+
+`apps/admin` is a self-contained app with its own `package.json` and lockfile: admin
+sign-in and the contact-message inbox, served under `/admin/*`. Not deployed yet; see
+[DEPLOYMENT.md](DEPLOYMENT.md#admin-app). `apps/admin/AGENTS.md` applies here too.
+
+```
+apps/admin/src/
+├── app/
+│   ├── layout.tsx                    → Root layout: fonts, noindex metadata
+│   ├── globals.css                   → Theme tokens copied from frontend/
+│   └── admin/
+│       ├── page.tsx                  → Inbox; redirects to login without a session
+│       ├── login/page.tsx            → Sign-in form
+│       ├── loading.tsx, error.tsx
+│       └── api/
+│           ├── session/route.ts          → POST sign in (sets cookie), DELETE sign out
+│           ├── session/expired/route.ts  → GET: clear cookie, redirect to login
+│           ├── messages/route.ts         → GET list
+│           └── messages/[id]/read/route.ts → PATCH toggle read
+│
+├── components/
+│   ├── Inbox.tsx, LoginForm.tsx      → Client components
+│   └── ui.tsx                        → NeonButton, Panel, TerminalInput, Notice
+│
+├── lib/
+│   ├── backend.ts                    → Server-only: every call to the API (timeout,
+│   │                                   response validation, failure kinds)
+│   ├── session.ts                    → Server-only: session cookie options
+│   ├── http.ts                       → Server-only: handler replies, origin check
+│   ├── messages.ts, types.ts         → Shared by server and client
+│
+└── test/                             → Vitest + React Testing Library
+```
+
+### Rules
+
+1. **Only `lib/backend.ts` talks to the API**, and only server code imports it. Client
+   components call this app's own `/admin/api/*` handlers.
+2. **The JWT lives in the `admin_session` cookie** (`httpOnly`, path `/admin`). Never
+   return it in a response body or pass it to a client component.
+3. **Every route stays under `src/app/admin/`** and the app sets no `basePath`; Vercel
+   Microfrontends routes `/admin/*` here and does not support `basePath`.
+4. **No `public/` directory** (see DEPLOYMENT.md). UI primitives and theme tokens are
+   copies of the ones in `frontend/` until a shared package exists.
+5. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
+
 ## Backend — Spring Boot 4.1 (Java 21)
 
 The service layer: content, contact messages and admin auth. Deployed to Railway from
@@ -90,7 +137,7 @@ fields (`tech_stack`, `skills`, `tags`, `stack`, `highlights`, `technologies`,
 
 | File | Trigger | Does |
 |---|---|---|
-| `ci.yml` | push / PR to `main` | Backend compile, test, package; frontend type check, lint, test, build. No deploy. |
+| `ci.yml` | push / PR to `main` | Backend compile, test, package; frontend and admin type check, lint, test, build. No deploy. |
 | `docker-build.yml` | push to `main`, manual | Builds and pushes backend and frontend images to GHCR |
 | `release.yml` | `v*.*.*` tag | JAR + versioned images + GitHub release |
 | `codeql.yml` | schedule / push | Code scanning |

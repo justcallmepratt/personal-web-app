@@ -10,7 +10,7 @@ How the site is built, deployed and configured. This replaces the earlier
                        justcallmepratt.dev (Vercel)
   browser ───────────▶ ┌──────────────────────────────────────────┐
                        │ web   (frontend/)  public pages, static   │
-                       │ admin (planned)    /admin/* micro-frontend│
+                       │ admin (apps/admin) /admin/* micro-frontend│
                        └───────────────┬──────────────────────────┘
                                        │ server-side only (BACKEND_URL)
                                        ▼
@@ -19,8 +19,9 @@ How the site is built, deployed and configured. This replaces the earlier
 ```
 
 - **Micro-frontends on Vercel.** `web` is the public site and the default app. `admin`
-  (login, inbox, job tracker) is planned as a second Next.js app routed under
-  `/admin/*` with Vercel Microfrontends. See [Roadmap](#roadmap).
+  (login and inbox; job tracker later) is a second Next.js app in `apps/admin`, to be
+  routed under `/admin/*` with Vercel Microfrontends. The code is in the repository
+  but not deployed yet. See [Admin app](#admin-app).
 - **Services on Railway.** The Spring Boot API owns content, contact messages and
   admin auth, backed by Postgres.
 - **The browser only talks to Vercel.** Pages fetch content from the API on the server;
@@ -34,7 +35,7 @@ How the site is built, deployed and configured. This replaces the earlier
 
 ## Keeping the Vercel footprint small
 
-- **Two projects at most:** `web` now, `admin` later. No Vercel projects for services.
+- **Two projects at most:** `web` and `admin`. No Vercel projects for services.
 - **Pages are static** and re-rendered at most once an hour (`REVALIDATE_SECONDS` in
   `frontend/src/lib/api.ts`), so visitors are served from the CDN and the API sees
   about one request per page per hour, not one per visit.
@@ -103,6 +104,110 @@ preview.
 The Railway token is only needed for CLI or API automation. Do not commit it; if a
 workflow ever needs it, store it with `gh secret set RAILWAY_TOKEN`.
 
+## Admin app
+
+`apps/admin` is a separate Next.js app: sign-in and the contact-message inbox. It is
+**not deployed yet**, and it has only been run against a local stand-in for the API,
+never the real one. It is useful once the API is live on Railway.
+
+How it works:
+
+- **Routes:** `/admin` (inbox) and `/admin/login`, plus its own handlers under
+  `/admin/api/*`. All routes sit in `src/app/admin/`; the app does not set `basePath`,
+  because Vercel Microfrontends does not support Next.js apps that use it.
+- **The browser only talks to this app.** The handlers call the API server-side with
+  `BACKEND_URL`. The API's JWT is kept in an `httpOnly`, `secure`, `sameSite=strict`
+  cookie scoped to `/admin`; client script never sees it. The cookie expires with the
+  token (24 h by default, `jwt.expiry-ms` in the backend).
+- **Every API call has an 8 s timeout**, and the login handler refuses bodies over 4 KB.
+- **No static pages and no caching:** each view of the inbox is one function call and
+  one API request. Only the admin uses it, so the cost is negligible.
+
+### Environment variables for `admin`
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `BACKEND_URL` | yes | Base URL of the API, `https://api.justcallmepratt.dev`. Server-only. Without it the app builds and runs but every page reports that no API is configured. |
+
+### Vercel setup (by hand, in this order)
+
+Nothing here has been done yet. Steps 2 to 4 follow
+<https://vercel.com/docs/microfrontends/quickstart>; re-check that page before starting
+in case it has changed.
+
+1. **Create the project.** New Vercel project from this repository, named `admin`
+   (the name is what `microfrontends.json` refers to), root directory `apps/admin`,
+   framework Next.js. Set `BACKEND_URL` for Production and Preview. Deploy and check
+   that `https://<admin-project>.vercel.app/admin/login` loads. Do not attach a domain.
+2. **Create the microfrontends group.** Team **Settings → Microfrontends → Create
+   Group**. Add the `frontend` and `admin` projects and choose **`frontend` as the
+   default application**. Nothing changes for visitors until step 3 reaches production.
+3. **Add `microfrontends.json` to the default app** (`frontend/microfrontends.json`,
+   deliberately not part of the change that added `apps/admin`), then deploy it to
+   production. Vercel shows a suggested file on the `frontend` project under
+   **Settings → Microfrontends**; it should be equivalent to:
+
+   ```json
+   {
+     "$schema": "https://openapi.vercel.sh/microfrontends.json",
+     "applications": {
+       "frontend": {
+         "development": { "fallback": "justcallmepratt.dev" }
+       },
+       "admin": {
+         "routing": [{ "paths": ["/admin/:path*"] }]
+       }
+     }
+   }
+   ```
+
+   The keys under `applications` must be the Vercel project names. The quickstart also
+   has every app in the group install `@vercel/microfrontends` and wrap its Next.js
+   config in `withMicrofrontends`; `apps/admin` already does, and `frontend` needs the
+   same change in that commit.
+4. **Redeploy `admin`** after step 3 is live. Its build then picks up the group's
+   configuration and serves its JavaScript and CSS under its own asset prefix
+   (`/vc-ap-…`) so they cannot collide with the public site's `/_next/` files. Until
+   then the build logs "no microfrontends.json found; building as a standalone app",
+   which is expected.
+5. **Check** `https://justcallmepratt.dev/admin/login` signs in and the inbox loads,
+   and that the public pages are unchanged.
+
+Things to know:
+
+- **Cost:** Hobby and Pro include two microfrontends projects; on Pro, routing is
+  billed at $2 per million routed requests. A third project costs extra.
+- **Moving between the public site and `/admin` is a full page load**, since they are
+  separate apps.
+- **`apps/admin` has no `public/` directory** on purpose: files there are not covered
+  by the asset prefix and would have to be routed separately.
+- **Rollback:** remove the `admin` entry from `microfrontends.json` and redeploy
+  `frontend`; `/admin/*` then goes back to the public site (a 404).
+
+### Edge cases and what the admin sees
+
+| Situation | Behaviour |
+|---|---|
+| `BACKEND_URL` not set | Login and inbox say no API is configured (HTTP 503 from the handlers) |
+| API unreachable | "The API could not be reached" (502); the session is kept, **Refresh** retries |
+| API slower than 8 s | "The API took too long to answer" (504); same as above |
+| API answers with something that is not the expected JSON | "A response this app could not read" (502) |
+| Wrong username or password | "Invalid credentials" (401) |
+| `ADMIN_PASSWORD_HASH` not set on the API | "Admin sign-in is not configured on the API" (503) |
+| Token expired or rejected (API answers 401 or 403) | Cookie cleared, back to the login page with "Your session has expired" |
+| Message deleted before it is toggled (404) | Removed from the list with "That message no longer exists" |
+| No messages | "No messages yet" |
+| Oversized or malformed login request, request from another origin | Rejected by `admin` (413 / 400 / 403) without calling the API |
+
+### Local development
+
+```bash
+cd apps/admin
+pnpm install
+BACKEND_URL=http://localhost:8080 pnpm dev   # http://localhost:3001/admin
+pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build
+```
+
 ## Environment variables for `web`
 
 | Variable | Required | Purpose |
@@ -149,14 +254,15 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
    upgrade (PR #32) first so the redeploy starts from the current framework version.
 3. **Monorepo:** move `frontend/` to `apps/web`, extract shared UI and API types into
    packages.
-4. **`admin` micro-frontend:** new Next.js app for login, inbox and job tracker against
-   the existing `/api/admin/*` endpoints; `microfrontends.json` in `web` routes
-   `/admin/*` to it.
+4. **`admin` micro-frontend:** login and inbox are built (`apps/admin`). Still to do:
+   the Vercel steps under [Admin app](#admin-app), then the job tracker.
 
 ## GitHub setup
 
 - **Branch protection on `main`:** the CI jobs `Backend — Java 21 / Maven` and
-  `Frontend — Node 22 / pnpm` must pass before merging. No review is required and
+  `Frontend — Node 22 / pnpm` must pass before merging. `Admin — Node 22 / pnpm` also
+  runs on every PR but is not a required check yet; add it under Settings → Branches
+  if it should be. No review is required and
   admins can bypass.
 - **Dependabot:** version updates (`.github/dependabot.yml`), alerts and security
   updates are on. `dependabot-auto-merge.yml` approves patch and minor bumps and merges

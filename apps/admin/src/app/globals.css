@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* Theme tokens copied from frontend/src/app/globals.css. Keep them in step
+   until both apps read them from a shared package. */
+@theme {
+  --color-cp-red: #C5003C;
+  --color-cp-teal: #55EAD4;
+  --color-cp-yellow: #F3E600;
+  --color-cp-dark: #000000;
+  --color-cp-panel: #0A0A10;
+  --color-cp-border: #1E2235;
+  --color-cp-muted: #4A4F6A;
+  --color-cp-text: #C8CDD8;
+
+  --font-ui: var(--font-ui), Rajdhani, sans-serif;
+  --font-display: var(--font-display), Orbitron, sans-serif;
+  --font-mono: var(--font-mono), "Share Tech Mono", monospace;
+}
+
+html,
+body {
+  background: #000000;
+  color: #C8CDD8;
+  min-height: 100%;
+  font-family: var(--font-mono);
+}
+
+body {
+  background-image:
+    linear-gradient(#1E223560 1px, transparent 1px),
+    linear-gradient(90deg, #1E223560 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-attachment: fixed;
+}
+
+.hud-clip {
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+}
