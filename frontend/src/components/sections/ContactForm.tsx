@@ -5,6 +5,7 @@ import HUDChrome from '@/components/layout/HUDChrome'
 import NeonButton from '@/components/ui/NeonButton'
 import TerminalInput from '@/components/ui/TerminalInput'
 import { api } from '@/lib/api'
+import { publicContactEmail } from '@/lib/contactEmail'
 
 type Status = 'idle' | 'sending' | 'sent' | 'error'
 
@@ -15,6 +16,7 @@ export default function ContactForm() {
   const [body, setBody] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [msg, setMsg] = useState('')
+  const directEmail = publicContactEmail()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -62,6 +64,17 @@ export default function ContactForm() {
                 <span aria-hidden="true">» </span>
                 {status === 'error' && <span className="sr-only">Error: </span>}
                 {msg}
+              </>
+            )}
+            {status === 'error' && directEmail && (
+              <>
+                {' '}
+                <span className="normal-case tracking-normal">
+                  Or email me directly:{' '}
+                  <a href={`mailto:${directEmail}`} className="text-cp-yellow underline">
+                    {directEmail}
+                  </a>
+                </span>
               </>
             )}
           </p>

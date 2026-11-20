@@ -41,13 +41,61 @@ How the site is built, deployed and configured. This replaces the earlier
 - **Pages are static** and re-rendered at most once an hour (`REVALIDATE_SECONDS` in
   `frontend/src/lib/api.ts`), so visitors are served from the CDN and the API sees
   about one request per page per hour, not one per visit.
-- **One function:** `POST /api/contact`. It rejects bodies over 16 KB before reading
-  them, validates before doing any network call, and stops waiting for the backend
-  after 10 s.
+- **One function:** `POST /api/contact` (`maxDuration` 25 s). It rejects bodies over
+  16 KB before reading them and validates before doing any network call. Every
+  outbound call has a timeout: relay 4 s, MX lookup 2 s, SMTP 10 s, so the worst case
+  is 16 s.
 - **CI does not deploy.** Vercel's Git integration builds once per push.
 - **Settings worth turning on** (dashboard, not in the repo): skip builds when nothing
   under the project's root directory changed, so backend-only and Dependabot Maven
   pushes cost no build; and a spend limit under Billing → Spend Management.
+
+## Contact delivery
+
+`POST /api/contact` on `web` tries these in order:
+
+1. **Relay** to the API when `BACKEND_URL` is set. A definite answer (2xx, or a 4xx such
+   as validation or rate limit) is returned to the visitor as is.
+2. **Direct SMTP** (`nodemailer`, `MAIL_*`) when there is no `BACKEND_URL`, or when the
+   relay failed: backend unreachable, no answer within 4 s, a 5xx, or a non-JSON reply.
+   On this path `web` applies its own rate limit and email-domain checks (the API's did
+   not run) and logs a warning.
+3. **Undeliverable** when neither path can deliver (HTTP 503 with no mail configured,
+   502 if SMTP rejects or hangs). The form's error state then shows a `mailto:` link,
+   and the contact page always shows "Or email me directly", when
+   `NEXT_PUBLIC_CONTACT_EMAIL` is set. No address is hard-coded in the repository.
+
+Each outcome writes one JSON line to the function logs (Vercel → project → Logs, filter
+`"event":"contact"`): `relayed`, `sent-smtp`, `fell-back`, `undeliverable`. Lines carry
+status codes, reasons and a masked sender (`a***@example.com`); never the message,
+subject, name or a full address. A failure to deliver is an `undeliverable` line.
+
+### Turn on contact email
+
+Do this once, in the Vercel `frontend` project (Settings → Environment Variables), for
+Production (and Preview if you want previews to send mail):
+
+1. **Remove `BACKEND_URL`** until the API is live. It currently points at a dead host.
+   (Leaving it is safe now, since the form falls back to SMTP after 4 s, but it adds a
+   delay to every submission and a 5 s wait per page at build time.)
+2. **Add `MAIL_USER`**: the sending mailbox, e.g. your Gmail address.
+3. **Add `MAIL_PASS`**: for Gmail, an **app password**, never the account password.
+   Create it at <https://myaccount.google.com/security> → turn on 2-Step Verification →
+   App passwords → create one named "portfolio". Paste the 16 characters without spaces.
+4. **Optional `CONTACT_NOTIFY_TO`**: where messages are delivered if not `MAIL_USER`.
+   `MAIL_HOST` and `MAIL_PORT` default to `smtp.gmail.com` and 587; set them only for
+   another provider.
+5. **Add `NEXT_PUBLIC_CONTACT_EMAIL`**: the address visitors may write to directly. It is
+   public, and read at build time, so a redeploy is required.
+6. **Redeploy** the latest production deployment (Deployments → ⋯ → Redeploy). Variable
+   changes apply only to new deployments.
+7. **Send a test message** from <https://justcallmepratt.dev/contact> using a real
+   address that is not yours, and confirm it arrives (check spam once). If the form shows
+   an error, read the `"event":"contact"` log lines for the reason. Real delivery has not
+   been tested in this repository's CI.
+
+When the API goes live, set `BACKEND_URL` again. The SMTP variables can stay as the
+fallback.
 
 ## Vercel setup
 
@@ -60,7 +108,8 @@ preview.
 - **Still to do on `frontend` → Environment Variables:** remove `NEXT_PUBLIC_API_URL`;
   set `NEXT_PUBLIC_SITE_URL` to `https://justcallmepratt.dev`; set `BACKEND_URL` to the
   Railway URL once the backend is up. Until then it points at a dead host, so every
-  build waits 5 s per page before falling back to the repo content.
+  build waits 5 s per page before falling back to the repo content. Add the mail
+  variables too: see [Turn on contact email](#turn-on-contact-email).
 - **Projects `personal-web-app` and `backend`** have never had a working deployment
   and should be deleted (Project → Settings → General → Delete Project).
 
@@ -289,8 +338,11 @@ pnpm test && pnpm lint && pnpm exec tsc --noEmit && pnpm build
 | `GITHUB_TOKEN`, `GITHUB_USERNAME` | no | Optional, server-only. The home page's GitHub activity section makes one request an hour to `api.github.com` (60/hour per IP unauthenticated); a read-only token only raises that limit. `GITHUB_USERNAME` overrides the default account (`DEFAULT_GITHUB_USERNAME` in `frontend/src/lib/github.ts`). |
 | `NEXT_PUBLIC_SITE_NAME` | no | Site title |
 | `NEXT_PUBLIC_SITE_URL` | no | Canonical URL for metadata / Open Graph |
-| `MAIL_USER`, `MAIL_PASS`, `MAIL_HOST`, `MAIL_PORT`, `CONTACT_NOTIFY_TO` | only without `BACKEND_URL` | SMTP settings for the standalone contact handler |
-| `CONTACT_RATE_LIMIT_MAX`, `CONTACT_RATE_LIMIT_WINDOW` | no | Standalone handler limits (default 3 per 3600 s, per instance, best effort) |
+| `MAIL_USER`, `MAIL_PASS` | to receive contact mail without the API | SMTP login for the direct path and the fallback. For Gmail, `MAIL_PASS` is an app password. Server-only. |
+| `MAIL_HOST`, `MAIL_PORT` | no | SMTP server, default `smtp.gmail.com` and 587 (465 uses TLS) |
+| `CONTACT_NOTIFY_TO` | no | Recipient; defaults to `MAIL_USER` |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | recommended | Public address for the `mailto:` link in the form's error state and the "email me directly" line. Unset means no link is shown. Read at build time. |
+| `CONTACT_RATE_LIMIT_MAX`, `CONTACT_RATE_LIMIT_WINDOW` | no | Direct-SMTP path limits (default 3 per 3600 s, per instance, best effort) |
 
 ## Edge cases and what happens
 
@@ -299,10 +351,15 @@ pnpm test && pnpm lint && pnpm exec tsc --noEmit && pnpm build
 | API down, erroring, or returning bad JSON | Pages render from `src/content`; a warning is logged |
 | API slower than 5 s (cold start) | Same fallback; the next hourly re-render tries again |
 | GitHub unreachable, slow (5 s), rate limited (403/429), 404, 5xx, bad JSON or no public repos | The GitHub activity section shrinks to a link to the profile; a warning is logged; the build and the page still succeed |
-| API down when the contact form is submitted | Form shows "channel offline" (HTTP 502); nothing is lost silently |
-| Contact relay slower than 10 s | Treated as down (502) |
+| API down when the contact form is submitted | Falls back to SMTP if `MAIL_USER` / `MAIL_PASS` are set (message delivered, warning logged); otherwise 503 and the form offers the `mailto:` link |
+| Contact relay slower than 4 s, or answering 5xx / non-JSON | Treated as down: same fallback as above |
+| API answers 4xx (validation, 429) | Passed to the visitor; no fallback, no SMTP |
+| Fallback path | `web` applies its own rate limit (429) and email-domain checks (422) |
+| SMTP rejects the message (bad app password, etc.) | 502, logged as `undeliverable` with the error code; form offers the `mailto:` link |
+| SMTP slower than 10 s | Aborted, 502 |
+| `NEXT_PUBLIC_CONTACT_EMAIL` unset or malformed | No `mailto:` link or "email me directly" line is rendered |
 | Invalid or oversized contact payload | Rejected by `web` (400 / 413) without calling the API |
-| Too many submissions | The API's per-address limit applies (429); `web` forwards the visitor's address |
+| Too many submissions | With the API: its per-address limit (429), `web` forwards the visitor's address. Direct SMTP: `web`'s own limit |
 | `BACKEND_URL` not set | Fully static site; contact handled by `web` over SMTP, or 503 if SMTP is not configured |
 | `KAFKA_DEMO_URL` not set | `/projects/kafka` renders with a "broker offline" notice and a disabled form; no function is called |
 | Kafka demo service down, cold or slower than 10 s | The send or read returns 502 and the page says the service is not responding |

@@ -10,6 +10,12 @@ export type Result<T> = { ok: true; value: T } | { ok: false; status: number; me
 
 const reject = (status: number, message: string) => ({ ok: false as const, status, message })
 
+// Time budget for one submission (the route sets maxDuration = 25 s):
+// relay 4 s + MX lookup 2 s + SMTP 10 s = 16 s worst case, leaving headroom.
+export const RELAY_TIMEOUT_MS = 4_000
+export const MX_TIMEOUT_MS = 2_000
+export const SMTP_TIMEOUT_MS = 10_000
+
 const LIMITS = { name: 100, email: 255, subject: 200, body: 2000 } as const
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -47,7 +53,8 @@ export async function validateEmailDomain(
     return reject(422, 'Disposable or throwaway email addresses are not accepted. Please use a real inbox.')
   }
   try {
-    if ((await lookupMx(domain)).length === 0) {
+    const records = await withTimeout(lookupMx(domain), MX_TIMEOUT_MS, 'MX lookup')
+    if (records.length === 0) {
       return reject(422, 'The email domain has no mail server. Please verify your email address.')
     }
   } catch (e) {
@@ -89,8 +96,17 @@ export function isMailConfigured(): boolean {
 
 const oneLine = (s: string) => s.replace(/[\r\n]+/g, ' ')
 
-/** Sends the notification email. Throws if SMTP rejects it. */
-export async function sendContactMail(msg: ContactPayload): Promise<void> {
+/** Rejects if `promise` has not settled after `ms`. Clears its timer either way. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error(`${what} timed out`), { code: 'ETIMEOUT' })), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+/** Sends the notification email. Throws if SMTP rejects it or takes longer than the timeout. */
+export async function sendContactMail(msg: ContactPayload, timeoutMs = SMTP_TIMEOUT_MS): Promise<void> {
   const user = process.env.MAIL_USER!
   const port = Number(process.env.MAIL_PORT ?? 587)
   const transport = nodemailer.createTransport({
@@ -98,12 +114,98 @@ export async function sendContactMail(msg: ContactPayload): Promise<void> {
     port,
     secure: port === 465,
     auth: { user, pass: process.env.MAIL_PASS! },
+    // Socket-level limits; the race below bounds the whole send regardless.
+    connectionTimeout: timeoutMs,
+    greetingTimeout: timeoutMs,
+    socketTimeout: timeoutMs,
   })
-  await transport.sendMail({
-    from: user,
-    to: process.env.CONTACT_NOTIFY_TO || user,
-    replyTo: msg.email,
-    subject: `[Resume Contact] ${oneLine(msg.subject)}`,
-    text: `From: ${oneLine(msg.name)} <${msg.email}>\n\n${msg.body}`,
-  })
+  try {
+    await withTimeout(
+      transport.sendMail({
+        from: user,
+        to: process.env.CONTACT_NOTIFY_TO || user,
+        replyTo: msg.email,
+        subject: `[Resume Contact] ${oneLine(msg.subject)}`,
+        text: `From: ${oneLine(msg.name)} <${msg.email}>\n\n${msg.body}`,
+      }),
+      timeoutMs,
+      'SMTP send',
+    )
+  } finally {
+    transport.close()
+  }
+}
+
+export type RelayResult =
+  | { kind: 'reply'; status: number; success: boolean; message: string }
+  | { kind: 'unavailable'; reason: string }
+
+/**
+ * Relays to the Spring API. A definite answer (2xx or 4xx JSON) is returned as a
+ * reply to pass on. Unreachable, timed out, 5xx or non-JSON is "unavailable", so
+ * the caller can fall back to SMTP.
+ */
+export async function relayToBackend(
+  backend: string,
+  payload: ContactPayload,
+  ip: string,
+  timeoutMs = RELAY_TIMEOUT_MS,
+): Promise<RelayResult> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(`${backend}/api/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': ip },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    if (res.status >= 500) return { kind: 'unavailable', reason: `backend ${res.status}` }
+    let body: { success?: unknown; message?: unknown }
+    try {
+      body = await res.json()
+    } catch {
+      return { kind: 'unavailable', reason: 'backend returned non-JSON' }
+    }
+    if (typeof body !== 'object' || body === null) {
+      return { kind: 'unavailable', reason: 'backend returned non-object JSON' }
+    }
+    return {
+      kind: 'reply',
+      status: res.status,
+      success: Boolean(body.success),
+      message: typeof body.message === 'string' ? body.message : 'Send failed.',
+    }
+  } catch (e) {
+    return { kind: 'unavailable', reason: controller.signal.aborted ? 'backend timed out' : `backend unreachable (${errorCode(e)})` }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Keeps the first character and the domain: `a***@example.com`. */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf('@')
+  return at < 1 ? '***' : `${email[0]}***${email.slice(at)}`
+}
+
+export function errorCode(e: unknown): string {
+  const err = e as { code?: unknown; responseCode?: unknown; name?: unknown }
+  return String(err?.code ?? err?.responseCode ?? err?.name ?? 'unknown')
+}
+
+export type ContactOutcome = 'relayed' | 'sent-smtp' | 'fell-back' | 'undeliverable'
+
+/**
+ * One structured line per outcome. Never logs the message body, subject, name or
+ * a full email address; read these in the Vercel function logs.
+ */
+export function logContact(
+  outcome: ContactOutcome,
+  fields: Record<string, string | number | boolean>,
+): void {
+  const line = JSON.stringify({ event: 'contact', outcome, ...fields })
+  if (outcome === 'undeliverable') console.error(line)
+  else if (outcome === 'fell-back') console.warn(line)
+  else console.info(line)
 }

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const sendMail = vi.hoisted(() => vi.fn())
-vi.mock('nodemailer', () => ({ default: { createTransport: () => ({ sendMail }) } }))
+vi.mock('nodemailer', () => ({ default: { createTransport: () => ({ sendMail, close: vi.fn() }) } }))
 vi.mock('node:dns/promises', () => ({ resolveMx: vi.fn().mockResolvedValue([{ exchange: 'mx' }]) }))
 
 import { isRateLimited, resetRateLimit, validateEmailDomain, validatePayload } from '@/lib/contact'
@@ -173,12 +173,5 @@ describe('POST /api/contact with BACKEND_URL', () => {
     vi.stubGlobal('fetch', fetchMock)
     expect((await post({ ...valid, email: 'nope' })).status).toBe(400)
     expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it('returns 502 when the backend is unreachable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')))
-    const res = await post(valid)
-    expect(res.status).toBe(502)
-    expect(await res.json()).toMatchObject({ success: false })
   })
 })
