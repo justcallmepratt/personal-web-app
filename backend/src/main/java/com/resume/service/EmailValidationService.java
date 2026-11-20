@@ -111,7 +111,7 @@ public class EmailValidationService {
 
         // 1. Disposable provider
         if (DISPOSABLE.contains(domain)) {
-            log.warn("Contact rejected: disposable email domain [{}]", domain);
+            log.warn("Contact rejected: disposable email domain [{}]", safe(domain));
             return ValidationResult.reject(
                 "Disposable or throwaway email addresses are not accepted. Please use a real inbox."
             );
@@ -123,13 +123,18 @@ public class EmailValidationService {
 
         // 3. Suspicious pattern
         if (SUSPICIOUS.matcher(domain).matches()) {
-            log.warn("Contact flagged: suspicious domain pattern [{}]", domain);
+            log.warn("Contact flagged: suspicious domain pattern [{}]", safe(domain));
             return ValidationResult.reject(
                 "The email domain looks invalid or suspicious. Please double-check your address."
             );
         }
 
         return ValidationResult.ok();
+    }
+
+    /** Strips line breaks so user-supplied text cannot forge extra log entries. */
+    private static String safe(String s) {
+        return s == null ? null : s.replaceAll("[\\r\\n]", "_");
     }
 
     private ValidationResult checkMxRecord(String domain) {
@@ -143,7 +148,7 @@ public class EmailValidationService {
             Attributes attrs = ctx.getAttributes("dns:/" + domain, new String[]{"MX"});
 
             if (attrs.get("MX") == null || attrs.get("MX").size() == 0) {
-                log.warn("Contact rejected: no MX records for domain [{}]", domain);
+                log.warn("Contact rejected: no MX records for domain [{}]", safe(domain));
                 return ValidationResult.reject(
                     "The email domain has no mail server. Please verify your email address."
                 );
@@ -151,11 +156,11 @@ public class EmailValidationService {
             return ValidationResult.ok();
 
         } catch (javax.naming.NameNotFoundException e) {
-            log.warn("Contact rejected: domain does not exist [{}]", domain);
+            log.warn("Contact rejected: domain does not exist [{}]", safe(domain));
             return ValidationResult.reject("The email domain does not exist. Please check your address.");
         } catch (Exception e) {
             // DNS timeout or other infra issue — fail open to avoid blocking legit users
-            log.debug("MX lookup inconclusive for [{}]: {}", domain, e.getMessage());
+            log.debug("MX lookup inconclusive for [{}]: {}", safe(domain), e.getMessage());
             return ValidationResult.ok();
         }
     }

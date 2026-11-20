@@ -54,7 +54,8 @@ public class RateLimitService {
             }
 
             if (times.size() >= maxSubmissions) {
-                log.warn("Rate limit exceeded for IP [{}]: {} submissions in {}s window", ip, times.size(), windowSeconds);
+                log.warn("Rate limit exceeded for IP [{}]: {} submissions in {}s window",
+                        ip == null ? null : ip.replaceAll("[\\r\\n]", "_"), times.size(), windowSeconds);
                 return false;
             }
 
