@@ -162,7 +162,8 @@ class PostgresPersistenceTest {
         p.setCvUrl("/cv.pdf");
         p.setTechStack(List.of("Java", "Spring Boot", "Postgres"));
         p.setSocials(Map.of("github", "https://github.com/example", "linkedin", "https://linkedin.com/in/example"));
-        p.setSkills(List.of(new Skill("Java", "Backend", 90), new Skill("React", "Frontend", 85)));
+        p.setSkills(List.of(new Skill("Java", "Backend", 90), new Skill("React", "Frontend", 85),
+                new Skill("Kafka", "Backend")));
 
         Long id = profiles.save(p).getId();
         Profile loaded = profiles.findById(id).orElseThrow();
@@ -178,12 +179,17 @@ class PostgresPersistenceTest {
         assertThat(loaded.getSocials()).containsOnly(
                 Map.entry("github", "https://github.com/example"),
                 Map.entry("linkedin", "https://linkedin.com/in/example"));
-        assertThat(loaded.getSkills()).hasSize(2);
+        assertThat(loaded.getSkills()).hasSize(3);
         Skill first = loaded.getSkills().get(0);
         assertThat(first.getName()).isEqualTo("Java");
         assertThat(first.getCategory()).isEqualTo("Backend");
         assertThat(first.getLevel()).isEqualTo(90);
         assertThat(loaded.getSkills().get(1).getName()).isEqualTo("React");
+        // A skill without a level stays without one: null in Java, no key in the stored JSON.
+        assertThat(loaded.getSkills().get(2).getName()).isEqualTo("Kafka");
+        assertThat(loaded.getSkills().get(2).getLevel()).isNull();
+        assertThat(jdbc.queryForObject(
+                "select jsonb_exists(skills -> 2, 'level') from profile where id = ?", Boolean.class, id)).isFalse();
         assertThat(loaded.getUpdatedAt()).isNotNull();
 
         // Stored as real JSONB, in the shape the GIN index on skills can serve.
