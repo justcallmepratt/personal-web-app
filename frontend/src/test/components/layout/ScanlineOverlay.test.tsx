@@ -9,4 +9,12 @@ describe('ScanlineOverlay', () => {
     expect(div).toBeTruthy()
     expect(div.className).toContain('pointer-events-none')
   })
+
+  it('is hidden from assistive tech and holds nothing focusable', () => {
+    const { container: c } = render(<ScanlineOverlay />)
+    const div = c.firstElementChild as HTMLElement
+    expect(div).toHaveAttribute('aria-hidden', 'true')
+    expect(div.querySelectorAll('a, button, input, [tabindex]')).toHaveLength(0)
+    expect(div).toBeEmptyDOMElement()
+  })
 })

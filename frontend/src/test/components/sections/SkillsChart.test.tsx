@@ -6,6 +6,7 @@ import type { Skill } from '@/lib/types'
 
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
+  useReducedMotion: () => false,
   motion: {
     div: ({ children, style, className }: React.HTMLAttributes<HTMLDivElement>) => (
       <div style={style} className={className}>{children}</div>
@@ -23,9 +24,13 @@ const skills: Skill[] = [
 describe('SkillsChart', () => {
   it('renders all skill categories present in the data', () => {
     render(<SkillsChart skills={skills} />)
-    expect(screen.getByText('Frontend')).toBeInTheDocument()
-    expect(screen.getByText('Backend')).toBeInTheDocument()
-    expect(screen.getByText('DevOps')).toBeInTheDocument()
+    // Each category appears twice: its filter button and its panel title
+    // (the title's decorative glyph is now a separate aria-hidden span).
+    for (const category of ['Frontend', 'Backend', 'DevOps']) {
+      expect(screen.getAllByText(category)).toHaveLength(2)
+    }
+    // "Other" has no skills in the data: only its filter button is shown.
+    expect(screen.getAllByText('Other')).toHaveLength(1)
   })
 
   it('renders filter buttons', () => {
@@ -42,6 +47,19 @@ describe('SkillsChart', () => {
     expect(screen.getByText('Next.js')).toBeInTheDocument()
     expect(screen.queryByText('Java')).not.toBeInTheDocument()
     expect(screen.queryByText('Docker')).not.toBeInTheDocument()
+  })
+
+  it('exposes the active filter with aria-pressed inside a labelled group', async () => {
+    render(<SkillsChart skills={skills} />)
+    expect(screen.getByRole('group', { name: /filter skills/i })).toBeInTheDocument()
+    const all = screen.getByRole('button', { name: /^All$/i })
+    const frontend = screen.getByRole('button', { name: /^Frontend$/i })
+    expect(all).toHaveAttribute('aria-pressed', 'true')
+    expect(frontend).toHaveAttribute('aria-pressed', 'false')
+
+    await userEvent.click(frontend)
+    expect(all).toHaveAttribute('aria-pressed', 'false')
+    expect(frontend).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('clicking All shows all skills', async () => {

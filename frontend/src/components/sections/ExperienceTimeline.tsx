@@ -48,9 +48,10 @@ export default function ExperienceTimeline({ items }: { items: Experience[] }) {
                   <div className="space-y-3">
                     {/* Role + company — right-align heading block on left-side cards (md+) */}
                     <div className={!right ? 'md:text-right' : ''}>
-                      <h3 className="font-[var(--font-display)] text-xl text-cp-yellow">
+                      {/* h2: each role sits directly under the page's h1 */}
+                      <h2 className="font-[var(--font-display)] text-xl text-cp-yellow">
                         {e.role}
-                      </h3>
+                      </h2>
                       <p className="text-cp-teal text-sm uppercase tracking-widest mt-1">
                         @ {e.company}
                         {e.location && (

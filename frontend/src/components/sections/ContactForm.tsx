@@ -38,10 +38,10 @@ export default function ContactForm() {
 
   return (
     <HUDChrome accent="teal" title="secure_channel.tx">
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4" aria-busy={status === 'sending'}>
         <div className="grid md:grid-cols-2 gap-4">
-          <TerminalInput label="Handle" required value={name} onChange={(e) => setName(e.target.value)} />
-          <TerminalInput label="Net Address" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TerminalInput label="Handle" required autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+          <TerminalInput label="Net Address" required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <TerminalInput label="Subject" required value={subject} onChange={(e) => setSubject(e.target.value)} />
         <TerminalInput label="Payload" multiline required value={body} onChange={(e) => setBody(e.target.value)} />
@@ -49,11 +49,22 @@ export default function ContactForm() {
           <NeonButton type="submit" accent="teal" disabled={status === 'sending'}>
             {status === 'sending' ? 'Transmitting…' : 'Send Burst'}
           </NeonButton>
-          {msg && (
-            <span className={`text-xs uppercase tracking-widest ${status === 'sent' ? 'text-cp-teal' : 'text-cp-red'}`}>
-              » {msg}
-            </span>
-          )}
+          {/* Always in the DOM so screen readers announce the result when it appears. */}
+          <p
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className={`text-xs uppercase tracking-widest ${status === 'sent' ? 'text-cp-teal' : 'text-cp-red'}`}
+          >
+            {status === 'sending' && <span className="sr-only">Sending message…</span>}
+            {msg && (
+              <>
+                <span aria-hidden="true">» </span>
+                {status === 'error' && <span className="sr-only">Error: </span>}
+                {msg}
+              </>
+            )}
+          </p>
         </div>
       </form>
     </HUDChrome>

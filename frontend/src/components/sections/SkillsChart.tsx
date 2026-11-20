@@ -23,14 +23,16 @@ export default function SkillsChart({ skills }: { skills: Skill[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
+      <div role="group" aria-label="Filter skills by category" className="flex flex-wrap gap-2">
         {filters.map((f) => (
           <button
             key={f}
+            type="button"
+            aria-pressed={filter === f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1 text-xs uppercase tracking-widest border transition-colors ${filter === f
                 ? 'border-cp-teal text-cp-teal bg-cp-teal/10'
-                : 'border-cp-border text-cp-text hover:border-cp-teal/60'
+                : 'border-cp-border-strong text-cp-text hover:border-cp-teal/60'
               }`}
           >
             {f}

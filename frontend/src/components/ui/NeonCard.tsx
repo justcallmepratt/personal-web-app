@@ -1,19 +1,28 @@
 import HUDChrome from '@/components/layout/HUDChrome'
 import type { Project } from '@/lib/types'
 
-export default function NeonCard({ project }: { project: Project }) {
+interface Props {
+  project: Project
+  /** Heading level for the title: 2 directly under a page h1, 3 under a section h2. */
+  headingLevel?: 2 | 3
+}
+
+const linkCls = 'inline-flex items-center min-h-6'
+
+export default function NeonCard({ project, headingLevel = 2 }: Props) {
+  const Heading = `h${headingLevel}` as const
   return (
     <div className="relative group">
       <span
-        aria-hidden
-        className="absolute left-0 top-0 h-full w-[3px] bg-cp-red z-10"
+        aria-hidden="true"
+        className="absolute left-0 top-0 h-full w-[3px] bg-cp-red-deep z-10"
         style={{ boxShadow: '0 0 10px #FF003C' }}
       />
       <HUDChrome accent="red" title={project.featured ? 'Featured · Project' : 'Project'} className="h-full transition-all group-hover:[box-shadow:0_0_20px_#C5003C66]">
         <div className="space-y-3">
-          <h3 className="font-[var(--font-display)] text-lg text-cp-red tracking-wider">
+          <Heading className="font-[var(--font-display)] text-lg text-cp-red tracking-wider">
             {project.title}
-          </h3>
+          </Heading>
           <p className="text-sm text-cp-text/80">{project.description}</p>
           <div className="flex flex-wrap gap-2">
             {project.tags.map((t) => (
@@ -31,9 +40,10 @@ export default function NeonCard({ project }: { project: Project }) {
                 href={project.demoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-cp-yellow hover:underline"
+                className={`${linkCls} text-cp-yellow hover:underline`}
               >
-                ▶ DEMO
+                <span aria-hidden="true">▶&nbsp;</span>DEMO
+                <span className="sr-only">: {project.title} (opens in a new tab)</span>
               </a>
             )}
             {project.repoUrl && (
@@ -41,9 +51,10 @@ export default function NeonCard({ project }: { project: Project }) {
                 href={project.repoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-cp-text hover:text-cp-red"
+                className={`${linkCls} text-cp-text hover:text-cp-red`}
               >
-                ▶ REPO
+                <span aria-hidden="true">▶&nbsp;</span>REPO
+                <span className="sr-only">: {project.title} (opens in a new tab)</span>
               </a>
             )}
           </div>

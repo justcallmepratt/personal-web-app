@@ -10,13 +10,8 @@ vi.mock('next/navigation', () => ({
 
 // Mock next/link
 vi.mock('next/link', () => ({
-  default: ({ href, children, onClick, className }: {
-    href: string
-    children: React.ReactNode
-    onClick?: () => void
-    className?: string
-  }) => (
-    <a href={href} onClick={onClick} className={className}>{children}</a>
+  default: ({ href, children, ...rest }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
+    <a href={href} {...rest}>{children}</a>
   ),
 }))
 
@@ -47,6 +42,37 @@ describe('Navbar', () => {
 
     // Menu should close - hamburger should say "Open menu" again
     expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument()
+  })
+
+  it('is a labelled navigation landmark that contains the mobile menu', async () => {
+    render(<Navbar />)
+    const nav = screen.getByRole('navigation', { name: /primary/i })
+    const hamburger = screen.getByRole('button', { name: /open menu/i })
+    expect(hamburger).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(hamburger)
+    expect(hamburger).toHaveAttribute('aria-expanded', 'true')
+    const menu = document.getElementById(hamburger.getAttribute('aria-controls') as string)
+    expect(menu).not.toBeNull()
+    expect(nav).toContainElement(menu)
+  })
+
+  it('Escape closes the mobile menu and returns focus to the toggle', async () => {
+    render(<Navbar />)
+    await userEvent.click(screen.getByRole('button', { name: /open menu/i }))
+    await userEvent.tab()
+    await userEvent.keyboard('{Escape}')
+    const hamburger = screen.getByRole('button', { name: /open menu/i })
+    expect(hamburger).toHaveAttribute('aria-expanded', 'false')
+    expect(hamburger).toHaveFocus()
+  })
+
+  it('marks the current page with aria-current and hides the decorative marker', () => {
+    render(<Navbar />)
+    const current = screen.getAllByRole('link', { current: 'page' })
+    expect(current.length).toBeGreaterThan(0)
+    for (const link of current) expect(link).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'EXPERIENCE' })).not.toHaveAttribute('aria-current')
+    for (const marker of screen.getAllByText('▮')) expect(marker).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('shows active indicator on current route', () => {

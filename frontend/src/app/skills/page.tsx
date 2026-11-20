@@ -1,8 +1,13 @@
 import SkillsChart from '@/components/sections/SkillsChart'
 import GlitchText from '@/components/ui/GlitchText'
 import { api } from '@/lib/api'
+import { pageMetadata } from '@/lib/site'
 
-export const metadata = { title: 'Skills // Loadout' }
+export const metadata = pageMetadata({
+  title: 'Skills // Loadout',
+  description: 'Skills loadout across frontend, backend and DevOps, filterable by category.',
+  path: '/skills',
+})
 
 export default async function SkillsPage() {
   const profile = await api.getProfile().catch(() => null)

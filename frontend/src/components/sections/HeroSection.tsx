@@ -7,7 +7,7 @@ export default function HeroSection({ profile }: { profile: Profile | null }) {
   if (!profile) {
     return (
       <section className="min-h-[70vh] flex items-center justify-center">
-        <p className="text-cp-red">{'// PROFILE NOT FOUND //'}</p>
+        <h1 className="text-cp-red">{'// PROFILE NOT FOUND //'}</h1>
       </section>
     )
   }
@@ -65,8 +65,9 @@ export default function HeroSection({ profile }: { profile: Profile | null }) {
               <dt className="text-cp-teal text-xs uppercase tracking-widest">Net</dt>
               <dd className="flex flex-col gap-1 pt-1">
                 {Object.entries(profile.socials).map(([k, v]) => (
-                  <a key={k} href={v} target="_blank" rel="noreferrer" className="text-cp-yellow hover:underline">
-                    ▶ {k}
+                  <a key={k} href={v} target="_blank" rel="noreferrer" className="inline-flex items-center min-h-6 text-cp-yellow hover:underline">
+                    <span aria-hidden="true">▶&nbsp;</span>{k}
+                    <span className="sr-only"> (opens in a new tab)</span>
                   </a>
                 ))}
               </dd>

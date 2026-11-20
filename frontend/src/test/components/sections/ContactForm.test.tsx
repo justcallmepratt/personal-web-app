@@ -52,6 +52,34 @@ describe('ContactForm', () => {
     })
   })
 
+  it('has an empty polite live region before anything is sent, and labelled fields', () => {
+    render(<ContactForm />)
+    const status = screen.getByRole('status')
+    expect(status).toHaveAttribute('aria-live', 'polite')
+    expect(status).toBeEmptyDOMElement()
+    expect(screen.getByLabelText(/handle/i)).toBeRequired()
+    expect(screen.getByLabelText(/net address/i)).toHaveAttribute('type', 'email')
+    expect(screen.getByLabelText(/subject/i)).toBeRequired()
+    expect(screen.getByLabelText(/payload/i)).toBeRequired()
+  })
+
+  it('announces the result of a submission in the live region', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ success: false, message: 'Channel offline.' }),
+    }))
+    render(<ContactForm />)
+    await userEvent.type(screen.getByLabelText(/handle/i), 'Cara')
+    await userEvent.type(screen.getByLabelText(/net address/i), 'cara@example.com')
+    await userEvent.type(screen.getByLabelText(/subject/i), 'Hi')
+    await userEvent.type(screen.getByLabelText(/payload/i), 'A message body')
+    await userEvent.click(screen.getByRole('button', { name: /send burst/i }))
+
+    await waitFor(() => {
+      // The same element that existed before the submit now holds the message.
+      expect(screen.getByRole('status')).toHaveTextContent('Error: Channel offline.')
+    })
+  })
+
   it('failed submission shows error message', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ success: false, message: 'Send failed.' }),
