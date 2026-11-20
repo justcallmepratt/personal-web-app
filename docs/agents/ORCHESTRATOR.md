@@ -58,6 +58,8 @@ Batch D (run last):     17
 ## Phase index
 Status as of 2026-11-20. Briefs predate the current hosting; see the status block at the top of each phase file.
 
+> **Roadmap (2026-11-20):** the dependency graph and parallel batches above are superseded by [`docs/ROADMAP.md`](../ROADMAP.md) (evidence in [`docs/RESEARCH.md`](../RESEARCH.md)). In short: do 7, 10 and the ops part of 17 now; redesign 8 (Vercel Web Analytics) and 15 (GitHub activity section); build 11 and 12 only after the backend is live and the owner wants them; drop 9, 13, 14 and 16. Real content and the Railway backend come before any of it.
+
 | File | Phase | Status |
 |---|---|---|
 | `phase-07-polish.md` | Visual polish | partly done |

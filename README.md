@@ -22,6 +22,8 @@ unavailable.
 **Live:** https://justcallmepratt.dev  
 **Deployment and configuration:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)  
 **Code layout:** [`docs/CODEBASE_STRUCTURE.md`](docs/CODEBASE_STRUCTURE.md)  
+**Roadmap (prioritised plan for the remaining phases):** [`docs/ROADMAP.md`](docs/ROADMAP.md)  
+**Research behind the roadmap (site review, third-party limits):** [`docs/RESEARCH.md`](docs/RESEARCH.md)  
 **How the original version was built (historical):** [`docs/HOW_IT_WAS_BUILT.md`](docs/HOW_IT_WAS_BUILT.md)
 
 ---

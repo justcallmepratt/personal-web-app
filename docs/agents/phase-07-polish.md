@@ -3,6 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Partly done: some visual polish landed directly in the public app; the brief's checklist was not tracked. Check the current UI before redoing items.
 > Still valid: animation and Lighthouse goals. No Railway or deploy assumptions.
+> **Roadmap (2026-11-20):** Do now, in reduced form: accessibility, reduced motion, Lighthouse, real CV and OG image (WP-A, WP-B, WP-E). Skip the typewriter, hover glitch and particle field. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Complete the remaining visual animations and polish from the original design spec.
