@@ -3,6 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Partly done by other means: the custom domain is live on Vercel, CI only verifies, and Vercel's Git integration deploys. The backend is not deployed yet.
 > No longer holds: Railway CLI deploys, Railway Postgres and its backups (Supabase is the only database), `NEXT_PUBLIC_API_URL` (unused; the server reads `BACKEND_URL`), the Railway deploy-hook and post-deploy smoke-test jobs in `ci.yml` (CI has no deploy jobs and the repo has no secrets), and the `*.up.railway.app` URL. See `docs/DEPLOYMENT.md`.
+> **Roadmap (2026-11-20):** Reduced; do after the backend is live (WP-H keep-alive, uptime and backup notes; WP-I admin deploy). Much of this brief is already done or obsolete. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Fully harden the existing Railway + Vercel + Supabase deployment for production traffic.

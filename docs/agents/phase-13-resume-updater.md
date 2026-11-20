@@ -3,6 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Not started; depends on Phase 12. Admin pages would live in the planned `admin` micro-frontend, not the public app.
 > No longer holds: the Vercel redeploy hook (deployment is Vercel's Git integration; no CI deploy jobs or secrets) and Railway-based apply flow.
+> **Roadmap (2026-11-20):** Drop. The redeploy hook is unnecessary (the site re-renders hourly) and market-driven edits to a public résumé invite overstating. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Compare your current `profile` in Supabase against market skill insights from Phase 12.

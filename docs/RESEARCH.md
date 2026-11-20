@@ -1,0 +1,416 @@
+# Research notes
+
+Findings behind [ROADMAP.md](ROADMAP.md). Written 2026-11-20 against `main` at `0a8f52c`.
+Part 1 is the site as it is (read from the code and checked live). Part 2 is third-party
+research. Every third-party claim has a link; anything I could not confirm from an
+official page is marked **(unconfirmed)**. Pricing pages change, so re-check before paying
+for anything. Nothing here is legal advice.
+
+Method limits: web search results were summarised, not read page by page, except the CD
+PROJEKT RED guideline and the Databricks Free Edition pages, which were fetched in full.
+I could not run Lighthouse (Google's PageSpeed API returned a quota error and a local run
+was not permitted in this session), so there are no Lighthouse scores here. Run one
+before and after the polish work (see WP-A and WP-B in the roadmap).
+
+---
+
+## Part 1 — The site as it is
+
+### Verdict in one paragraph
+
+The engineering is in better shape than the content. The public site is fast, static,
+cached on the CDN, responsive at phone width, and has sensible security headers. But every
+fact on it is placeholder: a fictional persona "V", invented employers named after
+Cyberpunk 2077 corporations, five fake projects with `example.com` and `github.com/you/…`
+links, `yourhandle` social links, and a CV that is a blank page. The contact form cannot
+deliver (the API is not deployed). Social previews point at the wrong domain and show a
+blank image. For a hiring manager the site currently proves "can build a themed Next.js
+site" and nothing else. Real content is the biggest single lever.
+
+### What works (checked live on 2026-11-20)
+
+- All five pages return 200 and are served from the Vercel CDN (`x-vercel-cache: HIT`);
+  responses took roughly 0.13–0.29 s from the test machine. HTML is about 18–35 KB per page.
+- Security headers are present: HSTS with preload, `X-Frame-Options: DENY` and
+  `Referrer-Policy` were seen live; `nosniff` and `Permissions-Policy` are configured in
+  [`frontend/vercel.json`](../frontend/vercel.json). There is no Content-Security-Policy.
+- At 375 px width there is no horizontal scroll; the hamburger menu button is 44 px high;
+  hero buttons stack full width. Fonts are self-hosted by `next/font` with `display: swap`.
+- The contact endpoint validates before doing anything else: `POST /api/contact` with an
+  empty body returns `400 {"success":false,"message":"Missing name."}`. (I did not submit
+  a real message.)
+- Each page has a title, an `<h1>`, `lang="en"`, and a viewport tag. Error and loading
+  boundaries exist.
+- The code is tested (Vitest) and the structure is clean (see
+  [CODEBASE_STRUCTURE.md](CODEBASE_STRUCTURE.md)).
+
+### What is broken or placeholder
+
+| Area | Finding |
+|---|---|
+| Identity | Name is "V", tagline "Night City Developer", location "Night City, NC", email `v@nightcity.dev`. The hero `<h1>` is the single letter "V". |
+| Experience | Four invented jobs at Arasaka, Militech, Kang Tao, NetWatch (fictional corporations from the game) with invented metrics. A recruiter reading this would take it as fiction at best, or as fabricated claims at worst. |
+| Projects | Five fake projects. Demo links go to `example.com/demo1` and `/demo3`; repo links go to `github.com/you/…`. Every link is dead or wrong. |
+| Social links | `github.com/yourhandle`, `linkedin.com/in/yourhandle`, `twitter.com/yourhandle`. |
+| CV | `frontend/public/cv.pdf` is 309 bytes: one empty US-letter page, no text, no metadata. **It contains no real profile details**, so there is nothing that conflicts with the placeholder content; it is just blank. The "Download CV" button on the home page serves it. |
+| Social preview | `public/og.png` is a 67-byte solid-colour 1200×630 image. Worse, the live `og:image` URL is `https://frontend-liard-theta-28.vercel.app/og.png`, the old Vercel address, because `NEXT_PUBLIC_SITE_URL` is not set on the Vercel project (listed as a to-do in [DEPLOYMENT.md](DEPLOYMENT.md)). Link unfurls on LinkedIn, Slack, iMessage and X will therefore show a blank image from a different host. |
+| Per-page metadata | Page titles are set (e.g. "Projects // Night City Ops \| V // Night City Dev") but `og:title`/`og:description` are the site-wide ones on every page, and there is no canonical URL, no JSON-LD (`Person`), no `theme-color`. |
+| Crawling | `/robots.txt` and `/sitemap.xml` both return 404. Unknown URLs return the default Next.js 404 page (no custom `not-found`). |
+| Contact | The form posts to `/api/contact`, which relays to the API; with no API it answers "channel offline" (HTTP 502). Visitors cannot reach the owner through the site. There is no fallback `mailto:` and the only email shown is the placeholder one. |
+| Skills | Twelve skills as self-rated percentage bars (e.g. "Java 90%", "Figma 60%"). See the recruiter research below: self-ratings carry little weight. |
+| Avatar | `avatarUrl` exists in the data but is never rendered; there is no photo anywhere. |
+| Footer | "© 2026 · Compiled in Night City". No legal or credit information (see the brand-risk section). |
+| Admin | `apps/admin` is not deployed; `/admin/login` on the live domain is a 404, as expected. |
+
+### Accessibility basics
+
+Contrast ratios computed from the theme tokens in
+[`globals.css`](../frontend/src/app/globals.css) against the page background `#000`
+(WCAG AA needs 4.5:1 for normal text, 3:1 for large text and UI components,
+<https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html>):
+
+| Token | Ratio | Where it is used | Result |
+|---|---|---|---|
+| `cp-text` `#C8CDD8` | 13.2:1 | body text | pass |
+| `cp-teal` `#55EAD4` | 14.1:1 | labels, tags | pass |
+| `cp-yellow` `#F3E600` | 16.1:1 | headings, links | pass |
+| `cp-red` `#C5003C` | 3.4:1 (3.2:1 on `cp-panel`) | active nav link (12 px), skill percentages, error messages, REPO hover | **fails AA for small text**; passes only for large text and UI |
+| `cp-muted` `#4A4F6A` | 2.6:1 (2.5:1 on `cp-panel`) | location text on experience cards, error page body, input placeholders | **fails** |
+| `cp-border` `#1E2235` | 1.3:1 | input borders | below the 3:1 needed for UI component boundaries |
+
+Other findings (from the code and from the live DOM):
+
+- **Reduced motion: not handled.** There is no `prefers-reduced-motion` rule anywhere in
+  the shipped CSS (checked in the live stylesheets). Five animations run on page load:
+  the infinite glitch on every heading (`.glitch-text::before/::after`), the blinking
+  cursor, plus Framer Motion width animations on the skill bars. The scanline overlay is
+  always on. Users who ask the OS for reduced motion still get all of it. Clipped,
+  jittering text is also a risk for people sensitive to flicker.
+- **Focus:** no `:focus-visible` styles are defined. Links fall back to the browser default
+  outline, but `TerminalInput` sets `focus:outline-none` and replaces it with a 1 px
+  border colour change from 1.3:1 to teal, which is a weak indicator. Buttons use only
+  hover styles.
+- **Keyboard:** there is no skip-to-content link and `<main>` has no `id`. The mobile menu
+  does not close on `Escape` and does not manage focus. The skills filter buttons have no
+  `aria-pressed`.
+- **Forms:** inputs are wrapped in `<label>`, which is good. The status message after
+  submit has no `role="status"`/`aria-live`, so a screen reader user is not told whether
+  it sent. There is no spam protection (no honeypot) on the form, which matters once the
+  API is live.
+- **Target size:** WCAG 2.2 asks for 24×24 px minimum
+  (<https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html>). Measured on
+  the live home page at 375 px: social links are 20 px high, "DEMO"/"REPO" links 16 px,
+  the logo link 20 px.
+- **Glitch text:** `GlitchText` duplicates the string through `data-text` and CSS
+  pseudo-elements. Some screen readers announce CSS generated content, so headings may be
+  read twice (**unconfirmed**; test with VoiceOver).
+- **Headings:** one `<h1>` per page and logical `<h2>`/`<h3>` order. Good.
+
+### Performance basics
+
+- Pages are static with hourly revalidation, so TTFB is CDN-fast and the Vercel function
+  footprint is just `/api/contact`.
+- The home page has 14 `<script>` tags. Framer Motion (used by one component, `SkillBar`)
+  ships to the browser for a bar animation that could be CSS. Bundle size was not
+  measured **(unconfirmed)**.
+- There are no images at all (`document.images.length === 0`), so LCP is text. The one
+  image, `og.png`, is not rendered.
+- Three Google fonts are loaded (Rajdhani, Orbitron, Share Tech Mono). Rajdhani loads four
+  weights. Trimming weights is a small win.
+- Each build waits up to 5 s per page for the dead `BACKEND_URL` before falling back
+  (documented in DEPLOYMENT.md). Unsetting it until the API is live saves build time.
+- Lighthouse scores: **not measured** (see method limits).
+
+### Mobile layout
+
+Checked the home page at 375×812: single column, nothing overflowing, readable type. Two
+cosmetic points: the angled `hud-clip` corner cuts the top-right of every button's
+border so the border looks broken, and the hero "V" with its glitch layer renders as a
+small mark on the left. I did not check the other pages visually; they use the same
+responsive classes.
+
+### The admin app (`apps/admin`)
+
+Read the code and DEPLOYMENT.md rather than running it. It is a well-contained app: its own
+`package.json`, `noindex` metadata and `X-Robots-Tag` header, server-only API access with
+timeouts, an `httpOnly` cookie, an origin check, and tests. Notes:
+
+- It has never run against the real API (stated in DEPLOYMENT.md) and is not deployed.
+- UI primitives and theme tokens are copied from `frontend/`; the planned shared package
+  would remove the duplication.
+- TypeScript is 6.x in `apps/admin` after the Dependabot bump (#46) but `^5` in `frontend/`.
+  Harmless, but a monorepo move should settle on one version.
+- It only does the inbox. Every admin phase (11, 12, 13, 14, 16) adds pages here.
+
+### Backend
+
+Not deployed. Content endpoints, contact, and admin login exist with tests. A known gap
+from the Dependabot triage: the H2 test schema cannot create `JSONB` tables, so
+profile/projects/experience repositories are not exercised against a real schema in CI.
+Anything that adds tables (phases 11, 12, 15, 16) should fix that first or test against
+Postgres (for example Testcontainers).
+
+---
+
+## Part 2 — Background research
+
+### 2.1 What makes a developer portfolio effective in 2026
+
+Sources are mostly practitioner posts and recruiting-company blogs rather than studies, so
+treat percentages as unverified. The advice is consistent across them:
+
+- **Real, deployed work beats volume.** Reviewers skim many applications and spot tutorial
+  clones quickly; projects should be live, and the site must work on phones because
+  hiring managers check there ([Scrimba](https://scrimba.com/articles/how-to-build-a-web-developer-portfolio-that-gets-you-hired),
+  [Underdog.io](https://underdog.io/blog/software-engineer-portfolio),
+  [DEV: portfolio that gets you hired in 2026](https://dev.to/getcraftly/how-to-build-a-developer-portfolio-that-gets-you-hired-in-2026-4oih)).
+- **Explain the work for someone who will not read the code.** Short case studies:
+  problem, your role, decisions and trade-offs, outcome, metrics, link to repo or demo.
+  For backend-leaning engineers especially, diagrams, metrics, write-ups and live demos
+  are what recruiters can actually evaluate ([Fueler](https://fueler.io/blog/what-recruiters-actually-want-to-see-in-a-backend-developer-portfolio)).
+- **Make repos public and readable**, with a README (description, stack, live link,
+  screenshot, setup) ([Underdog.io: what hiring managers look for on GitHub](https://underdog.io/blog/what-hiring-managers-look-for-on-github)).
+- **Fewer, better projects tailored to target roles**, with AI-related work increasingly
+  expected in 2026 (same sources; this is opinion, not data).
+- **Make contact obvious and working**: visible email or LinkedIn, a downloadable CV.
+- One quoted figure that looks more solid than the rest: a survey of 60+ hiring managers
+  found 93% would look at a portfolio site if offered, but 51% said a candidate's chances
+  would not be lower without one. I saw this only in a search summary; the **original
+  survey was not located (unconfirmed)**. The widely repeated "73% value a portfolio over
+  a résumé" and "7.4 seconds" figures have inconsistent attribution; I did not use them.
+
+**How this site compares.**
+
+| Practice | This site today |
+|---|---|
+| Real, verifiable work | None: all placeholder (biggest gap) |
+| Live demos and public repos | Dead links |
+| Case-study depth | One-sentence descriptions; no problem, decision or outcome |
+| Working contact path and CV | Contact offline; CV blank |
+| Works on mobile | Yes |
+| Fast, accessible, indexable | Fast; accessibility and SEO gaps above |
+| Distinctive design | Strong (the Cyberpunk look is memorable), but it is also the main risk: it must not read as a joke at the expense of credibility |
+| Self-ratings | Percentage skill bars; listing technologies by area and showing them used in projects is more credible |
+| The repo itself as evidence | Strong: this monorepo (CI, Dependabot, micro-frontends, tests, docs) is real evidence of engineering practice, and nothing on the site points to it yet |
+
+The last row is the opportunity: a "how this site is built" project with an architecture
+diagram and decisions (static-first with backend fallback, micro-frontends, footprint
+limits) is the most credible case study the owner can write today, because it is true.
+
+### 2.2 Third-party dependencies the phases assume
+
+#### Analytics: Amplitude vs Vercel Web Analytics (phase 8)
+
+| | Vercel Web Analytics | Amplitude (Browser SDK) |
+|---|---|---|
+| Footprint | One component from `@vercel/analytics`, enabled per project in the dashboard; no key, no new project, no extra service | New SDK in the client bundle, an Amplitude account, an API key in the build env |
+| Cookies and privacy | Docs say visitors are identified by a hash of request data, not cookies, and by default only aggregated data is kept ([privacy](https://vercel.com/docs/analytics/privacy-policy)). Whether a banner is still needed depends on jurisdiction; a consent vendor says it is compliant if loaded after consent (secondary source: [ConsentStack](https://www.consentstack.io/vendors/vercel-analytics)). | The SDK sets a first-party cookie (`AMP_<key prefix>`, 365 days by default) as soon as it initialises, even for opted-out users, so GDPR use means delaying `init()` until consent ([cookies and consent](https://amplitude.com/docs/en/sdks/analytics/browser/cookies-and-consent-management)). Session Replay needs disclosure and consent where required ([session replay consent](https://www.amplitude.com/docs/session-replay/best-practices-for-managing-user-consent)). |
+| Cost | Billed by collected events across the team. **Sources disagree on Pro's allowance**: current docs list none included and $0.03 per 1K events; an older changelog says 100K/month. A portfolio's traffic is tiny, but confirm on the [pricing page](https://vercel.com/docs/analytics/limits-and-pricing) and keep the spend limit on. Web Analytics Plus is a $10/month add-on you do not need. | Free plan: 2M events/month plus session replay (10K sessions listed), no card ([pricing](https://amplitude.com/pricing)). Older Starter/MTU figures on community pages are legacy. Free session-replay cap **unconfirmed**. |
+| Depth | Page views, referrers, countries, devices, custom events (whether custom events are included on Pro is **unconfirmed**) | Funnels, retention, replay: far more than a portfolio needs |
+
+**Recommendation:** Vercel Web Analytics. It matches "smallest Vercel footprint" (no new
+project, SDK or key), is cookieless by design, and answers the only questions a portfolio
+has: did a recruiter's link get opened, from where, which page. Drop Amplitude. If custom
+events (CV downloads, contact clicks) are wanted, check that they are included in the
+plan first. Speed Insights is a separate Vercel product; skip it unless Lighthouse work
+shows a need.
+
+#### Spotify embeds (phase 9)
+
+- The embed is an `<iframe>` from `open.spotify.com/embed/...`; Spotify documents it, plus
+  an iFrame API for control ([Embeds docs](https://developer.spotify.com/documentation/embeds),
+  [iFrame API](https://developer.spotify.com/documentation/embeds/references/iframe-api)).
+- Visitors who are not logged in to Spotify in that browser get a preview clip of under
+  30 seconds, and modifying the iframe tag or dropping `encrypted-media` also degrades it
+  to previews ([troubleshooting](https://developer.spotify.com/documentation/embeds/tutorials/troubleshooting)).
+  Most recruiters will not be logged in, so "play the song" mostly yields a 30-second clip.
+- Autoplay is blocked by browsers (Safari especially) without a user gesture; the brief
+  already plans click-to-play.
+- Using embeds means accepting the Spotify Developer Terms
+  ([Play Button docs](https://developer.spotify.com/technologies/widgets/spotify-play-button/documentation));
+  I did not read those terms in full **(unconfirmed)**.
+- The track ID in the brief (`5HTHMQ8wMAlF6cEo6bx0aL`, "The Rebel Path") **could not be
+  verified**; check that it resolves to the right track before use.
+- Cost: free. Footprint: an iframe loaded only on click adds nothing to page load. Once
+  loaded, Spotify may set its own cookies, which belongs on the credits page.
+
+#### Adzuna jobs API (phase 12)
+
+- Free key, no payment details ([terms](https://developer.adzuna.com/docs/terms_of_service)).
+  The terms say the free tier is for evaluating the API and that commercial, government or
+  academic organisations get a 14-day trial; that wording matters if this ever becomes
+  more than a personal tool.
+- **Rate limits could not be confirmed from an official page.** The brief says 250
+  calls/day; third-party sites quote anything from about 33/day to about 1,000/month.
+  Check the developer dashboard after registering.
+- Attribution ("Jobs by Adzuna") is mentioned by secondary sources; the **exact
+  requirement is unconfirmed**. Keeping market data admin-only avoids the question.
+- Cache results; a weekly pull is enough for skill-frequency counts.
+
+#### LinkedIn data export (phase 14)
+
+- Self-service: Settings & Privacy → Data Privacy → "Get a copy of your data"
+  ([LinkedIn help](https://www.linkedin.com/help/linkedin/answer/50191)). Files include
+  `Profile.csv`, `Positions.csv` and `Skills.csv` per that page and third-party tools.
+  Delivery is quick for the partial download and up to about 72 hours for the full archive
+  (reported by third-party guides; exact CSV columns **unconfirmed**, they change).
+- Using your own export is ToS-safe; scraping profiles is not. The brief's point that API
+  access needs Partner Program approval matches what is widely reported; I did not
+  re-verify it.
+- This is a once-in-a-while manual task. A multipart upload endpoint, ZIP parsing, a diff
+  UI and an approval flow is a lot of surface for something done a few times a year.
+
+#### GitHub API for benchmarking (phase 15)
+
+- Unauthenticated REST: 60 requests/hour per IP; authenticated tokens: 5,000/hour
+  ([official rate-limit page](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api);
+  the 5,000 figure came from secondary sources in my search). GitHub changed
+  unauthenticated limits in May 2025 ([changelog](https://github.blog/changelog/2025-05-08-updated-rate-limits-for-unauthenticated-requests/));
+  exact current numbers **unconfirmed**.
+- For one user's own repos, hourly-revalidated server fetches stay far under either limit.
+  A token, if used, should be a fine-grained read-only token held only in Vercel or Railway.
+- Product risk, not API risk: a public page that ranks the owner against well-known
+  developers on stars and followers is an unflattering comparison and says little about
+  hiring fit. See the roadmap.
+
+### 2.3 Vercel Microfrontends on the Pro plan
+
+- The repo's plan (`web` as default app, `admin` routed under `/admin/*`) is the
+  documented pattern ([docs](https://vercel.com/docs/microfrontends),
+  [quickstart](https://vercel.com/docs/microfrontends/quickstart)). Apps that set Next.js
+  `basePath` are not supported, which `apps/admin` already respects.
+- Pricing, as reported by Vercel's docs and pricing pages: two microfrontends projects
+  are included on Hobby and Pro; additional projects are listed at **$250 per project per
+  month**; routed requests are billed at **$2 per million** on Pro
+  ([pricing](https://vercel.com/pricing), [docs pricing](https://vercel.com/docs/pricing)).
+  The sources disagree: the pricing page shows a 50K routed-request allowance for Hobby
+  and none stated for Pro, and the microfrontends docs page also says Pro and Enterprise
+  get unlimited projects and requests at the same price table
+  ([GA changelog](https://vercel.com/changelog/microfrontends-now-generally-available)).
+  **Treat the $250 and the allowance as unconfirmed and read the dashboard before adding
+  a third app.**
+- What this means here: `web` plus `admin` is within the included two. A third app would
+  likely cost real money; put new admin features in the existing `admin` app. At
+  portfolio traffic, $2 per million routed requests is negligible, and the footprint
+  advice in DEPLOYMENT.md still holds.
+- Moving `frontend/` to `apps/web` does not change Vercel's setup beyond the project's
+  root-directory setting.
+
+### 2.4 Scheduled and background jobs on Railway, and the Supabase free tier
+
+**Railway** (needed for phases 12 and 13 only):
+
+- Railway has native cron: a service with a cron schedule starts on a five-field UTC
+  expression, runs, and must **exit**. Minimum interval is 5 minutes; timing is not exact
+  to the minute; if the previous run is still going the next is skipped
+  ([cron docs](https://docs.railway.com/reference/cron-jobs),
+  [cron vs workers vs queues](https://docs.railway.com/guides/cron-workers-queues)).
+- Spring's `@Scheduled` runs inside the always-on API process. It works only while that
+  process is awake. Railway's optional serverless (app sleeping) mode stops a service
+  after about 10 minutes without outbound traffic, which would silently stop in-process
+  schedulers, and the first request after sleep waits for a JVM cold start
+  ([app sleeping](https://docs.railway.com/reference/app-sleeping)).
+- Options for a daily or weekly job, smallest first:
+  1. `@Scheduled` in the API with sleeping **off**. Simplest, no extra service; the JVM
+     has to be always on anyway if the API must answer the contact form quickly.
+  2. A second Railway service from the same image with a cron schedule and an entrypoint
+     that runs one job and exits (a Spring profile or `CommandLineRunner`). Cleanest
+     isolation, but a second service to configure and pay for.
+  3. A GitHub Actions `schedule` workflow that calls a protected API endpoint. Free and
+     visible in the repo, but needs a secret, which DEPLOYMENT.md says no workflow uses today.
+  4. Vercel Cron (Pro: per-minute precision, 100 per project; it invokes a Vercel
+     function and is listed as a legacy feature moving to "Schedules",
+     [usage and pricing](https://vercel.com/docs/cron-jobs/usage-and-pricing)). It works
+     against the "keep Vercel small" rule and should not be used here.
+- Railway pricing: Hobby is $5/month and includes $5 of usage; a one-time $5 trial credit
+  exists ([plans](https://docs.railway.com/pricing/plans)). Whether an always-on JVM
+  service fits inside the included usage is **unconfirmed**; use Railway's usage estimate
+  for a 512 MB service before committing to cron services on top.
+
+**Supabase free plan** ([pausing](https://supabase.com/docs/guides/platform/pausing),
+[pricing](https://supabase.com/pricing)):
+
+- Projects with low database activity for about 7 days are paused, with a warning email
+  about a week earlier. Paused projects can be restored from the dashboard; paid projects
+  never pause. Activity means real queries, not just open connections (a Supabase
+  explanation in [discussion 13121](https://github.com/orgs/supabase/discussions/13121)).
+- Limits listed for Free: 500 MB database, 5 GB egress plus 5 GB cached egress, 1 GB file
+  storage, two active projects, 50,000 monthly active users (auth, which this repo does
+  not use). Automatic backups are not included on Free per secondary sources
+  ([summary](https://dev.to/mahdi_benrhouma_fe1c6005/supabase-free-tier-limits-in-2026-what-you-actually-get-and-when-you-will-hit-them-4mhe));
+  confirm on the pricing page. The contact messages table is the only irreplaceable data.
+- Connection limits for Free are **not published on the pricing page** (it lists them for
+  paid compute sizes only), so keep `DB_POOL_SIZE=5` as DEPLOYMENT.md says and use the
+  session pooler.
+- Pause risk for this site: the API sees about one request per page per hour only while
+  the site has traffic. A quiet week could pause the database and leave the contact form
+  on "channel offline". A weekly keep-alive that touches the DB (a scheduled GitHub Action
+  or Railway cron calling an endpoint that runs a query) closes that gap; whether
+  `/actuator/health` itself issues a query is **unconfirmed**; test it.
+
+### 2.5 Databricks Free Edition
+
+Read in full from [free-edition](https://docs.databricks.com/aws/en/getting-started/free-edition)
+(updated 2026-11-15) and [limitations](https://docs.databricks.com/aws/en/getting-started/free-edition-limitations)
+(updated 2026-11-16):
+
+- **Offers:** serverless-only workspace with notebooks, a SQL editor and one 2X-Small SQL
+  warehouse, Lakeflow pipelines (one active per type), jobs (max five concurrent tasks),
+  up to three Databricks Apps (each auto-stops after 24 hours and must be restarted), one
+  Lakebase Postgres project with scale-to-zero compute, AI Playground and model serving
+  with limits, Genie for natural-language dashboards.
+- **Limits and terms:** a fair-use quota with no published number; when exceeded, compute
+  is shut down for the rest of the day (in extreme cases, the month) and data is kept.
+  "Meant for non-commercial use." No SLA or support. Inactive accounts may be deleted after
+  an unstated period. One workspace; no account-level APIs. Outbound internet is
+  restricted to trusted domains; LinkedIn verification is listed as raising some limits.
+  External JDBC/ODBC access, storage size and scheduling frequency are **not stated**.
+- **Fit:** it does **not** fit serving the website or API: no reliability guarantee,
+  daily compute shutdowns, apps that stop after 24 hours, possible account deletion, and a
+  non-commercial label. It can fit **offline analysis** that is allowed to be down:
+  phase 12's skill-frequency analysis (keep Adzuna JSON in Postgres, load it into Delta
+  tables, run a weekly notebook or job, share a Genie dashboard) is a reasonable place to
+  learn Databricks, and "used Databricks for market-skills analytics" is itself portfolio
+  material. It must not be on the path of any public page or of the success of the
+  backend's own job. This matches the deferred idea already recorded for the project.
+
+### 2.6 Cyberpunk 2077 names, look and soundtrack: legal and brand risk
+
+What the [CD PROJEKT RED Fan Content Guideline](https://cdprojektred.com/fan-content/)
+says (the page is marked last updated 2020-12-10; it is not a contract, and the User
+Agreement and each game's EULA win on conflict). This describes the text; it is not legal
+advice:
+
+- **Golden rules:** no commercial use (donations are fine, no paywalls); fan content must
+  be clearly marked as unofficial and not endorsed, with a disclaimer in an obvious place;
+  do not build it into another game or product; do not harm others; follow the User
+  Agreement and EULA.
+- **Permitted examples** include fan art, screenshots, community websites and fan pages,
+  and software that works alongside the games. Domains must not contain CD PROJEKT RED or
+  game or company names or trademarks. `justcallmepratt.dev` contains none.
+- **Music:** not licensed by the page; it warns that some in-game music (some Cyberpunk
+  2077 radio tracks) is owned by third parties and may need their permission. Remixing is
+  not allowed. The guideline does not say whether linking or embedding from a streaming
+  service is covered.
+- **Not addressed anywhere on the page:** fonts, logo and trademark use beyond domain
+  names, ads, personal portfolios or using fan work to seek employment, web apps.
+- CD PROJEKT RED does enforce against commercial use; in January 2026 it issued a DMCA
+  takedown against a paywalled Cyberpunk 2077 VR mod
+  ([Windows Central](https://www.windowscentral.com/gaming/pc-gaming/cyberpunk-vr-mod-disappeared-cd-projekt-red-issues-a-takedown),
+  [Gaming Bible](https://www.gamingbible.com/news/platform/pc/cd-projekt-dmca-cyberpunk-2077-vr-mod-257553-20260120)).
+  That case is about paid distribution, not portfolios.
+
+How this applies, factually:
+
+| Element | Status |
+|---|---|
+| "Cyberpunk-inspired" colours, HUD panels, glitch effects, monospaced fonts | Generic visual language. No game artwork or logos appear to be shipped (the repo's own `CP2077_DESIGN_BIBLE.html` is the owner's reference document). Fonts are Google Fonts (Rajdhani, Orbitron, Share Tech Mono), which Google distributes under open licences; **licence text not re-read**. |
+| Arasaka, Militech, Kang Tao, NetWatch as "employers" | In-game corporation names. Fine as obviously fictional placeholders on a fan page; a problem on a job-seeking portfolio, because a recruiter would read them as the owner's work history. They must go when real content arrives. |
+| "Night City" naming in copy and titles | Setting name from the game; low risk as an homage with a disclaimer; the guideline's "clearly unofficial" rule is the cautious path. |
+| Disclaimer | There is none on the site. The guideline asks for one. A footer line plus the credits page covers it. |
+| Soundtrack (phase 9) | Third-party music. An official Spotify embed streams from Spotify rather than copying audio, but logged-out visitors get a ~30 s preview. Whether embedding fits the guideline's music paragraph is **unconfirmed**; the guideline page lists `legal@cdprojektred.com` for questions. |
+| Job-seeking use | Not addressed by the guideline. The portfolio's purpose is career, which a strict reading of "no commercial use" could touch. That is a question for a lawyer or CD PROJEKT RED, not for this document. |
+
+Mitigation already in the roadmap: keep the aesthetic, replace game names with real
+content, add an unofficial-fan-work disclaimer, add a credits page, and make the
+soundtrack optional or drop it.

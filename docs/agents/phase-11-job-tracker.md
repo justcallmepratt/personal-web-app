@@ -3,6 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Not started. No job controller, model or `/admin` pages exist.
 > No longer holds: Railway Postgres (the only database is Supabase), Flyway, `ddl-auto: update` (the repo uses `validate`; add tables to `supabase/init.sql`), and admin pages inside the public app (the plan is a separate `admin` micro-frontend).
+> **Roadmap (2026-11-20):** After the backend is live, and only if the owner will use it (WP-K). Table goes in `supabase/init.sql`; pages go in `apps/admin`; fix the H2/JSONB test gap first. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Admin-only Kanban board to track job applications through their lifecycle.

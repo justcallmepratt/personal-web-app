@@ -3,6 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Not started; depends on Phases 12 and 15. Admin pages belong in the planned `admin` micro-frontend, not the public app.
 > No longer holds: Railway Postgres and `ddl-auto: update` (the repo uses `validate`).
+> **Roadmap (2026-11-20):** Drop. It depends on phases 12 and 15, which are being dropped or redesigned. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Admin-only dashboard surfacing skill gaps, learning velocity, and recommended next steps

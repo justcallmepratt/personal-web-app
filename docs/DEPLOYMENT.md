@@ -256,6 +256,10 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
 4. **`admin` micro-frontend:** login and inbox are built (`apps/admin`). Still to do:
    the Vercel steps under [Admin app](#admin-app), then the job tracker.
 
+The prioritised plan for the remaining phases (what to do now, what to drop, in what
+order) is in [ROADMAP.md](ROADMAP.md); the findings behind it are in
+[RESEARCH.md](RESEARCH.md).
+
 ## GitHub setup
 
 - **Branch protection on `main`:** the CI jobs `Backend — Java 21 / Maven` and
