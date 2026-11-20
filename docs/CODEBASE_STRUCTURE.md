@@ -50,7 +50,7 @@ frontend/src/
 3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` runs per request.
 4. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
 
-## Backend — Spring Boot 3.5 (Java 21)
+## Backend — Spring Boot 4.1 (Java 21)
 
 The service layer: content, contact messages and admin auth. Deployed to Railway from
 `backend/` (see `backend/railway.toml`); built and tested in CI.
