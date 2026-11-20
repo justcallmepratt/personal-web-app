@@ -1,9 +1,9 @@
-## NOTE: This docker-compose is for LOCAL DEVELOPMENT ONLY.
-## Production uses Railway Postgres — set SPRING_DATASOURCE_URL to the Railway connection string
-## and do not run the supabase-db service in production.
+## Local full-stack environment: Postgres + Spring Boot API + Next.js.
+## The deployed site does not use this stack — it serves content from
+## frontend/src/content (see docs/DEPLOYMENT.md).
 
 services:
-  # Supabase Database — local-only dev Postgres. Production uses Railway Postgres.
+  # Local Postgres for the Spring Boot API.
   supabase-db:
     image: supabase/postgres:15.1.0.147
     container_name: personal-web-app-db
@@ -54,7 +54,12 @@ services:
       dockerfile: Dockerfile
     container_name: personal-web-app-frontend
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+      # Read content from the API container instead of src/content.
+      BACKEND_URL: http://backend:8080
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
       NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-"V // Night City Dev"}
     ports:
       - "3000:3000"

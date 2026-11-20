@@ -13,9 +13,10 @@
   },
   "dependencies": {
     "framer-motion": "^12.38.0",
-    "next": "16.2.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "next": "16.2.10",
+    "nodemailer": "^10.6.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -23,12 +24,13 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "jsdom": "^29.1.1",
+    "eslint-config-next": "16.4.6",
+    "jsdom": "^31.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.6"

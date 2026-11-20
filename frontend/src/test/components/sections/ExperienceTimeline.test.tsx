@@ -41,6 +41,11 @@ describe('ExperienceTimeline', () => {
     expect(screen.getByText('Senior Engineer')).toBeInTheDocument()
   })
 
+  it('formats first-of-month dates without shifting the month', () => {
+    render(<ExperienceTimeline items={[makeExperience()]} />)
+    expect(screen.getByText(/Mar 2024/i)).toBeInTheDocument()
+  })
+
   it('shows PRESENT for current position', () => {
     render(<ExperienceTimeline items={[makeExperience({ current: true, endDate: null })]} />)
     expect(screen.getByText(/PRESENT/)).toBeInTheDocument()
