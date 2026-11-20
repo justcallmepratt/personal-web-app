@@ -51,9 +51,17 @@ live API that day.
    200) and `POST /api/admin/auth/login` are public (`SecurityConfig` permits both), and
    login attempts are not rate limited. Add a rate limiter (in the Spring app, or an edge
    or load-balancer layer) in front of admin login **before** `ADMIN_PASSWORD_HASH` is
-   set. Options: rate limiting in the app; hiding Swagger in production; requiring a
-   shared secret from the site so only Vercel can call the API; an edge proxy such as
-   Cloudflare in front of the API only, not the Vercel site.
+   set. Options for the login limiter: rate limiting in the app; requiring a shared secret
+   from the site so only Vercel can call the API; an edge proxy such as Cloudflare in
+   front of the API only, not the Vercel site.
+
+   **Decided (owner):** Swagger must only be reachable after signing in with GitHub, and
+   only as the owner's account (`justcallmepratt`). Needs, none of it built yet: Spring
+   Security OAuth2 login with GitHub protecting `/swagger-ui/**` and `/v3/api-docs/**`;
+   an allow-list of one GitHub login; a GitHub OAuth App created by the owner, with its
+   client ID and client secret set as variables on the Railway `personal-web-app-api`
+   service; and a callback URL on the API's public address. **Open question:** should the
+   same GitHub sign-in replace the username-and-password admin login?
 2. **No Content-Security-Policy** header on the site; the other standard security headers
    are sent from `frontend/vercel.json`.
 3. **Contact-form rate limiting is per server instance** (in-memory in both the API and
