@@ -211,7 +211,7 @@ claude "Read docs/agents/ORCHESTRATOR.md then docs/agents/phase-08-analytics.md
 | Backend framework | Spring Boot | 3.5.0 |
 | Backend ORM | Spring Data JPA + Hibernate | 6.6 |
 | Site content | Typed files in `frontend/src/content` | — |
-| Database (optional API only) | Postgres | 17 |
+| Database | Supabase Postgres | 17 |
 | JWT | jjwt | 0.13 |
 | API docs | springdoc-openapi | 2.5 |
 | Frontend runtime | Node.js | 20 LTS |

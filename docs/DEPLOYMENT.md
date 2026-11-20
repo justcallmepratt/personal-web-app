@@ -15,7 +15,7 @@ How the site is built, deployed and configured. This replaces the earlier
                                        │ server-side only (BACKEND_URL)
                                        ▼
                        api.justcallmepratt.dev (Railway)
-                       Spring Boot API (backend/) ──▶ Postgres
+                       Spring Boot API (backend/) ──▶ Supabase Postgres
 ```
 
 - **Micro-frontends on Vercel.** `web` is the public site and the default app. `admin`
@@ -70,22 +70,33 @@ After that every push to `main` deploys production and every PR gets a preview.
    check come from [`backend/railway.toml`](../backend/railway.toml) (Dockerfile build,
    `/actuator/health`). Railway redeploys on every push to `main`; no CI job or deploy
    hook is involved.
-2. **Add a Postgres database** to the project and apply
-   [`supabase/init.sql`](../supabase/init.sql) to it once. The API runs with
-   `ddl-auto: validate` and will not start against an empty database.
+2. **Database: the existing Supabase project** (`nxqiuqlwyjimioosaiio`). It already
+   has the schema from [`supabase/init.sql`](../supabase/init.sql) and the seed rows,
+   so there is nothing to create or migrate. Get the connection details from the
+   Supabase dashboard → Connect → **Session pooler**. Use the pooler, not the direct
+   `db.<ref>.supabase.co` host: the direct host is IPv6-only on the free plan, and
+   session mode (port 5432) is the one that works with Hibernate's connection pool.
 3. **Service variables:**
 
    | Variable | Value |
    |---|---|
    | `SPRING_PROFILES_ACTIVE` | `docker` |
-   | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://<host>:<port>/<database>` |
-   | `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | from the Postgres service |
+   | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://<pooler-host>:5432/postgres?sslmode=require` |
+   | `SPRING_DATASOURCE_USERNAME` | the pooler username, `postgres.nxqiuqlwyjimioosaiio` |
+   | `SPRING_DATASOURCE_PASSWORD` | the Supabase database password |
+   | `DB_POOL_SIZE` | `5` (the pooler caps connections on the free plan) |
    | `JWT_SECRET` | `openssl rand -base64 32` |
    | `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password |
    | `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT` if not Gmail) | SMTP credentials for contact notifications |
    | `CORS_ORIGIN` | `https://justcallmepratt.dev` |
 
-   On the `docker` profile `SeedRunner` fills empty tables with placeholder content.
+   On the `docker` profile `SeedRunner` fills empty tables with placeholder content;
+   the Supabase tables are already populated, so it does nothing.
+
+   Free Supabase projects pause after about a week with no database activity. The
+   hourly page re-renders query the API, which keeps it active while the site has any
+   traffic. If it does pause, the site keeps rendering from `src/content` and the
+   contact form reports "channel offline" until the project is restored.
 4. **Domain:** add `api.justcallmepratt.dev` as a custom domain on the service, then
    create the CNAME record Railway shows in the Vercel DNS zone for
    `justcallmepratt.dev`.
@@ -152,6 +163,6 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
   `BACKEND_URL`, `AMPLITUDE_API_KEY`, and the old `RAILWAY_TOKEN` value.
 - **GitHub variables:** `NEXT_PUBLIC_API_URL` (unused); update `NEXT_PUBLIC_SITE_URL`
   to the new domain.
-- **Supabase project:** not used in production. It serves the backend's `dev` profile
-  only and pauses after about a week without activity.
+- **Supabase:** nothing outstanding. Its security advisors reported no issues on
+  2026-11-20; re-check them after any schema change.
 - **Dependabot PRs:** triaged; see PR #32 for the Spring Boot 4.1 + springdoc 3.2 upgrade.
