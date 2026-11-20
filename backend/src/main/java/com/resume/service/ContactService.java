@@ -30,6 +30,11 @@ public class ContactService {
         this.mailTo = mailTo;
     }
 
+    /** Strips line breaks so user-supplied text cannot forge extra log entries. */
+    private static String oneLine(String s) {
+        return s == null ? null : s.replaceAll("[\\r\\n]", "_");
+    }
+
     @Transactional
     public Message handle(ContactRequest req) {
         Message m = new Message();
@@ -40,7 +45,8 @@ public class ContactService {
         Message saved = repo.save(m);
 
         if (mailUser == null || mailUser.isBlank()) {
-            log.info("Mail not configured. Inbound contact: from={} <{}> subject={}", req.name(), req.email(), req.subject());
+            log.info("Mail not configured. Inbound contact: from={} <{}> subject={}",
+                    oneLine(req.name()), oneLine(req.email()), oneLine(req.subject()));
             return saved;
         }
 
