@@ -22,19 +22,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Safe: patch and minor — approve, then merge once CI is green ──────
-      # Values from the PR go through env, never straight into the script.
-      - name: Approve patch/minor update
-        if: |
-          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
-          steps.meta.outputs.update-type == 'version-update:semver-minor'
-        env:
-          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
-          DEPENDENCIES: ${{ steps.meta.outputs.dependency-names }}
-        run: |
-          gh pr review "$PR_URL" --approve \
-            --body "Auto-approved: $UPDATE_TYPE update for \`$DEPENDENCIES\`"
-
+      # ── Safe: patch and minor — merge once CI is green ───────────────────
+      # No approval step: main does not require reviews, and this repository
+      # does not let GitHub Actions approve pull requests.
       # --auto merges only after the required status checks on main pass.
       # It needs branch protection with required checks; without it this step
       # fails and nothing is merged.
