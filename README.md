@@ -217,7 +217,7 @@ From [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md#roadmap):
 1. Live on the domain: done.
 2. Backend on Railway, using the existing Supabase project as its database.
 3. Monorepo: move `frontend/` to `apps/web`, extract shared UI and API types.
-4. `admin` micro-frontend: login and inbox are built (`apps/admin`); deploying it and the job tracker remain.
+4. `admin` micro-frontend: login and inbox are built (`apps/admin`); deploying it remains.
 
 [`docs/agents/`](docs/agents/) holds design briefs for further features (analytics,
 credits page, job tracker, market research and others). They are unbuilt, mostly

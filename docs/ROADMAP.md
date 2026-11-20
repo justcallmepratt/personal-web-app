@@ -38,9 +38,11 @@ something simpler (9, 13, 14, 16).
    (keep-alive and uptime check) and WP-I (admin Vercel project and microfrontends group).
 5. **Monorepo move (WP-J):** in a quiet window, after steps 2 and 3 have merged, and
    before any shared-package work or new admin pages.
-6. **Only then**, if wanted: job tracker (phase 11), then market research (phase 12, with
-   an optional Databricks learning exercise).
-7. **Drop:** phases 9 (as a feature), 13, 14 and 16 as written.
+6. **Only then**, if wanted: market research (phase 12, with an optional Databricks
+   learning exercise).
+7. **Drop:** phases 9 (as a feature), 11, 13, 14 and 16 as written. Phase 11 (job
+   tracker) was dropped on 2026-11-20: the owner will run the open-source
+   [JobSync](https://github.com/Gsync/jobsync) on their own machine instead.
 
 ### Top five recommendations
 
@@ -63,7 +65,7 @@ something simpler (9, 13, 14, 16).
 | 2 | Provide real content: bio, roles, 3 to 5 projects (with problem, your role, outcome, links), real links, a CV PDF, optionally a photo | Blocks WP-E, WP-F and every claim on the site | Do this first. A rough draft in `frontend/src/content/index.ts` is enough to start. |
 | 3 | Analytics: Vercel Web Analytics, Amplitude, or none | Phase 8 | Vercel Web Analytics. Confirm Pro pricing for events in the dashboard. |
 | 4 | Cyberpunk branding: keep the look and "Night City" copy? Keep game-corp names anywhere? Keep or drop the soundtrack? | Brand and fan-guideline risk (see RESEARCH.md 2.6) | Keep the look, add the unofficial-fan-work disclaimer, remove game-corp names once real jobs are in, drop the soundtrack (phase 9). |
-| 5 | Do you want private tools (job tracker, market research) at all? | Phases 11 to 16 are tools for you, not for visitors, and each adds backend, schema, admin pages and upkeep | Decide after the backend is live. Build 11 only if you will actually use it. |
+| 5 | Do you want private tools (job tracker, market research) at all? | Phases 11 to 16 are tools for you, not for visitors, and each adds backend, schema, admin pages and upkeep | Job tracker: **decided 2026-11-20, no** (phase 11 dropped; an existing open-source tracker, JobSync, is used instead). Market research: decide after the backend is live. |
 | 6 | Railway: go ahead with the Hobby plan and deploy the backend? Cost of an always-on JVM is unconfirmed (RESEARCH.md 2.4) | Unblocks the contact form, admin app and all later phases | Yes, but check Railway's usage estimate first and set a spend limit. |
 | 7 | Contact fallback while the API is offline: show your email address (or a `mailto:`) on the contact page? | A recruiter currently has no way to reach you | Yes; it is a one-line change in WP-E. |
 | 8 | Monorepo move timing (`frontend/` to `apps/web`) | It renames every frontend path and conflicts with anyone else editing `frontend/src` | After WP-A to WP-G merge, announced in advance. |
@@ -98,7 +100,7 @@ and contact. Effort: S under a day, M one to three days, L about a week or more.
 | **8 Analytics** | Know who visits and what they click | **Medium**: tells you whether a recruiter opened the link; little else is needed | S | A Vercel dashboard toggle | `frontend/` layout (one component) | Replace Amplitude with Vercel Web Analytics: no key, no cookies, no extra project (RESEARCH.md 2.2). No `NEXT_PUBLIC_AMPLITUDE_API_KEY`, no dashboard to build, no consent-banner logic. | **Redesign, then do now** (WP-D). Drop Amplitude. |
 | **9 Spotify** | Click-to-play Cyberpunk soundtrack in the hero | **Low**: logged-out visitors get a 30 s preview; adds a third-party iframe and a brand/licensing question | S | Nothing technical; legal question open | `frontend/` hero | The track ID in the brief is unverified. | **Drop** for now. If revived: click-to-load iframe only, credited on the credits page, after the owner asks CD PROJEKT RED. |
 | **10 Credits** (done: WP-C) | Credits and citations page for tech, design, fonts, hosting | **Medium**: cheap trust signal, and the place for the unofficial-fan-work disclaimer, font licences and third-party notices | S | Nothing | `frontend/` new page, footer | List what is actually used today (Vercel, Supabase; Railway only once live; Spring Boot 4.1 not 3.5; Framer Motion version from `package.json`). Add the disclaimer and a note on third-party embeds. Put the link in a footer, not the navbar, so it does not touch `Navbar.tsx` while WP-B edits it. | **Do now** (WP-C). |
-| **11 Job tracker** | Admin-only Kanban of job applications | **Low for visitors**, **medium for the owner** if used daily | L | Backend live; `admin` project deployed; microfrontends group; Supabase table | `backend/` (entity, service, controller), `apps/admin` (pages), `supabase/init.sql` plus a migration | Not Railway Postgres, not Flyway, not `ddl-auto: update`: add the table to `supabase/init.sql` and apply it with the Supabase migration tool. Pages go in `apps/admin`, not the public app. Fix the H2/JSONB test gap or test on Postgres. A spreadsheet does the same job with no code, so build it only if the owner commits to using it. | **After the backend is live**, and only on the owner's say-so (WP-K). |
+| **11 Job tracker** | Admin-only Kanban of job applications | **Low for visitors**, **medium for the owner** if used daily | L | Backend live; `admin` project deployed; microfrontends group; Supabase table | `backend/` (entity, service, controller), `apps/admin` (pages), `supabase/init.sql` plus a migration | Not Railway Postgres, not Flyway, not `ddl-auto: update`: add the table to `supabase/init.sql` and apply it with the Supabase migration tool. Pages go in `apps/admin`, not the public app. Fix the H2/JSONB test gap or test on Postgres. A spreadsheet does the same job with no code, so build it only if the owner commits to using it. | **Dropped (2026-11-20).** Work on WP-K was started and abandoned before anything was committed: open-source trackers already cover it. The owner uses [JobSync](https://github.com/Gsync/jobsync) (MIT, self-hosted with Docker), run separately from this site; it is not part of this repository or the `admin` app. |
 | **12 Market research** | Scheduled Adzuna pull, skill-frequency insights | **Low for visitors**, **medium for the owner** (informs what to learn; a good Databricks exercise) | L | Backend live; Adzuna account and keys; a way to run a schedule (RESEARCH.md 2.4) | `backend/` service, controller, scheduler; `supabase/init.sql`; admin page in `apps/admin` | Nightly is overkill: pull weekly. Scheduler per RESEARCH.md 2.4 (`@Scheduled` with sleeping off, or a Railway cron service), never Vercel Cron. Adzuna's free tier is for evaluation and its rate limit is unconfirmed, so keep it admin-only and cache. Optional: analysis in Databricks Free Edition (offline only). Re-check the 250 calls/day assumption on the Adzuna dashboard. | **Redesign; do after the backend and only if wanted** (WP-L). |
 | **13 Resume auto-updater** | Turn market insights into suggested edits to your profile and apply them | **Low**, and risky: suggestions to add skills to a public résumé because the market wants them invite overstating | L | Phase 12 | `backend/` and `apps/admin` | The Vercel redeploy hook is unnecessary: the site re-renders hourly from the API. The apply flow adds change-log tables and audit code for an edit you can make in one commit. | **Drop.** If wanted later, fold "edit profile in admin" into the admin app as a plain editor with no market-driven suggestions. |
 | **14 LinkedIn sync** | Import a LinkedIn data export into profile and experience | **Low to medium**: a one-off convenience | M | Backend live; admin app | `backend/` (parser), `apps/admin` (upload page) | ToS-safe (it uses the user's own export), but the upload, ZIP parsing, diff and approve flow is far more machinery than a few copy-pastes a year. CSV columns change (RESEARCH.md 2.2). | **Drop** as a feature. The owner (or a session) reads the export once and updates `content/index.ts` by hand in WP-E. |
@@ -136,15 +138,14 @@ different hunks and should merge in the order shown.
 | **WP-H Ops hardening (phase 17, reduced)** | Weekly keep-alive that touches the database (a scheduled GitHub Action calling a query-running endpoint, or a Railway cron), an uptime check, a documented export of the `messages` table, secret-rotation notes, Lighthouse baseline recorded in docs. | `.github/workflows/` (new file), `docs/`; maybe one small backend endpoint | Backend live | S to M |
 | **WP-I Admin deploy** | After the owner creates the `admin` Vercel project and microfrontends group: add `frontend/microfrontends.json` and wrap `frontend/next.config.ts` in `withMicrofrontends`; verify `/admin/login` end to end against the real API; make the admin CI job required. | `frontend/microfrontends.json`, `frontend/next.config.ts`, `frontend/package.json`; docs | Backend live; Vercel project and group created by hand | S |
 | **WP-J Monorepo move** | `frontend/` to `apps/web`, a shared UI package and shared API types, one TypeScript version, update workflows, Dockerfile, Vercel root directory and docs. | Almost everything under `frontend/`, `apps/admin`, `.github/workflows/`, docs | Quiet window; WP-A to WP-G merged | M to L |
-| **WP-K Job tracker (phase 11)** | Table in `supabase/init.sql`, backend entity, service and controller, admin pages; add the new table to `PostgresPersistenceTest`. | `backend/`, `supabase/`, `apps/admin` | Backend and admin deployed; owner decision 5 | L |
-| **WP-L Market research (phase 12)** | Adzuna client, weekly scheduler, table, admin insights page; optional Databricks exercise on exported data. | `backend/`, `supabase/`, `apps/admin` | WP-K's test fix; Adzuna keys; owner decisions 5 and 9 | L |
+| ~~**WP-K Job tracker (phase 11)**~~ | **Dropped 2026-11-20** (owner decision 5): JobSync is used instead. Nothing was merged. | none | n/a | n/a |
+| **WP-L Market research (phase 12)** | Adzuna client, weekly scheduler, table, admin insights page; optional Databricks exercise on exported data. Add the new table to `PostgresPersistenceTest`. | `backend/`, `supabase/`, `apps/admin` | Backend and admin deployed; Adzuna keys; owner decisions 5 and 9 | L |
 
 Overlap notes: WP-A, WP-B and WP-C each touch a different hunk of `layout.tsx`, and WP-A
 and WP-E both touch page-level files; merge in the order A, B, C, D, then E, F, G. WP-J
 must wait for all of them. WP-H and WP-I touch files disjoint from the frontend packages
-(WP-I edits `frontend/next.config.ts` and `package.json`, so it also goes after WP-D). WP-K
-and WP-L both add backend classes and edit `supabase/init.sql` and `apps/admin`, so run
-them one after the other.
+(WP-I edits `frontend/next.config.ts` and `package.json`, so it also goes after WP-D). WP-L
+adds backend classes and edits `supabase/init.sql` and `apps/admin`.
 
 ## Status of the phases after this roadmap
 
@@ -154,7 +155,7 @@ them one after the other.
 | 8 | Redesign to Vercel Web Analytics; do now (WP-D) |
 | 9 | Drop (optional click-to-load later) |
 | 10 | Done (WP-C) |
-| 11 | After the backend is live, if the owner wants it (WP-K) |
+| 11 | Dropped (2026-11-20); JobSync is used instead |
 | 12 | Redesign (weekly, simple scheduler, admin-only); after the backend (WP-L) |
 | 13 | Drop |
 | 14 | Drop as a feature; one-off manual update (WP-E) |

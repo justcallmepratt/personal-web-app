@@ -38,7 +38,7 @@ Phase 7  (polish)        — no deps
 Phase 8  (analytics)     — no deps
 Phase 9  (spotify)       — no deps
 Phase 10 (citations)     — no deps
-Phase 11 (job-tracker)   — no deps
+Phase 11 (job-tracker)   — dropped
 Phase 12 (market)        — no deps
 Phase 13 (resume-upd)    — needs Phase 12
 Phase 14 (linkedin)      — no deps
@@ -66,7 +66,7 @@ Status as of 2026-11-20. Briefs predate the current hosting; see the status bloc
 | `phase-08-analytics.md` | Amplitude analytics | not started |
 | `phase-09-spotify.md` | Spotify player | not started |
 | `phase-10-citations.md` | Credits page | not started |
-| `phase-11-job-tracker.md` | Job application tracker | not started |
+| `phase-11-job-tracker.md` | Job application tracker | dropped (JobSync is used instead) |
 | `phase-12-market-research.md` | Market research engine | not started |
 | `phase-13-resume-updater.md` | Resume auto-updater | not started |
 | `phase-14-linkedin.md` | LinkedIn sync | not started |

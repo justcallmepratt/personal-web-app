@@ -19,7 +19,7 @@ How the site is built, deployed and configured. This replaces the earlier
 ```
 
 - **Micro-frontends on Vercel.** `web` is the public site and the default app. `admin`
-  (login and inbox; job tracker later) is a second Next.js app in `apps/admin`, to be
+  (login and inbox) is a second Next.js app in `apps/admin`, to be
   routed under `/admin/*` with Vercel Microfrontends. The code is in the repository
   but not deployed yet. See [Admin app](#admin-app). `kafka` (`apps/kafka`) is a third
   app for the live Kafka demo, to be routed under `/kafka/*` the same way. See
@@ -417,7 +417,7 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
 3. **Monorepo:** move `frontend/` to `apps/web`, extract shared UI and API types into
    packages.
 4. **`admin` micro-frontend:** login and inbox are built (`apps/admin`). Still to do:
-   the Vercel steps under [Admin app](#admin-app), then the job tracker.
+   the Vercel steps under [Admin app](#admin-app).
 
 The prioritised plan for the remaining phases (what to do now, what to drop, in what
 order) is in [ROADMAP.md](ROADMAP.md); the findings behind it are in
