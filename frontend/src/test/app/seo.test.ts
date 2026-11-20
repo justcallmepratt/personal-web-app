@@ -6,6 +6,7 @@ import { metadata as homeMetadata } from '@/app/page'
 import { metadata as experienceMetadata } from '@/app/experience/page'
 import { metadata as projectsMetadata } from '@/app/projects/layout'
 import { metadata as skillsMetadata } from '@/app/skills/page'
+import { metadata as certificationsMetadata } from '@/app/certifications/page'
 import { metadata as contactMetadata } from '@/app/contact/page'
 import { publicRoutes, siteName } from '@/lib/site'
 
@@ -29,6 +30,7 @@ describe('sitemap.xml', () => {
       `${HOST}/experience`,
       `${HOST}/projects`,
       `${HOST}/skills`,
+      `${HOST}/certifications`,
       `${HOST}/contact`,
     ])
     expect(urls).toHaveLength(publicRoutes.length)
@@ -45,8 +47,9 @@ describe('per-page metadata', () => {
     ['/', homeMetadata, undefined],
     ['/experience', experienceMetadata, 'Experience // Career Log'],
     // /projects keeps its metadata in a layout; page.tsx exports the same title.
-    ['/projects', projectsMetadata, 'Projects // Night City Ops'],
+    ['/projects', projectsMetadata, 'Projects'],
     ['/skills', skillsMetadata, 'Skills // Loadout'],
+    ['/certifications', certificationsMetadata, 'Certifications'],
     ['/contact', contactMetadata, 'Contact // Open Channel'],
   ]
 
@@ -61,6 +64,13 @@ describe('per-page metadata', () => {
     // Every page restates the image: a page-level openGraph replaces the root one.
     expect(meta.openGraph?.images).toEqual([expect.objectContaining({ url: '/opengraph-image', width: 1200, height: 630 })])
     expect(meta.twitter?.images).toEqual([expect.objectContaining({ url: '/opengraph-image' })])
+  })
+
+  it('no title or description carries the old persona', () => {
+    expect(siteName).toBe('Pratham Sachan')
+    for (const [, meta] of pages) {
+      expect(JSON.stringify(meta)).not.toMatch(/night.?city/i)
+    }
   })
 
   it('descriptions are unique across pages', () => {

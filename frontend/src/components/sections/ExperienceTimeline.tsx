@@ -8,7 +8,9 @@ function fmtRange(start: string, end: string | null, current: boolean) {
     // the month doesn't shift for viewers west of Greenwich.
     return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
   }
-  return `${fmt(start)} — ${current || !end ? 'PRESENT' : fmt(end)}`
+  if (current) return `${fmt(start)} — PRESENT`
+  // A past role whose end date is unknown shows its start only, never "PRESENT".
+  return end ? `${fmt(start)} — ${fmt(end)}` : fmt(start)
 }
 
 export default function ExperienceTimeline({ items }: { items: Experience[] }) {

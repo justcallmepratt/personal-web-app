@@ -42,11 +42,23 @@ export default function SkillsChart({ skills }: { skills: Skill[] }) {
       <div className="grid md:grid-cols-2 gap-6">
         {grouped.map((g) => (
           <HUDChrome key={g.cat} title={g.cat} accent="teal">
-            <div className="space-y-4">
-              {g.items.map((s) => (
-                <SkillBar key={s.name} skill={s} />
-              ))}
-            </div>
+            {/* Skills with a level get a bar; skills without one are a plain list. */}
+            {g.items.some((s) => s.level !== undefined) && (
+              <div className="space-y-4 mb-4 last:mb-0">
+                {g.items.filter((s) => s.level !== undefined).map((s) => (
+                  <SkillBar key={s.name} skill={s} />
+                ))}
+              </div>
+            )}
+            {g.items.some((s) => s.level === undefined) && (
+              <ul className="flex flex-wrap gap-2 font-[var(--font-mono)]">
+                {g.items.filter((s) => s.level === undefined).map((s) => (
+                  <li key={s.name} className="px-2 py-1 text-xs uppercase tracking-widest border border-cp-teal/40 text-cp-teal/90">
+                    {s.name}
+                  </li>
+                ))}
+              </ul>
+            )}
           </HUDChrome>
         ))}
       </div>

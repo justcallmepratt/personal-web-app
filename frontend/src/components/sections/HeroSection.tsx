@@ -15,7 +15,7 @@ export default function HeroSection({ profile }: { profile: Profile | null }) {
     <section className="max-w-6xl mx-auto px-4 py-10 sm:py-16 md:py-24 grid md:grid-cols-3 gap-6 md:gap-8">
       <div className="md:col-span-2 space-y-5">
         <p className="text-cp-teal text-xs uppercase tracking-[0.4em] terminal-cursor">
-          init: night_city.exe
+          init: portfolio.exe
         </p>
         {/* Scale down on smallest phones; bump up at sm+ */}
         <h1 className="font-[var(--font-display)] text-4xl sm:text-5xl md:text-7xl tracking-tight text-cp-text leading-[1.1]">
@@ -31,9 +31,12 @@ export default function HeroSection({ profile }: { profile: Profile | null }) {
           <NeonButton href="/projects" accent="teal" className="w-full sm:w-auto justify-center">
             View Projects
           </NeonButton>
-          <NeonButton href={profile.cvUrl || '/cv.pdf'} accent="yellow" className="w-full sm:w-auto justify-center">
-            Download CV
-          </NeonButton>
+          {/* Only when the content names a real CV file; there is no placeholder PDF. */}
+          {profile.cvUrl && (
+            <NeonButton href={profile.cvUrl} accent="yellow" className="w-full sm:w-auto justify-center">
+              Download CV
+            </NeonButton>
+          )}
           <NeonButton href="/contact" accent="red" className="w-full sm:w-auto justify-center">
             Contact
           </NeonButton>
@@ -46,10 +49,12 @@ export default function HeroSection({ profile }: { profile: Profile | null }) {
             <dt className="text-cp-teal text-xs uppercase tracking-widest">Location</dt>
             <dd className="text-cp-text">{profile.location || '—'}</dd>
           </div>
-          <div>
-            <dt className="text-cp-teal text-xs uppercase tracking-widest">Comm</dt>
-            <dd className="text-cp-text break-all">{profile.email}</dd>
-          </div>
+          {profile.email && (
+            <div>
+              <dt className="text-cp-teal text-xs uppercase tracking-widest">Comm</dt>
+              <dd className="text-cp-text break-all">{profile.email}</dd>
+            </div>
+          )}
           <div>
             <dt className="text-cp-teal text-xs uppercase tracking-widest">Stack</dt>
             <dd className="flex flex-wrap gap-1 pt-1">

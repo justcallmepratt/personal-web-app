@@ -3,7 +3,7 @@ import ProjectsGrid from '@/components/sections/ProjectsGrid'
 import GlitchText from '@/components/ui/GlitchText'
 import { api } from '@/lib/api'
 
-export const metadata = { title: 'Projects // Night City Ops' }
+export const metadata = { title: 'Projects' }
 
 export default async function ProjectsPage() {
   const projects = await api.getProjects().catch(() => [])

@@ -18,7 +18,12 @@ vi.mock('next/link', () => ({
 describe('Navbar', () => {
   it('renders logo', () => {
     render(<Navbar />)
-    expect(screen.getByText(/V\/\/SYS/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Pratham Sachan, home' })).toHaveAttribute('href', '/')
+  })
+
+  it('links to the certifications page', () => {
+    render(<Navbar />)
+    expect(screen.getByRole('link', { name: 'CERTIFICATIONS' })).toHaveAttribute('href', '/certifications')
   })
 
   it('opens mobile menu on hamburger click', async () => {

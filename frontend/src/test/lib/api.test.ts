@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { api } from '@/lib/api'
 import type { Profile, Project, Experience } from '@/lib/types'
+import { certifications } from '@/content'
 
 function mockFetch(data: unknown, ok = true) {
   return vi.fn().mockResolvedValue({
@@ -21,20 +22,20 @@ describe('api — remote source (BACKEND_URL set)', () => {
   })
 
   it('getProfile resolves to a Profile', async () => {
-    const profile: Partial<Profile> = { id: 1, name: 'V', tagline: 'Night City Developer' }
+    const profile: Partial<Profile> = { id: 1, name: 'Remote Name', tagline: 'From the API' }
     vi.stubGlobal('fetch', mockFetch(profile))
 
     const result = await api.getProfile()
-    expect(result.name).toBe('V')
+    expect(result.name).toBe('Remote Name')
   })
 
   it('getProjects resolves to array of projects', async () => {
-    const projects: Partial<Project>[] = [{ id: 1, title: 'Neon Dashboard' }]
+    const projects: Partial<Project>[] = [{ id: 1, title: 'Remote Project' }]
     vi.stubGlobal('fetch', mockFetch(projects))
 
     const result = await api.getProjects()
     expect(result).toHaveLength(1)
-    expect(result[0].title).toBe('Neon Dashboard')
+    expect(result[0].title).toBe('Remote Project')
   })
 
   it('getProjects with featured=true passes correct query param', async () => {
@@ -47,12 +48,12 @@ describe('api — remote source (BACKEND_URL set)', () => {
   })
 
   it('getExperience resolves to array', async () => {
-    const exp: Partial<Experience>[] = [{ id: 1, company: 'Arasaka' }]
+    const exp: Partial<Experience>[] = [{ id: 1, company: 'Acme' }]
     vi.stubGlobal('fetch', mockFetch(exp))
 
     const result = await api.getExperience()
     expect(result).toHaveLength(1)
-    expect(result[0].company).toBe('Arasaka')
+    expect(result[0].company).toBe('Acme')
   })
 
   it('sendContact calls POST with correct body', async () => {
@@ -71,6 +72,15 @@ describe('api — remote source (BACKEND_URL set)', () => {
         body: expect.stringContaining('Alice'),
       })
     )
+  })
+
+  it('getCertifications reads repo content and never calls the API', async () => {
+    const fetchMock = mockFetch([])
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await api.getCertifications()
+    expect(result).toHaveLength(certifications.length)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('falls back to repo content on a non-ok response from GET', async () => {
@@ -104,6 +114,19 @@ describe('api — local content (no BACKEND_URL)', () => {
     expect(profile.name).toBeTruthy()
     expect(projects.length).toBeGreaterThan(0)
     expect(experience.length).toBeGreaterThan(0)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('getCertifications resolves to the repo list in sortOrder, each with a name and issuer', async () => {
+    const result = await api.getCertifications()
+    expect(result.length).toBeGreaterThan(0)
+    for (const c of result) {
+      expect(c.name).toBeTruthy()
+      expect(c.issuer).toBeTruthy()
+    }
+    const orders = result.map((c) => c.sortOrder ?? 0)
+    expect(orders).toEqual([...orders].sort((a, b) => a - b))
+    expect(result).not.toBe(certifications)
     expect(fetch).not.toHaveBeenCalled()
   })
 

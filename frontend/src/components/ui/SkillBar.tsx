@@ -11,7 +11,9 @@ function accentFor(level: number): Accent {
 }
 
 export default function SkillBar({ skill }: { skill: Skill }) {
-  const { line, text } = accents[accentFor(skill.level)]
+  // Unrated skills are listed without a bar by SkillsChart; treat a stray one as 0.
+  const level = skill.level ?? 0
+  const { line, text } = accents[accentFor(level)]
   // With "reduce motion" on, the bar jumps straight to its final width. The
   // initial state stays the same either way so server and client markup match.
   const reduceMotion = useReducedMotion()
@@ -19,12 +21,12 @@ export default function SkillBar({ skill }: { skill: Skill }) {
     <div className="space-y-1">
       <div className="flex items-baseline justify-between font-[var(--font-mono)] text-xs">
         <span className="text-cp-text">{skill.name}</span>
-        <span style={{ color: text }}>{skill.level.toString().padStart(3, '0')}%</span>
+        <span style={{ color: text }}>{level.toString().padStart(3, '0')}%</span>
       </div>
       <div className="h-2 w-full overflow-hidden" style={{ backgroundColor: 'rgba(197,0,60,0.04)' }}>
         <motion.div
           initial={{ width: 0 }}
-          whileInView={{ width: `${skill.level}%` }}
+          whileInView={{ width: `${level}%` }}
           viewport={{ once: true, amount: 0.5 }}
           transition={reduceMotion ? { duration: 0 } : { duration: 1.2, ease: 'easeOut' }}
           data-reduced-motion={reduceMotion ? 'true' : undefined}

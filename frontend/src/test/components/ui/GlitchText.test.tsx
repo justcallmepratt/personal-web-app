@@ -4,14 +4,14 @@ import GlitchText from '@/components/ui/GlitchText'
 
 describe('GlitchText', () => {
   it('renders text content', () => {
-    render(<GlitchText text="Night City" />)
-    expect(screen.getByText('Night City')).toBeInTheDocument()
+    render(<GlitchText text="Glitch Me" />)
+    expect(screen.getByText('Glitch Me')).toBeInTheDocument()
   })
 
   it('applies data-text attribute with the given text', () => {
-    render(<GlitchText text="Night City" />)
-    const el = screen.getByText('Night City')
-    expect(el).toHaveAttribute('data-text', 'Night City')
+    render(<GlitchText text="Glitch Me" />)
+    const el = screen.getByText('Glitch Me')
+    expect(el).toHaveAttribute('data-text', 'Glitch Me')
   })
 
   it('renders as span by default', () => {

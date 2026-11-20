@@ -93,8 +93,8 @@ describe('ExperienceTimeline — edge cases', () => {
   // ── Location handling ─────────────────────────────────────────────────────
 
   it('renders location when provided', () => {
-    render(<ExperienceTimeline items={[makeExp({ location: 'NightCityNC' })]} />)
-    expect(screen.getByText(/NightCityNC/i)).toBeInTheDocument()
+    render(<ExperienceTimeline items={[makeExp({ location: 'SpringfieldUS' })]} />)
+    expect(screen.getByText(/SpringfieldUS/i)).toBeInTheDocument()
   })
 
   it('renders without crashing when location is empty string', () => {

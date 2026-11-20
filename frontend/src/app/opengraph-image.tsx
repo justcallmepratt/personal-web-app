@@ -3,7 +3,8 @@ import { siteName, siteUrl } from '@/lib/site'
 
 // Social preview card. It uses no request-time APIs, so Next.js renders it
 // once at build time and serves the PNG as a static file (no function).
-// The text is limited to the site name and host: no personal details.
+// The text is limited to the site name (the owner's name by default), the
+// section list and the host.
 
 export const alt = siteName
 export const size = { width: 1200, height: 630 }
@@ -88,7 +89,7 @@ export default function OpenGraphImage() {
             {/* Stacked, not side by side: a long host must never collide with the labels. */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', color: TEXT, fontSize: 20, letterSpacing: 6 }}>
-                EXPERIENCE / PROJECTS / SKILLS / CONTACT
+                EXPERIENCE / PROJECTS / SKILLS / CERTIFICATIONS
               </div>
               <div style={{ display: 'flex', color: YELLOW, fontSize: 34, letterSpacing: 4, marginTop: 14 }}>
                 {host}

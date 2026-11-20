@@ -9,6 +9,7 @@ const links = [
   { href: '/experience', label: 'EXPERIENCE' },
   { href: '/projects',   label: 'PROJECTS'   },
   { href: '/skills',     label: 'SKILLS'     },
+  { href: '/certifications', label: 'CERTIFICATIONS' },
   { href: '/contact',    label: 'CONTACT'    },
 ]
 
@@ -38,10 +39,10 @@ export default function Navbar() {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link
             href="/"
-            aria-label="V//SYS, home"
+            aria-label="Pratham Sachan, home"
             className="inline-flex items-center min-h-6 font-[var(--font-display)] text-cp-yellow text-sm tracking-[0.3em]"
           >
-            <span aria-hidden="true">◆&nbsp;</span>V//SYS
+            <span aria-hidden="true">◆&nbsp;</span>PS//SYS
           </Link>
 
           {/* Hamburger — min 44 × 44 px touch target */}
@@ -57,7 +58,8 @@ export default function Navbar() {
             {open ? '✕' : '≡ MENU'}
           </button>
 
-          <ul className="hidden md:flex items-center gap-6 text-xs uppercase tracking-[0.25em] font-[var(--font-mono)]">
+          {/* Six links: tighter spacing between md and lg so the row fits at 768 px */}
+          <ul className="hidden md:flex items-center gap-3 lg:gap-6 text-xs uppercase tracking-[0.15em] lg:tracking-[0.25em] font-[var(--font-mono)]">
             {links.map((l) => {
               const active = pathname === l.href
               return (

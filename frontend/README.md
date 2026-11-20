@@ -22,6 +22,12 @@ Pages get their data through `src/lib/api.ts`.
 - **`BACKEND_URL` set** (server-only, e.g. `http://localhost:8080`): pages fetch from the
   Spring Boot API and fall back to `src/content/index.ts` if it is down or slow.
 
+`src/content/index.ts` is the owner's real profile and the site is public: add only
+confirmed facts. There is no `public/cv.pdf`; the "Download CV" button appears once
+`profile.cvUrl` is set (add the file, then set `cvUrl: '/cv.pdf'`). Certifications live
+in the same file and are served by `api.getCertifications()`, which has no API
+endpoint and always reads the repo content.
+
 The contact form posts to this app's own `POST /api/contact` (`src/app/api/contact/route.ts`),
 which relays to the API when `BACKEND_URL` is set and otherwise sends mail over SMTP
 (`MAIL_*`, `CONTACT_NOTIFY_TO`). Variables are documented in the root `.env.example`.

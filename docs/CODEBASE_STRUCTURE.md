@@ -15,25 +15,28 @@ frontend/src/
 │   ├── page.tsx                  → Home: hero + featured projects
 │   ├── projects/page.tsx         → All projects
 │   ├── experience/page.tsx       → Career timeline
-│   ├── skills/page.tsx           → Skill bars by category
+│   ├── skills/page.tsx           → Skills by category (a bar only for skills with a `level`)
+│   ├── certifications/page.tsx   → Certifications, from the content file
 │   ├── contact/page.tsx          → Contact form
 │   ├── api/contact/route.ts      → POST handler: validate → rate-limit → send email
 │   ├── error.tsx, loading.tsx    → Error boundary and loading states
 │   └── globals.css               → Tailwind 4 theme (cp-* colours)
 │
 ├── content/
-│   └── index.ts                  → profile, projects, experience — the site's content
+│   └── index.ts                  → profile, projects, experience, certifications — the
+│                                   site's content (the owner's real profile)
 │
 ├── components/
 │   ├── layout/                   → Navbar, HUDChrome, ScanlineOverlay
 │   ├── sections/                 → HeroSection, ProjectsGrid, ExperienceTimeline,
-│   │                               SkillsChart, ContactForm
+│   │                               SkillsChart, CertificationsList, ContactForm
 │   └── ui/                       → GlitchText, NeonButton, NeonCard, SkillBar, TerminalInput
 │
 ├── lib/
 │   ├── api.ts                    → Content source seam + sendContact
 │   ├── contact.ts                → Server-only: validation, rate limit, SMTP send
-│   └── types.ts                  → Profile, Project, Experience, ContactPayload, ApiResponse
+│   └── types.ts                  → Profile, Project, Experience, Certification,
+│                                   ContactPayload, ApiResponse
 │
 └── test/                         → Vitest + React Testing Library, mirrors src/
 ```
@@ -52,6 +55,28 @@ and build commands for Vercel.
    uses Node APIs and must only be imported from server code.
 3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` runs per request.
 4. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
+
+### Content shape
+
+`content/index.ts` is what visitors see while the API is not deployed. The site is
+public, so it holds only facts the owner has confirmed; `test/content/content.test.ts`
+guards against placeholder links, an email address or a phone number coming back.
+
+- **Optional means "leave it out".** `Skill.level` is optional and unset, so the skills
+  page lists names by category with no percentage. `Profile.email` is `''` (the hero
+  hides the row). An experience entry with `current: false` and `endDate: null` shows
+  its start month only, never "PRESENT"; use that when an end date is not confirmed.
+- **CV.** There is no `public/cv.pdf`. The "Download CV" button renders only when
+  `profile.cvUrl` is set: add the real file as `frontend/public/cv.pdf` and set
+  `cvUrl: '/cv.pdf'`.
+- **Certifications** are `{ id, name, issuer, date?, credentialId?, url?, sortOrder? }`.
+  `date` is ISO at whatever precision is known (`'2023'`, `'2023-05'`). The Spring API
+  has no certifications endpoint, so `api.getCertifications()` always reads this file.
+- **New fields in `types.ts` stay optional** so the Spring API's responses (which do
+  send `level`, and may send `email` and `cvUrl`) keep type-checking.
+- `backend/.../SeedRunner.java` and the seed rows in `supabase/init.sql` still hold the
+  old placeholder persona. They are not served anywhere public; replace them before
+  `BACKEND_URL` is pointed at a live API.
 
 ## `apps/kafka`
 

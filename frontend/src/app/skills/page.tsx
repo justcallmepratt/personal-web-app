@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/site'
 
 export const metadata = pageMetadata({
   title: 'Skills // Loadout',
-  description: 'Skills loadout across frontend, backend and DevOps, filterable by category.',
+  description: 'Languages, frameworks and tools grouped by area, filterable by category.',
   path: '/skills',
 })
 
