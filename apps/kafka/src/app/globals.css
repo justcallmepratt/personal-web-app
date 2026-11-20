@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cp-red: #C5003C;
+  --color-cp-teal: #55EAD4;
+  --color-cp-yellow: #F3E600;
+  /* Pure black for OLED — pixels fully off, maximum contrast with neons */
+  --color-cp-dark: #000000;
+  --color-cp-panel: #0A0A10;
+  --color-cp-border: #1E2235;
+  --color-cp-muted: #4A4F6A;
+  --color-cp-text: #C8CDD8;
+
+  --font-ui: var(--font-ui), Rajdhani, sans-serif;
+  --font-display: var(--font-display), Orbitron, sans-serif;
+  --font-mono: var(--font-mono), "Share Tech Mono", monospace;
+}
+
+@keyframes glitch {
+
+  0%,
+  100% {
+    clip-path: inset(0 0 95% 0);
+    transform: translate(-2px, 0);
+  }
+
+  25% {
+    clip-path: inset(40% 0 40% 0);
+    transform: translate(2px, 0);
+  }
+
+  50% {
+    clip-path: inset(80% 0 5% 0);
+    transform: translate(-1px, 0);
+  }
+
+  75% {
+    clip-path: inset(20% 0 70% 0);
+    transform: translate(1px, 0);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+@keyframes flicker {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  92% {
+    opacity: 1;
+  }
+
+  93% {
+    opacity: 0.4;
+  }
+
+  94% {
+    opacity: 1;
+  }
+
+  96% {
+    opacity: 0.6;
+  }
+
+  97% {
+    opacity: 1;
+  }
+}
+
+@keyframes neon-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px #00D4FF44, 0 0 20px #00D4FF22;
+  }
+
+  50% {
+    box-shadow: 0 0 10px #00D4FF88, 0 0 40px #00D4FF44;
+  }
+}
+
+@keyframes blink {
+
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+html,
+body {
+  background: #000000;
+  color: #C8CDD8;
+  min-height: 100%;
+  font-family: var(--font-mono);
+}
+
+body {
+  /* Slightly brighter grid lines against true black for depth */
+  background-image:
+    linear-gradient(#1E223560 1px, transparent 1px),
+    linear-gradient(90deg, #1E223560 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-attachment: fixed;
+}
+
+.hud-clip {
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+}
+
+.glitch-text {
+  position: relative;
+  color: #C8CDD8;
+  display: inline-block;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.glitch-text::before {
+  color: #FF003C;
+  animation: glitch 2.5s infinite linear alternate-reverse;
+  transform: translate(-2px, 0);
+}
+
+.glitch-text::after {
+  color: #00D4FF;
+  animation: glitch 3s infinite linear alternate-reverse;
+  transform: translate(2px, 0);
+}
+
+.terminal-cursor::after {
+  content: "▍";
+  margin-left: 4px;
+  animation: blink 1s steps(2) infinite;
+  color: #00D4FF;
+}

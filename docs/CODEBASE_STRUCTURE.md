@@ -53,6 +53,14 @@ and build commands for Vercel.
 3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` runs per request.
 4. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
 
+## `apps/kafka`
+
+A self-contained app like `apps/admin`, with its own `package.json` and lockfile: the
+live Kafka demo, served under `/kafka/*`. Not deployed yet; see
+[DEPLOYMENT.md](DEPLOYMENT.md#kafka-app). Its page, relay routes and helpers are copies
+of the ones in `frontend/` (`KafkaDemo.tsx`, `lib/kafka.ts`, `app/api/kafka/*`), which
+stay live until the cutover described there.
+
 ## Admin — Next.js 16 (TypeScript, Tailwind 4)
 
 `apps/admin` is a self-contained app with its own `package.json` and lockfile: admin

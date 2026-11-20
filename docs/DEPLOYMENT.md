@@ -21,7 +21,9 @@ How the site is built, deployed and configured. This replaces the earlier
 - **Micro-frontends on Vercel.** `web` is the public site and the default app. `admin`
   (login and inbox; job tracker later) is a second Next.js app in `apps/admin`, to be
   routed under `/admin/*` with Vercel Microfrontends. The code is in the repository
-  but not deployed yet. See [Admin app](#admin-app).
+  but not deployed yet. See [Admin app](#admin-app). `kafka` (`apps/kafka`) is a third
+  app for the live Kafka demo, to be routed under `/kafka/*` the same way. See
+  [Kafka app](#kafka-app).
 - **Services on Railway (not live yet).** The Spring Boot API owns content, contact messages and
   admin auth, backed by Postgres. Until it is deployed, the live site serves the repo content.
 - **The browser only talks to Vercel.** Pages fetch content from the API on the server;
@@ -35,7 +37,7 @@ How the site is built, deployed and configured. This replaces the earlier
 
 ## Keeping the Vercel footprint small
 
-- **Two projects at most:** `web` and `admin`. No Vercel projects for services.
+- **Three projects at most:** `web`, `admin` and `kafka`. No Vercel projects for services.
 - **Pages are static** and re-rendered at most once an hour (`REVALIDATE_SECONDS` in
   `frontend/src/lib/api.ts`), so visitors are served from the CDN and the API sees
   about one request per page per hour, not one per visit.
@@ -206,6 +208,75 @@ cd apps/admin
 pnpm install
 BACKEND_URL=http://localhost:8080 pnpm dev   # http://localhost:3001/admin
 pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build
+```
+
+## Kafka app
+
+`apps/kafka` is the live Kafka demo as its own Next.js app, built to join the same
+microfrontends group as `admin`. It is **not deployed yet**. Until it is, the demo
+keeps running from `web` at `/projects/kafka` (see [Kafka live demo](#kafka-live-demo));
+both copies talk to the same Railway service, so nothing is lost while this is pending.
+
+How it works:
+
+- **Routes:** `/kafka` (the page) plus its own handlers `/kafka/api/produce` and
+  `/kafka/api/messages`. All routes sit in `src/app/kafka/`, with no `basePath`, for
+  the same reason as `admin`.
+- **Same behaviour as the page in `web`:** session-scoped records, validation, rate
+  limits, a 10 s timeout, and bounded polling. The code was copied, not shared, because
+  the shared UI package (roadmap step 3) does not exist yet. Until it does, a change to
+  the demo has to be made in the copy that is live.
+- **Its header links back to `/` and `/projects` with plain links**, which are full
+  page loads because those pages belong to `web`.
+
+### Environment variables for `kafka`
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `KAFKA_DEMO_URL` | yes | Base URL of the Kafka demo service on Railway. Server-only, read at build time and at request time. Without it the page shows "broker offline". |
+| `KAFKA_DEMO_TOKEN` | yes | Must match the service's `DEMO_API_TOKEN`. Server-only. |
+| `NEXT_PUBLIC_SITE_NAME` | no | Site name shown in the header and page title |
+
+### Vercel setup (by hand, in this order)
+
+Nothing here has been done yet. It follows the same steps as [Admin app](#admin-app);
+if the microfrontends group already exists, skip creating it.
+
+1. **Create the project.** New Vercel project from this repository, named `kafka`,
+   root directory `apps/kafka`, framework Next.js. Set both variables above for
+   Production and Preview. Deploy and check that
+   `https://<kafka-project>.vercel.app/kafka` loads and a record goes through. Do not
+   attach a domain.
+2. **Add it to the microfrontends group** (Team **Settings → Microfrontends**), with
+   `frontend` as the default application.
+3. **Route `/kafka/*` to it** in `frontend/microfrontends.json`, next to `admin`:
+
+   ```json
+   "kafka": {
+     "routing": [{ "paths": ["/kafka", "/kafka/:path*"] }]
+   }
+   ```
+
+   `frontend` must also wrap its Next.js config in `withMicrofrontends` in that commit,
+   as described for `admin`.
+4. **Redeploy `kafka`** once step 3 is live, so its assets get their own prefix.
+5. **Cut over, in a separate change to `web`:** replace `frontend/src/app/projects/kafka`
+   with a redirect to `/kafka`, point the projects page link at `/kafka`, and delete
+   `frontend/src/app/api/kafka`, `KafkaDemo.tsx`, `lib/kafka.ts` and their tests. Then
+   remove `KAFKA_DEMO_URL` and `KAFKA_DEMO_TOKEN` from the `frontend` project.
+6. **Check** `https://justcallmepratt.dev/kafka` sends and shows a record, the old
+   `/projects/kafka` address redirects, and the public pages are unchanged.
+
+**Rollback:** remove the `kafka` entry from `microfrontends.json` and redeploy
+`frontend`. If step 5 has already shipped, revert that change too.
+
+### Local development
+
+```bash
+cd apps/kafka
+pnpm install
+KAFKA_DEMO_URL=http://localhost:<port> pnpm dev   # http://localhost:3002/kafka
+pnpm test && pnpm lint && pnpm exec tsc --noEmit && pnpm build
 ```
 
 ## Environment variables for `web`
