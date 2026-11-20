@@ -29,7 +29,7 @@ export const siteDescription =
   'Full-stack engineer — Java, Spring Boot, React, Next.js. Night City protocols.'
 
 /** Public, indexable routes. `/api/*` is deliberately absent. */
-export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/contact'] as const
+export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/contact', '/credits'] as const
 export type PublicRoute = (typeof publicRoutes)[number]
 
 /** Absolute URL for a site path; the home page has no trailing slash. */

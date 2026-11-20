@@ -1,7 +1,7 @@
 # Phase 10 — Citation / Credits Page Agent
 
 > **Status and caveats (2026-11-20)**
-> Not started. Frontend-only. The hosting credit lists Railway, which is not serving anything yet (Vercel and Supabase are).
+> **Done 2026-11-20 as WP-C.** `/credits` (data in `frontend/src/lib/credits.ts`), a `Footer` component with the short disclaimer, and a sitemap entry. The page lists only what is in the code; Railway is described as planned because the API is not live. The Spotify, Amplitude and navbar steps below were dropped (see the roadmap); the link is in the footer. The original brief follows for reference.
 > **Roadmap (2026-11-20):** Do now (WP-C): list what is actually used, add the unofficial-fan-work disclaimer, link from the footer. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
