@@ -51,8 +51,10 @@ How the site is built, deployed and configured, and what is still outstanding. S
    service, create the CNAME Railway shows in the Vercel DNS zone, then change
    `BACKEND_URL` on Vercel to `https://api.justcallmepratt.dev` and redeploy. Set
    `CORS_ORIGIN` on Railway to `https://justcallmepratt.dev`.
-2. **Set `ADMIN_PASSWORD_HASH`** on the Railway service (bcrypt of the admin password).
-   Until then admin sign-in answers 503.
+2. **Set `ADMIN_PASSWORD_HASH`** on the Railway service (bcrypt of the admin password),
+   but only after a rate limiter is in front of admin login (first item of
+   [Security follow-ups](ROADMAP.md#security-follow-ups)). Until then admin sign-in answers
+   503 "Admin not configured", by design.
 3. **Turn on contact email.** The contact form now relays to the API, which stores each
    message but sends no email until `MAIL_USER` and `MAIL_PASS` are set on the Railway
    service. Also set the Vercel variables ([steps](#turn-on-contact-email)) for the SMTP
@@ -64,7 +66,9 @@ How the site is built, deployed and configured, and what is still outstanding. S
 5. **Delete the two unused Vercel projects** `personal-web-app` and `backend` if they
    still exist (they never had a working deployment), then the GitHub environments they
    created (`… – backend`, `… – personal-web-app`).
-6. **Content fixes (not docs):** make `SeedRunner` seed the real profile, and correct the
+6. **Security follow-ups** (API surface, CSP, code-scanning alerts, rate limits) are
+   listed in [ROADMAP.md](ROADMAP.md#security-follow-ups).
+7. **Content fixes (not docs):** make `SeedRunner` seed the real profile, and correct the
    project description in `frontend/src/content/index.ts` (line 58) that still says the
    API is "built and tested in CI but not deployed yet".
 
@@ -174,7 +178,8 @@ holds the Kafka demo services), created from this GitHub repository with root di
   `JWT_SECRET`. I could not read the Railway dashboard, so whether
   `SPRING_PROFILES_ACTIVE=docker`, `DB_POOL_SIZE` and `CORS_ORIGIN` are set is not
   confirmed; the service is healthy, so the profile and datasource are right.
-- **Variables not set:** `ADMIN_PASSWORD_HASH` (admin sign-in answers 503) and
+- **`ADMIN_USERNAME`** is set to `psachan` on the service (the code default is `admin`).
+- **Variables not set:** `ADMIN_PASSWORD_HASH` (admin sign-in answers 503 "Admin not configured" until a rate limiter is in place; see [Security follow-ups](ROADMAP.md#security-follow-ups)) and
   `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`, `CONTACT_NOTIFY_TO`; contact
   contact messages are stored in the database but no notification email is sent).
 
