@@ -9,7 +9,7 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
   }, [error])
 
   return (
-    <section className="min-h-[60vh] flex flex-col items-center justify-center gap-6 px-4 text-center">
+    <section role="alert" className="min-h-[60vh] flex flex-col items-center justify-center gap-6 px-4 text-center">
       <p className="font-[var(--font-display)] text-cp-red text-2xl tracking-widest">
         {'// SYSTEM_ERROR //'}
       </p>

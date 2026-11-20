@@ -3,6 +3,10 @@ import ProjectsGrid from '@/components/sections/ProjectsGrid'
 import GlitchText from '@/components/ui/GlitchText'
 import NeonButton from '@/components/ui/NeonButton'
 import { api } from '@/lib/api'
+import { pageMetadata, siteDescription } from '@/lib/site'
+
+// No `title`: the home page uses the site-wide default title.
+export const metadata = pageMetadata({ description: siteDescription, path: '/' })
 
 export default async function HomePage() {
   const [profile, featured] = await Promise.all([
@@ -21,7 +25,7 @@ export default async function HomePage() {
             </h2>
             <NeonButton href="/projects" accent="yellow">All Projects</NeonButton>
           </div>
-          <ProjectsGrid projects={featured} />
+          <ProjectsGrid projects={featured} headingLevel={3} />
         </section>
       )}
     </>

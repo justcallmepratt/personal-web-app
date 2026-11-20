@@ -38,6 +38,6 @@ describe('ProjectsGrid', () => {
   it('renders empty state when no projects', () => {
     const { container } = render(<ProjectsGrid projects={[]} />)
     // No project headings
-    expect(container.querySelectorAll('h3').length).toBe(0)
+    expect(container.querySelectorAll('h2, h3').length).toBe(0)
   })
 })

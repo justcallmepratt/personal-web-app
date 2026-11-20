@@ -1,7 +1,12 @@
 import ContactForm from '@/components/sections/ContactForm'
 import GlitchText from '@/components/ui/GlitchText'
+import { pageMetadata } from '@/lib/site'
 
-export const metadata = { title: 'Contact // Open Channel' }
+export const metadata = pageMetadata({
+  title: 'Contact // Open Channel',
+  description: 'Open a channel: send a message through the contact form.',
+  path: '/contact',
+})
 
 export default function ContactPage() {
   return (

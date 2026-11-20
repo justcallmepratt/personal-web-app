@@ -1,14 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cp-red: #C5003C;
+  /* Contrast on #000 / cp-panel / HUD panel #111318 (WCAG AA text needs 4.5:1).
+     cp-red is the text-safe neon red: 5.78 / 5.43 / 5.11. The original deep
+     red (3.44 / 3.23 / 3.04) lives on as cp-red-deep for fills, borders and
+     glows only. */
+  --color-cp-red: #FF2E57;
+  --color-cp-red-deep: #C5003C;
   --color-cp-teal: #55EAD4;
   --color-cp-yellow: #F3E600;
   /* Pure black for OLED — pixels fully off, maximum contrast with neons */
   --color-cp-dark: #000000;
   --color-cp-panel: #0A0A10;
   --color-cp-border: #1E2235;
-  --color-cp-muted: #4A4F6A;
+  /* Field and control outlines: 3.74 / 3.52 / 3.31 (UI boundaries need 3:1). */
+  --color-cp-border-strong: #5F6688;
+  /* Muted text: 5.54 / 5.21 / 4.90 (was #4A4F6A at 2.62 / 2.46 / 2.32). */
+  --color-cp-muted: #7A82A2;
+  --color-cp-focus: #FFFFFF;
   --color-cp-text: #C8CDD8;
 
   --font-ui: var(--font-ui), Rajdhani, sans-serif;
@@ -133,6 +142,12 @@ body {
 .glitch-text::before,
 .glitch-text::after {
   content: attr(data-text);
+  /* Empty alt text: assistive tech must not read the heading three times.
+     Browsers without the "/ alt" syntax keep the line above. */
+  content: attr(data-text) / "";
+  /* The copies must never swallow clicks or text selection. */
+  pointer-events: none;
+  user-select: none;
   position: absolute;
   top: 0;
   left: 0;
@@ -154,7 +169,74 @@ body {
 
 .terminal-cursor::after {
   content: "▍";
+  content: "▍" / "";
   margin-left: 4px;
   animation: blink 1s steps(2) infinite;
   color: #00D4FF;
+}
+
+/* ── Keyboard focus ─────────────────────────────────────────────────────────
+   In the base layer so a utility class can still opt out where needed. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-cp-focus);
+    outline-offset: 3px;
+  }
+
+  /* clip-path cuts off anything drawn outside the box, so the ring goes inside. */
+  .hud-clip:focus-visible {
+    outline-offset: -5px;
+  }
+}
+
+/* ── Skip link ──────────────────────────────────────────────────────────────
+   Off-screen until focused; z-index sits above the navbar (40) and the
+   scanline overlay (50). */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 60;
+  transform: translateY(-200%);
+  padding: 12px 16px;
+  background: #000000;
+  color: var(--color-cp-yellow);
+  border: 2px solid var(--color-cp-yellow);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────
+   Applies to the glitch headings, the blinking cursor, Tailwind's
+   animate-pulse skeletons and every transition. The scanline overlay is a
+   static texture, so it stays. Framer Motion is handled in SkillBar. */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Drop the jittering colour copies entirely; the plain heading remains. */
+  .glitch-text::before,
+  .glitch-text::after {
+    content: none;
+    animation: none !important;
+  }
+
+  /* Solid cursor instead of a blinking one. */
+  .terminal-cursor::after {
+    animation: none !important;
+    opacity: 1;
+  }
 }

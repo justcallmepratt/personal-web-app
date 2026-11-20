@@ -16,7 +16,7 @@ COPY . .
 
 # Content comes from src/content, so the build needs no backend.
 ARG NEXT_PUBLIC_SITE_NAME="V // Night City Dev"
-ARG NEXT_PUBLIC_SITE_URL=https://frontend-liard-theta-28.vercel.app
+ARG NEXT_PUBLIC_SITE_URL=https://justcallmepratt.dev
 ENV NEXT_PUBLIC_SITE_NAME=$NEXT_PUBLIC_SITE_NAME \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 

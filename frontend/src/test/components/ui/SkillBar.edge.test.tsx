@@ -65,8 +65,8 @@ describe('SkillBar — edge cases', () => {
   it('level > 70 uses red colour on label', () => {
     const { container } = render(<SkillBar skill={{ name: 'High', category: 'Backend', level: 90 }} />)
     const label = container.querySelector('span[style]') as HTMLElement
-    // red = rgb(197, 0, 60)
-    expect(label?.style.color).toBe('rgb(197, 0, 60)')
+    // red = rgb(255, 46, 87)
+    expect(label?.style.color).toBe('rgb(255, 46, 87)')
   })
 
   // ── Boundary thresholds (exact values) ───────────────────────────────────
@@ -82,13 +82,13 @@ describe('SkillBar — edge cases', () => {
     const { container } = render(<SkillBar skill={{ name: 'Boundary', category: 'Backend', level: 70 }} />)
     const label = container.querySelector('span[style]') as HTMLElement
     expect(label?.style.color).toBe('rgb(243, 230, 0)')
-    expect(label?.style.color).not.toBe('rgb(197, 0, 60)')
+    expect(label?.style.color).not.toBe('rgb(255, 46, 87)')
   })
 
   it('level 71 uses red (not yellow)', () => {
     const { container } = render(<SkillBar skill={{ name: 'Boundary', category: 'Backend', level: 71 }} />)
     const label = container.querySelector('span[style]') as HTMLElement
-    expect(label?.style.color).toBe('rgb(197, 0, 60)')
+    expect(label?.style.color).toBe('rgb(255, 46, 87)')
     expect(label?.style.color).not.toBe('rgb(243, 230, 0)')
   })
 
