@@ -46,23 +46,20 @@ How the site is built, deployed and configured. This replaces the earlier
   under the project's root directory changed, so backend-only and Dependabot Maven
   pushes cost no build; and a spend limit under Billing → Spend Management.
 
-## Vercel setup (one time)
+## Vercel setup
 
-Three Vercel projects (`frontend`, `personal-web-app`, `backend`) are connected to this
-repository and every push produces three failed deployments, because none of them
-builds from `frontend/`.
+State as of 2026-11-20. Every push to `main` deploys production and every PR gets a
+preview.
 
-1. **Project `frontend`** (this is `web`; rename it if you like):
-   - Settings → Build and Deployment → Root Directory: `frontend`.
-   - Environment variables: remove `NEXT_PUBLIC_API_URL`; set `BACKEND_URL` to the
-     Railway URL once the backend is up (remove it until then — it currently points at
-     a dead host); keep `NEXT_PUBLIC_SITE_NAME`; set `NEXT_PUBLIC_SITE_URL` to
-     `https://justcallmepratt.dev`.
-   - Domains: add `justcallmepratt.dev` (already registered with Vercel, on Vercel DNS).
-2. **Projects `personal-web-app` and `backend`:** delete, or disconnect from Git. They
-   have never had a working deployment.
-
-After that every push to `main` deploys production and every PR gets a preview.
+- **Project `frontend`** is `web`. Root directory is `frontend`; `justcallmepratt.dev`
+  is attached and `www.justcallmepratt.dev` redirects to it. The original
+  `frontend-liard-theta-28.vercel.app` address still works.
+- **Still to do on `frontend` → Environment Variables:** remove `NEXT_PUBLIC_API_URL`;
+  set `NEXT_PUBLIC_SITE_URL` to `https://justcallmepratt.dev`; set `BACKEND_URL` to the
+  Railway URL once the backend is up. Until then it points at a dead host, so every
+  build waits 5 s per page before falling back to the repo content.
+- **Projects `personal-web-app` and `backend`** have never had a working deployment
+  and should be deleted (Project → Settings → General → Delete Project).
 
 ## Railway setup (one time)
 
@@ -147,7 +144,7 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
 
 ## Roadmap
 
-1. **Live on the domain:** merge, apply the Vercel setup above.
+1. **Live on the domain:** done.
 2. **Backend on Railway:** apply the Railway setup above. Land the Spring Boot 4.1
    upgrade (PR #32) first so the redeploy starts from the current framework version.
 3. **Monorepo:** move `frontend/` to `apps/web`, extract shared UI and API types into
@@ -156,13 +153,25 @@ Container images are also published to GHCR by `docker-build.yml` (every push to
    the existing `/api/admin/*` endpoints; `microfrontends.json` in `web` routes
    `/admin/*` to it.
 
+## GitHub setup
+
+- **Branch protection on `main`:** the CI jobs `Backend — Java 21 / Maven` and
+  `Frontend — Node 22 / pnpm` must pass before merging. No review is required and
+  admins can bypass.
+- **Dependabot:** version updates (`.github/dependabot.yml`), alerts and security
+  updates are on. `dependabot-auto-merge.yml` approves patch and minor bumps and merges
+  them once the required checks pass; major bumps get a comment and the `major-update`
+  label instead.
+- **Variables:** `NEXT_PUBLIC_SITE_NAME`, `NEXT_PUBLIC_SITE_URL` (used by the CI and
+  image builds). No workflow needs a secret.
+
 ## Cleanup still to do by hand
 
 - **GitHub secrets no longer used by any workflow:** `RAILWAY_DEPLOY_HOOK_URL`,
   `RAILWAY_SERVICE_ID`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`,
   `BACKEND_URL`, `AMPLITUDE_API_KEY`, and the old `RAILWAY_TOKEN` value.
-- **GitHub variables:** `NEXT_PUBLIC_API_URL` (unused); update `NEXT_PUBLIC_SITE_URL`
-  to the new domain.
+- **GitHub environments:** the `… – backend` and `… – personal-web-app` environments
+  were created by the two unused Vercel projects and can be deleted once those are gone.
 - **Supabase:** nothing outstanding. Its security advisors reported no issues on
   2026-11-20; re-check them after any schema change.
 - **Dependabot PRs:** triaged; see PR #32 for the Spring Boot 4.1 + springdoc 3.2 upgrade.

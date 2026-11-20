@@ -21,7 +21,9 @@ jobs:
     - uses: actions/stale@v10
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        stale-issue-message: 'Stale issue message'
-        stale-pr-message: 'Stale pull request message'
+        stale-issue-message: 'This issue has had no activity for 60 days. It will be closed in 7 days unless there is an update.'
+        stale-pr-message: 'This pull request has had no activity for 60 days. It will be closed in 7 days unless there is an update.'
+        # Dependabot manages its own PRs; don't let this job close them.
+        exempt-pr-labels: 'dependencies,major-update'
         stale-issue-label: 'no-issue-activity'
         stale-pr-label: 'no-pr-activity'
