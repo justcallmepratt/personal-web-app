@@ -11,7 +11,7 @@ Read this first. Then read the phase file for your assigned task.
 | Layer | Tech | Live URL |
 |---|---|---|
 | Frontend | Next.js 16 · React 19 · Tailwind 4 | https://justcallmepratt.dev |
-| Backend | Spring Boot 4.1 · Java 21 · JPA | deployed on Railway (https://personal-web-app-api-production.up.railway.app), not used by the site yet; `api.justcallmepratt.dev` not attached |
+| Backend | Spring Boot 4.1 · Java 21 · JPA | deployed on Railway (https://personal-web-app-api-production.up.railway.app), used by the production site; `api.justcallmepratt.dev` not attached |
 | Database | Supabase Postgres (the only database; schema in `supabase/init.sql`) | nxqiuqlwyjimioosaiio.supabase.co |
 | Repo | GitHub | https://github.com/justcallmepratt/personal-web-app |
 

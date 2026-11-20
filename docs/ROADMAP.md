@@ -23,20 +23,20 @@ person can ship, and I can reach them". Work is judged against that.
   delivery logs. Needs the Vercel variables in [DEPLOYMENT.md](DEPLOYMENT.md).
 - **Kafka live demo** at `/projects/kafka`, plus the `apps/kafka` micro-frontend (built,
   not routable yet) and the `admin` micro-frontend `apps/admin` (built, not deployed).
-- **Backend deployed on Railway** (`personal-web-app-api`), healthy, not used by the site yet.
+- **Backend deployed on Railway** (`personal-web-app-api`), healthy, and used by the production site (`BACKEND_URL`); the database holds the real profile, projects and experience.
 - **Backend persistence tests** against real PostgreSQL in the required backend CI job;
   branch protection requires the backend, frontend and admin jobs.
 
 ## Next, in order
 
-1. The operations checklist in [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work): real
-   profile into the database and `SeedRunner`, then `BACKEND_URL`, the API domain,
-   `ADMIN_PASSWORD_HASH`, contact email, the Vercel `kafka` and `admin` projects and
-   group, and deleting two unused Vercel projects.
+1. The operations checklist in [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work): the API
+   domain, `ADMIN_PASSWORD_HASH`, contact email (mail variables on Railway), the Vercel
+   `kafka` and `admin` projects and group, deleting two unused Vercel projects, and the
+   `SeedRunner` and content-file description fixes.
 2. **WP-E leftovers:** the owner's real `cv.pdf` (none exists; the button is hidden until
    `profile.cvUrl` is set).
 3. **WP-D Vercel Web Analytics** (decided; not added).
-4. **WP-H ops hardening** once the site uses the API (Supabase keep-alive, uptime check,
+4. **WP-H ops hardening** (the site now uses the API) (Supabase keep-alive, uptime check,
    backup of the `messages` table, secret-rotation notes, Lighthouse baseline).
 5. **WP-F case-study projects.**
 6. **WP-J monorepo move**, in a quiet window.
@@ -66,10 +66,10 @@ person can ship, and I can reach them". Work is judged against that.
 | WP-B Accessibility and motion | Done (PR #61) | Check `GlitchText` with VoiceOver (unconfirmed); 24 px minimum targets for small links; no form honeypot. |
 | WP-C Credits and disclaimer | Done | none |
 | WP-D Vercel Web Analytics | Decided, not started | Add `@vercel/analytics` once to the layout; owner turns it on in the dashboard and confirms plan cost. |
-| WP-E Real content and CV | Mostly done | Real `cv.pdf` and `cvUrl`; real content in the database and `SeedRunner` (see DEPLOYMENT.md). |
+| WP-E Real content and CV | Mostly done | Real `cv.pdf` and `cvUrl`; `SeedRunner` still seeds the old persona and the project description in `content/index.ts` still says the API is not deployed (see DEPLOYMENT.md); the database itself holds the real content. |
 | WP-F Case-study projects | Not started | Problem, role, decisions, outcome per project; `/projects/[slug]`; a "How this site is built" entry. New fields optional in `types.ts`. |
 | WP-G GitHub activity | Done | none |
-| WP-H Ops hardening | Not started | Weekly keep-alive touching the database, uptime check, `messages` export, secret-rotation notes, Lighthouse baseline. Needs the site on the API. |
+| WP-H Ops hardening | Not started | Weekly keep-alive touching the database, uptime check, `messages` export, secret-rotation notes, Lighthouse baseline. The site is on the API now. |
 | WP-I Admin deploy | Partly done | `withMicrofrontends` and the `kafka` route are in `frontend`. Remaining: the `admin` route in `frontend/microfrontends.json` after the owner creates the project and group; verify `/admin/login` against the real API. |
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |

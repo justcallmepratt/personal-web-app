@@ -40,8 +40,8 @@ review found that is still open or unconfirmed:
 - **`avatarUrl`** exists in the data but is never rendered.
 - **TypeScript is 6.x in `apps/*` and `^5` in `frontend/`**: harmless, but the monorepo
   move should settle on one version.
-- **Backend:** persistence is now tested against PostgreSQL in CI; the API still serves
-  the old placeholder persona until the database is updated (see
+- **Backend:** persistence is now tested against PostgreSQL in CI; `SeedRunner` still seeds
+  the old placeholder persona into empty tables (see
   [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work)).
 
 ---

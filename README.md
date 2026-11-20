@@ -16,13 +16,14 @@ The repository holds three Next.js apps and a Spring Boot API:
 
 | Part | Path | State |
 |---|---|---|
-| Public site | `frontend/` | Live on Vercel at https://justcallmepratt.dev. Home, projects (with an "In the works" list), experience, skills, certifications, contact and credits pages, and a GitHub activity section. Content comes from `frontend/src/content/index.ts`. |
-| REST API | `backend/` | Deployed on Railway and healthy, but **the site does not use it yet**: the database still holds old placeholder content. See [Outstanding work](docs/DEPLOYMENT.md#outstanding-work). |
+| Public site | `frontend/` | Live on Vercel at https://justcallmepratt.dev. Home, projects (with an "In the works" list), experience, skills, certifications, contact and credits pages, and a GitHub activity section. Content from the API, with `frontend/src/content/index.ts` as fallback. |
+| REST API | `backend/` | Deployed on Railway and used by the production site for profile, projects and experience (the database holds the real content). Contact messages relayed to it are stored; email needs mail variables on Railway. See [Outstanding work](docs/DEPLOYMENT.md#outstanding-work). |
 | Kafka demo page | `apps/kafka/` | Built as a micro-frontend for `/kafka`; not routable yet. The demo runs from `frontend/` at `/projects/kafka`. |
 | Admin app | `apps/admin/` | Sign-in and contact-message inbox; not deployed. |
 
-When `BACKEND_URL` is set, `frontend` reads the API on the server and falls back to the
-repository content if the API is unavailable.
+In production `frontend` reads the API on the server (`BACKEND_URL`) and falls back to
+`frontend/src/content/index.ts` if it is unavailable; certifications and the "In the
+works" list come only from that file. Previews and local runs use the file alone.
 
 The site also hosts a **live Apache Kafka demo** at `/projects/kafka`: a visitor sends a
 record, it goes through a real broker and a Spring Boot consumer on Railway, is stored
@@ -61,7 +62,7 @@ this repo holds the page and the relay routes.
 | Frontend tests | Vitest + React Testing Library | — |
 | Container | Docker (multi-stage) | — |
 | Frontend hosting | Vercel | — |
-| Backend hosting | Railway (deployed; not used by the site yet) | — |
+| Backend hosting | Railway (deployed; used by the production site) | — |
 | Kafka demo service | Spring Boot + Apache Kafka (KRaft) on Railway, Supabase Postgres | separate repo |
 
 ---
@@ -193,7 +194,7 @@ personal-web-app/
 
 ## API Reference
 
-Served by the Spring Boot backend (deployed on Railway, not yet called by the site).
+Served by the Spring Boot backend (deployed on Railway; called by the production site).
 Interactive docs at `/swagger-ui/index.html` on a running instance; health at
 `/actuator/health`.
 

@@ -8,8 +8,8 @@ How the site is built, deployed and configured, and what is still outstanding. S
 
 | Part | Where | State |
 |---|---|---|
-| Public site (`frontend/`) | Vercel project `frontend`, root directory `frontend`, <https://justcallmepratt.dev> (`www` redirects to it) | Live. Serves the real profile from `frontend/src/content/index.ts`. |
-| API (`backend/`) | Railway project `kafka-demo`, service `personal-web-app-api` | Deployed and healthy at `https://personal-web-app-api-production.up.railway.app`. **Not used by the site yet.** Its public `GET /api/profile` and `/api/experience` currently return the old placeholder persona. |
+| Public site (`frontend/`) | Vercel project `frontend`, root directory `frontend`, <https://justcallmepratt.dev> (`www` redirects to it) | Live. Profile, projects and experience come from the API (database); certifications and "In the works" come from `frontend/src/content/index.ts`, which is also the fallback. |
+| API (`backend/`) | Railway project `kafka-demo`, service `personal-web-app-api` | Deployed and healthy at `https://personal-web-app-api-production.up.railway.app`. **Used by the production site** (`BACKEND_URL`); previews have no `BACKEND_URL` and use the repo content. |
 | API custom domain `api.justcallmepratt.dev` | Railway + Vercel DNS | Not attached. |
 | Kafka demo | Site page `/projects/kafka`, relaying to Railway service `kafka-demo-api` | Live. |
 | `apps/kafka` (`/kafka`) | Vercel project `kafka` + microfrontends group | Built, but `https://justcallmepratt.dev/kafka` is a 404: the project and group are not visible in the team that owns `frontend`. |
@@ -32,43 +32,41 @@ How the site is built, deployed and configured, and what is still outstanding. S
 - **The browser only talks to Vercel.** Pages fetch content from the API on the server;
   the contact form posts to the site's own `/api/contact`, which relays to the API. No CORS
   and no API URL in the client bundle.
-- **The site survives a backend outage.** If `BACKEND_URL` is unset, or the API is
-  unreachable, slow (5 s limit) or erroring, pages render from
-  [`frontend/src/content/index.ts`](../frontend/src/content/index.ts). Today `BACKEND_URL`
-  is set to an old dead address, so every build waits 5 s per page before falling back;
-  see [Outstanding work](#outstanding-work).
-- **Why the site is not pointed at the API yet:** the database rows and
-  [`SeedRunner.java`](../backend/src/main/java/com/resume/SeedRunner.java) still hold the
-  old placeholder persona, so switching `BACKEND_URL` now would replace the real content
-  with placeholder content.
+- **Content lives in two places.** The Supabase rows (the owner's real profile, four
+  projects, three roles) are what production shows.
+  [`frontend/src/content/index.ts`](../frontend/src/content/index.ts) is the fallback and
+  must be kept in step with them; certifications and the "In the works" list exist only
+  there (the API has no endpoint for them).
+- **The site survives a backend outage.** If the API is unreachable, slow (5 s limit) or
+  erroring, pages render from `content/index.ts` and a warning is logged. Without
+  `BACKEND_URL` (previews, local) the site runs entirely from that file.
+- **`SeedRunner` is stale.** [`SeedRunner.java`](../backend/src/main/java/com/resume/SeedRunner.java)
+  still seeds the old placeholder persona into *empty* tables (dev and docker profiles).
+  The database was loaded with the real content separately, so production is unaffected,
+  but a fresh database would get placeholder content.
 
 ## Outstanding work
 
-In this order. Items 1 and 2 must not be swapped.
-
-1. **Put the real profile in the API.** Update the Supabase `profile`, `projects` and
-   `experience` rows and `SeedRunner` to match `frontend/src/content/index.ts`.
-   `SeedRunner` only fills empty tables, so the existing rows need an SQL update; change
-   the seed too so a fresh database matches.
-2. **Set `BACKEND_URL` on Vercel** (project `frontend`, Production and Preview) to the
-   Railway address, replacing the dead value, and redeploy. Check the site still shows the
-   real content.
-3. **Attach `api.justcallmepratt.dev`:** add it as a custom domain on the Railway
-   service, create the CNAME Railway shows in the Vercel DNS zone, then set `BACKEND_URL`
-   to `https://api.justcallmepratt.dev` and `CORS_ORIGIN` on Railway to
-   `https://justcallmepratt.dev`.
-4. **Set `ADMIN_PASSWORD_HASH`** on the Railway service (bcrypt of the admin password).
+1. **Attach `api.justcallmepratt.dev`:** add it as a custom domain on the Railway
+   service, create the CNAME Railway shows in the Vercel DNS zone, then change
+   `BACKEND_URL` on Vercel to `https://api.justcallmepratt.dev` and redeploy. Set
+   `CORS_ORIGIN` on Railway to `https://justcallmepratt.dev`.
+2. **Set `ADMIN_PASSWORD_HASH`** on the Railway service (bcrypt of the admin password).
    Until then admin sign-in answers 503.
-5. **Turn on contact email** ([steps](#turn-on-contact-email)): `MAIL_USER`, `MAIL_PASS`
-   and `NEXT_PUBLIC_CONTACT_EMAIL` on Vercel. Until then the form can only offer the
-   `mailto:` link, if that variable is set.
-6. **Create or locate the Vercel `kafka` and `admin` projects and the microfrontends
+3. **Turn on contact email.** The contact form now relays to the API, which stores each
+   message but sends no email until `MAIL_USER` and `MAIL_PASS` are set on the Railway
+   service. Also set the Vercel variables ([steps](#turn-on-contact-email)) for the SMTP
+   fallback and the `mailto:` link.
+4. **Create or locate the Vercel `kafka` and `admin` projects and the microfrontends
    group** ([steps](#microfrontends-kafka-and-admin)), add the `admin` route to
    `frontend/microfrontends.json`, then make `Admin — Node 22 / pnpm` (and optionally the
-   Kafka job) a required check if wanted.
-7. **Delete the two unused Vercel projects** `personal-web-app` and `backend` if they
+   Kafka job) a required check if wanted. `/kafka` returns 404 until then.
+5. **Delete the two unused Vercel projects** `personal-web-app` and `backend` if they
    still exist (they never had a working deployment), then the GitHub environments they
    created (`… – backend`, `… – personal-web-app`).
+6. **Content fixes (not docs):** make `SeedRunner` seed the real profile, and correct the
+   project description in `frontend/src/content/index.ts` (line 58) that still says the
+   API is "built and tested in CI but not deployed yet".
 
 Product work (analytics, ops hardening, market research, monorepo move) is in
 [ROADMAP.md](ROADMAP.md).
@@ -97,7 +95,7 @@ Every push to `main` deploys production and every PR gets a preview; CI does not
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | yes | Canonical URL for metadata and Open Graph. Read at build time. |
 | `NEXT_PUBLIC_SITE_NAME` | no | Site title |
-| `BACKEND_URL` | for live data | Base URL of the API. Server-only. See [Outstanding work](#outstanding-work). |
+| `BACKEND_URL` | for live data | Base URL of the API. Server-only. Production only: set to the Railway address; previews do not have it. |
 | `KAFKA_DEMO_URL`, `KAFKA_DEMO_TOKEN` | for the Kafka demo | Base URL of `kafka-demo-api`, and the secret matching its `DEMO_API_TOKEN` (sent as `X-Demo-Token`). Server-only; the URL is read at build and request time. |
 | `MAIL_USER`, `MAIL_PASS` | for contact email | SMTP login for the direct path and the fallback. For Gmail, `MAIL_PASS` is an app password. Server-only. |
 | `MAIL_HOST`, `MAIL_PORT` | no | Default `smtp.gmail.com` and 587 (465 uses TLS) |
@@ -178,7 +176,7 @@ holds the Kafka demo services), created from this GitHub repository with root di
   confirmed; the service is healthy, so the profile and datasource are right.
 - **Variables not set:** `ADMIN_PASSWORD_HASH` (admin sign-in answers 503) and
   `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`, `CONTACT_NOTIFY_TO`; contact
-  mail is saved to the database but no notification is sent).
+  contact messages are stored in the database but no notification email is sent).
 
 | Variable | Value |
 |---|---|
@@ -192,8 +190,8 @@ holds the Kafka demo services), created from this GitHub repository with root di
 | `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`) | SMTP credentials for notifications |
 | `CORS_ORIGIN` | `https://justcallmepratt.dev` (only matters for browser calls; the site calls the API server-side) |
 
-On the `docker` profile `SeedRunner` fills **empty** tables with the placeholder persona;
-the Supabase tables are already populated, so it does nothing. Free Supabase projects
+On the `docker` profile `SeedRunner` fills **empty** tables with the old placeholder
+persona; the Supabase tables hold the real content, so it does nothing there. Free Supabase projects
 pause after about a week without database activity; hourly page re-renders keep it
 active once the site uses the API. The Railway token is only needed for CLI or API
 automation; never commit it (`gh secret set RAILWAY_TOKEN` if a workflow ever needs it).
@@ -202,7 +200,8 @@ automation; never commit it (`gh secret set RAILWAY_TOKEN` if a workflow ever ne
 
 `POST /api/contact` on the site tries these in order:
 
-1. **Relay** to the API when `BACKEND_URL` is set. A definite answer (2xx, or a 4xx such
+1. **Relay** to the API when `BACKEND_URL` is set (production). The API stores the message;
+   it emails a notification only if mail variables are set on the Railway service. A definite answer (2xx, or a 4xx such
    as validation or rate limit) is returned to the visitor as is.
 2. **Direct SMTP** (`nodemailer`, `MAIL_*`) when there is no `BACKEND_URL`, or the relay
    failed: unreachable, no answer within 4 s, a 5xx, or a non-JSON reply. The site then
@@ -231,8 +230,8 @@ previews should send):
    address that is not yours and confirm it arrives (check spam once). If the form shows
    an error, read the `"event":"contact"` log lines. Real delivery has not been tested.
 
-When the API is in use, also set `MAIL_*` on the Railway service if it should email
-notifications; the Vercel variables can stay as the fallback.
+Also set `MAIL_*` on the Railway service so the API emails notifications for relayed
+messages; the Vercel variables then serve as the fallback.
 
 ## Admin app
 
