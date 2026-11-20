@@ -14,16 +14,13 @@ env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  # NOTE: this workflow is NOT part of the production deploy path (Railway +
-  # Vercel handle that, via ci.yml). It only mirrors images to GHCR for
-  # optional self-hosting.
+  # NOTE: this workflow is NOT part of the production deploy path (Vercel's
+  # Git integration handles that). It only publishes images to GHCR for
+  # optional self-hosting — see docs/DEPLOYMENT.md.
   #
-  # 2026-07-16: jobs were failing fast (~5-10s) at the GHCR push step because
-  # repo Settings → Actions → General → "Workflow permissions" was read-only,
-  # capping the job-level `packages: write` request below. Fixed via
-  # `gh api -X PUT repos/.../actions/permissions/workflow -f
-  # default_workflow_permissions=write` — confirmed write access is now set
-  # repo-wide, so continue-on-error has been removed.
+  # Pushing needs repo Settings → Actions → General → "Workflow permissions"
+  # set to read/write (done 2026-07-16); otherwise the job-level
+  # `packages: write` below is capped and the push fails within seconds.
   build-backend:
     name: Build backend image
     runs-on: ubuntu-latest
@@ -102,8 +99,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BACKEND_URL=${{ secrets.BACKEND_URL || 'https://personal-web-app-backend-production.up.railway.app' }}
-            NEXT_PUBLIC_API_URL=${{ secrets.BACKEND_URL || 'https://personal-web-app-backend-production.up.railway.app' }}
             NEXT_PUBLIC_SITE_NAME=${{ vars.NEXT_PUBLIC_SITE_NAME || 'V // Night City Dev' }}
             NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || 'https://frontend-liard-theta-28.vercel.app' }}
           cache-from: type=gha

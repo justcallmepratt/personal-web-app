@@ -1,38 +1,52 @@
 import type { Profile, Project, Experience, ContactPayload, ApiResponse } from './types'
+import { profile, projects, experience } from '@/content'
 
-// ── Base URL strategy ────────────────────────────────────────────────────────
+// ── Content source ───────────────────────────────────────────────────────────
 //
-//  Server (RSC / build-time)
-//    → process.env.BACKEND_URL  (runtime env var, never baked into bundle)
-//    → Next.js rewrites handle local-dev: /api/* → localhost:8080
+//  With BACKEND_URL set (server-only): the Spring Boot API in /backend, which
+//  exposes /api/profile, /api/projects and /api/experience. Pages are static
+//  and re-rendered at most once per REVALIDATE_SECONDS, so the API (and a
+//  Vercel function) is hit about hourly per page rather than per visitor.
 //
-//  Client (browser, ContactForm)
-//    → '' (empty) — uses relative path /api/*
-//    → Vercel rewrites /api/* → Railway in production
-//    → next.config.ts rewrites /api/* → localhost:8080 in local dev
+//  Without it, or whenever the API is unreachable or errors: the typed files
+//  in src/content, so the site always renders. Keep those files a reasonable
+//  snapshot of the real content.
 //
-//  This means CORS headers on Railway are needed only for non-browser callers,
-//  and the browser never exposes the Railway URL directly.
+//  The contact form posts to this app's own /api/contact route handler, which
+//  relays to the API. This is the one seam to change if the data moves.
 // ────────────────────────────────────────────────────────────────────────────
-const BASE =
-  typeof window === 'undefined'
-    ? (process.env.BACKEND_URL ?? '')   // Server: direct to Railway (or empty = use rewrites)
-    : ''                                 // Client: relative → Vercel/Next.js rewrite proxy
+const REVALIDATE_SECONDS = 3600
+// A cold or hung backend must not hold a render open; fall back instead.
+const API_TIMEOUT_MS = 5000
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { next: { revalidate: 60 } })
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`)
-  return res.json() as Promise<T>
+async function load<T>(path: string, local: () => T): Promise<T> {
+  const base = process.env.BACKEND_URL
+  if (!base) return local()
+  try {
+    const res = await fetch(`${base}${path}`, {
+      next: { revalidate: REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    })
+    if (!res.ok) throw new Error(`API ${path} → ${res.status}`)
+    return (await res.json()) as T
+  } catch (e) {
+    console.warn(`Content API unavailable, serving repo content instead. ${e}`)
+    return local()
+  }
 }
 
+const bySortOrder = <T extends { sortOrder: number }>(items: T[]) =>
+  [...items].sort((a, b) => a.sortOrder - b.sortOrder)
+
 export const api = {
-  getProfile:    ()               => get<Profile>('/api/profile'),
+  getProfile:    ()               => load<Profile>('/api/profile', () => profile),
   getProjects:   (featured?: boolean) =>
-    get<Project[]>(`/api/projects${featured ? '?featured=true' : ''}`),
-  getExperience: ()               => get<Experience[]>('/api/experience'),
+    load<Project[]>(`/api/projects${featured ? '?featured=true' : ''}`, () =>
+      bySortOrder(featured ? projects.filter((p) => p.featured) : projects)),
+  getExperience: ()               => load<Experience[]>('/api/experience', () => bySortOrder(experience)),
 
   sendContact: (body: ContactPayload): Promise<ApiResponse> =>
-    fetch(`${BASE}/api/contact`, {
+    fetch('/api/contact', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),

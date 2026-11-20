@@ -14,15 +14,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# BACKEND_URL is a server-only env var used by RSC fetches at build time.
-# Must point to the live backend so static pages are pre-populated with data.
-ARG BACKEND_URL=https://personal-web-app-backend-production.up.railway.app
-ARG NEXT_PUBLIC_API_URL=https://personal-web-app-backend-production.up.railway.app
+# Content comes from src/content, so the build needs no backend.
 ARG NEXT_PUBLIC_SITE_NAME="V // Night City Dev"
 ARG NEXT_PUBLIC_SITE_URL=https://frontend-liard-theta-28.vercel.app
-ENV BACKEND_URL=$BACKEND_URL \
-    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
-    NEXT_PUBLIC_SITE_NAME=$NEXT_PUBLIC_SITE_NAME \
+ENV NEXT_PUBLIC_SITE_NAME=$NEXT_PUBLIC_SITE_NAME \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
 RUN pnpm build

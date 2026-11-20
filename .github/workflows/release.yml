@@ -69,7 +69,6 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/personal-web-app-frontend:${{ github.ref_name }}
             ghcr.io/${{ github.repository_owner }}/personal-web-app-frontend:latest
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:8080' }}
             NEXT_PUBLIC_SITE_NAME=${{ vars.NEXT_PUBLIC_SITE_NAME || 'V // Night City Dev' }}
             NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || 'https://example.com' }}
           cache-from: type=gha
@@ -106,4 +105,4 @@ jobs:
             docker pull ghcr.io/${{ github.repository_owner }}/personal-web-app-frontend:${{ github.ref_name }}
             ```
 
-            See [REMAINING_WORK.md](REMAINING_WORK.md) for deployment instructions.
+            See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for deployment instructions.

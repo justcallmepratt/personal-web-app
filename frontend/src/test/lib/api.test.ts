@@ -10,9 +10,14 @@ function mockFetch(data: unknown, ok = true) {
   })
 }
 
-describe('api', () => {
+describe('api — remote source (BACKEND_URL set)', () => {
+  beforeEach(() => {
+    vi.stubEnv('BACKEND_URL', 'http://backend.test')
+  })
+
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   it('getProfile resolves to a Profile', async () => {
@@ -68,9 +73,52 @@ describe('api', () => {
     )
   })
 
-  it('throws on non-ok response from GET', async () => {
+  it('falls back to repo content on a non-ok response from GET', async () => {
     vi.stubGlobal('fetch', mockFetch({ error: 'not found' }, false))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    await expect(api.getProfile()).rejects.toThrow()
+    const result = await api.getProfile()
+    expect(result.skills.length).toBeGreaterThan(0)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('/api/profile → 500'))
+    warn.mockRestore()
+  })
+})
+
+describe('api — local content (no BACKEND_URL)', () => {
+  beforeEach(() => {
+    vi.stubEnv('BACKEND_URL', '')
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('serves profile, projects and experience without calling fetch', async () => {
+    const [profile, projects, experience] = await Promise.all([
+      api.getProfile(),
+      api.getProjects(),
+      api.getExperience(),
+    ])
+    expect(profile.name).toBeTruthy()
+    expect(projects.length).toBeGreaterThan(0)
+    expect(experience.length).toBeGreaterThan(0)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('getProjects(true) returns only featured projects', async () => {
+    const all = await api.getProjects()
+    const featured = await api.getProjects(true)
+    expect(featured.length).toBeGreaterThan(0)
+    expect(featured.length).toBeLessThan(all.length)
+    expect(featured.every((p) => p.featured)).toBe(true)
+  })
+
+  it('returns projects and experience in sortOrder', async () => {
+    for (const items of [await api.getProjects(), await api.getExperience()]) {
+      const orders = items.map((i) => i.sortOrder)
+      expect(orders).toEqual([...orders].sort((a, b) => a - b))
+    }
   })
 })
