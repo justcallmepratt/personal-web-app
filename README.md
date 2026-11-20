@@ -6,15 +6,19 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?style=flat&logo=springboot)](https://spring.io/projects/spring-boot)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000?style=flat&logo=nextdotjs)](https://nextjs.org)
 [![Tailwind](https://img.shields.io/badge/Tailwind-4-38BDF8?style=flat&logo=tailwindcss)](https://tailwindcss.com)
-[![Railway](https://img.shields.io/badge/Backend-Railway-0B0D0E?style=flat&logo=railway)](https://railway.app)
 [![Vercel](https://img.shields.io/badge/Frontend-Vercel-000?style=flat&logo=vercel)](https://vercel.com)
 
 A full-stack personal portfolio styled after the **CP2077 Neo Militarism** aesthetic.
-Spring Boot REST API + Next.js App Router frontend, deployed on Railway + Vercel with Supabase Postgres.
+Next.js App Router frontend deployed on Vercel, with site content kept in the repo
+(`frontend/src/content`) and the contact form handled by a Next.js route handler.
+A Spring Boot REST API (`backend/`) is included as an optional content source and is
+tested in CI, but is not deployed.
 
 **Live:** https://frontend-liard-theta-28.vercel.app  
-**API:** https://personal-web-app-backend-production.up.railway.app  
-**Swagger UI:** https://personal-web-app-backend-production.up.railway.app/swagger-ui/index.html
+**Deployment and configuration:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+
+> Sections below that describe the original build (Railway backend, CLI deploys from
+> CI) are historical. The backend moved off Railway in November 2026.
 
 ---
 
@@ -207,8 +211,8 @@ claude "Read docs/agents/ORCHESTRATOR.md then docs/agents/phase-08-analytics.md
 | Backend runtime | Amazon Corretto JDK | 21 LTS |
 | Backend framework | Spring Boot | 3.5.0 |
 | Backend ORM | Spring Data JPA + Hibernate | 6.6 |
-| Database (primary) | Railway Postgres | 17 |
-| Database (analytics) | Supabase Postgres | 17 |
+| Site content | Typed files in `frontend/src/content` | — |
+| Database (optional API only) | Postgres | 17 |
 | JWT | jjwt | 0.13 |
 | API docs | springdoc-openapi | 2.5 |
 | Frontend runtime | Node.js | 20 LTS |
@@ -221,7 +225,7 @@ claude "Read docs/agents/ORCHESTRATOR.md then docs/agents/phase-08-analytics.md
 | Frontend tests | Vitest + React Testing Library | 95% gate |
 | Container | Docker (multi-stage) | — |
 | Frontend hosting | Vercel | — |
-| Backend hosting | Railway | — |
+| Backend hosting | none (optional; GHCR image) | — |
 | Analytics | Amplitude | — |
 
 ---
@@ -279,14 +283,14 @@ personal-web-app/
 │   │   ├── security/       JwtFilter, JwtUtil
 │   │   └── service/        Business logic layer
 │   ├── src/test/           42 JUnit tests (95% JaCoCo coverage)
-│   ├── railway.toml        Health check + restart policy
 │   └── Dockerfile          Multi-stage: Maven build → Corretto 21 runtime
 ├── frontend/
 │   ├── src/app/            Next.js App Router pages
 │   ├── src/components/     layout/, sections/, ui/
-│   ├── src/lib/            api.ts, types.ts, analytics.ts
-│   ├── src/test/           66 Vitest + RTL tests
-│   ├── vercel.json         Security headers, API rewrite proxy
+│   ├── src/content/        Profile, projects, experience (edit to update the site)
+│   ├── src/lib/            api.ts (content source), contact.ts, types.ts
+│   ├── src/test/           Vitest + RTL tests
+│   ├── vercel.json         Security headers
 │   └── Dockerfile          Multi-stage: pnpm build → standalone output
 ├── docs/
 │   ├── agents/             Self-contained briefs for AI sub-agents (Phases 7–17)
@@ -294,7 +298,7 @@ personal-web-app/
 ├── supabase/init.sql       Schema for local Docker dev
 ├── .github/workflows/      ci.yml, docker-build.yml, codeql.yml, release.yml
 ├── .env.example            All env vars documented with comments
-└── REMAINING_WORK.md       Planned phases + agent orchestration plan
+└── docs/DEPLOYMENT.md      How the site is deployed and configured
 ```
 
 ---
@@ -318,8 +322,8 @@ Full interactive docs at `/swagger-ui/index.html` on the running backend.
 
 ## Planned Features
 
-See [`REMAINING_WORK.md`](REMAINING_WORK.md) for the full roadmap and
-[`docs/agents/`](docs/agents/) for ready-to-execute agent briefs covering:
+See [`docs/agents/`](docs/agents/) for agent briefs (written against the original
+Railway-hosted stack, so their deployment steps need revisiting) covering:
 - Phase 8: Amplitude analytics
 - Phase 9: Spotify player ("The Rebel Path" OST)
 - Phase 10: Credits / citation page

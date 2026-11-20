@@ -4,7 +4,9 @@ import type { Experience } from '@/lib/types'
 function fmtRange(start: string, end: string | null, current: boolean) {
   const fmt = (iso: string) => {
     const d = new Date(iso)
-    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    // Dates are date-only ISO strings, which parse as UTC; format in UTC too so
+    // the month doesn't shift for viewers west of Greenwich.
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
   }
   return `${fmt(start)} — ${current || !end ? 'PRESENT' : fmt(end)}`
 }

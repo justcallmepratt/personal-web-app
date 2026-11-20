@@ -6,8 +6,14 @@ import { api } from '@/lib/api'
  * Covers: non-2xx responses, malformed JSON, network timeouts, empty responses.
  */
 describe('api — edge cases', () => {
-  beforeEach(() => { vi.stubGlobal('fetch', vi.fn()) })
-  afterEach(() => { vi.unstubAllGlobals() })
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+    vi.stubEnv('BACKEND_URL', 'http://backend.test')
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
 
   // ── Non-2xx responses must throw ──────────────────────────────────────────
 
