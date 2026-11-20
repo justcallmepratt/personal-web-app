@@ -3,6 +3,9 @@ import { describe, it, expect } from 'vitest'
 import CreditsPage from '@/app/credits/page'
 import { creditSections, DISCLAIMER_FULL, GUIDELINE_URL } from '@/lib/credits'
 
+// Escapes every regex metacharacter, backslash included.
+const escapeRegExp = (s: string) => s.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
+
 describe('/credits page', () => {
   it('has one h1 and a heading for the disclaimer and every section', () => {
     render(<CreditsPage />)
@@ -24,7 +27,7 @@ describe('/credits page', () => {
     render(<CreditsPage />)
     for (const section of creditSections) {
       for (const item of section.items) {
-        const link = screen.getByRole('link', { name: new RegExp(`^${item.name.replace(/[()]/g, '\\$&')}`) })
+        const link = screen.getByRole('link', { name: new RegExp(`^${escapeRegExp(item.name)}`) })
         expect(link).toHaveAttribute('href', item.url)
         expect(link).toHaveAttribute('target', '_blank')
         expect(link.getAttribute('rel')).toContain('noopener')
