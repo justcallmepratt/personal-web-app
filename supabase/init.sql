@@ -66,3 +66,10 @@ CREATE INDEX IF NOT EXISTS idx_projects_featured  ON projects(featured);
 CREATE INDEX IF NOT EXISTS idx_projects_sort      ON projects(sort_order);
 CREATE INDEX IF NOT EXISTS idx_experience_sort    ON experience(sort_order);
 CREATE INDEX IF NOT EXISTS idx_messages_sent_at   ON messages(sent_at DESC);
+
+-- GIN indexes on JSONB columns (containment queries such as tags @> '["java"]').
+-- These exist in the hosted Supabase database; defined here so a fresh database matches it.
+CREATE INDEX IF NOT EXISTS idx_projects_tags_gin    ON projects   USING GIN (tags);
+CREATE INDEX IF NOT EXISTS idx_projects_stack_gin   ON projects   USING GIN (stack);
+CREATE INDEX IF NOT EXISTS idx_experience_tech_gin  ON experience USING GIN (technologies);
+CREATE INDEX IF NOT EXISTS idx_profile_skills_gin   ON profile    USING GIN (skills);
