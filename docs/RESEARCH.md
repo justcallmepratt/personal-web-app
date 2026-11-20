@@ -1,7 +1,7 @@
 # Research notes
 
 Findings behind [ROADMAP.md](ROADMAP.md). Written 2026-11-20 against `main` at `0a8f52c`.
-Part 1 is the site as it is (read from the code and checked live). Part 2 is third-party
+Part 1 is what remains open from the site review. Part 2 is third-party
 research. Every third-party claim has a link; anything I could not confirm from an
 official page is marked **(unconfirmed)**. Pricing pages change, so re-check before paying
 for anything. Nothing here is legal advice.
@@ -14,141 +14,35 @@ before and after the polish work (see WP-A and WP-B in the roadmap).
 
 ---
 
-## Part 1 — The site as it is
+## Part 1 — Site review, status after the fixes
 
-### Verdict in one paragraph
+The first review (2026-11-20, `main` at `0a8f52c`) found placeholder content, a blank
+Open Graph image on the wrong host, no `robots.txt` or sitemap, no reduced-motion or
+focus handling, and an offline contact form. Those have been fixed (see
+[ROADMAP.md](ROADMAP.md) "Done"); the original findings are in git history. What the
+review found that is still open or unconfirmed:
 
-The engineering is in better shape than the content. The public site is fast, static,
-cached on the CDN, responsive at phone width, and has sensible security headers. But every
-fact on it is placeholder: a fictional persona "V", invented employers named after
-Cyberpunk 2077 corporations, five fake projects with `example.com` and `github.com/you/…`
-links, `yourhandle` social links, and a CV that is a blank page. The contact form cannot
-deliver (the API is not deployed). Social previews point at the wrong domain and show a
-blank image. For a hiring manager the site currently proves "can build a themed Next.js
-site" and nothing else. Real content is the biggest single lever.
-
-### What works (checked live on 2026-11-20)
-
-- All five pages return 200 and are served from the Vercel CDN (`x-vercel-cache: HIT`);
-  responses took roughly 0.13–0.29 s from the test machine. HTML is about 18–35 KB per page.
-- Security headers are present: HSTS with preload, `X-Frame-Options: DENY` and
-  `Referrer-Policy` were seen live; `nosniff` and `Permissions-Policy` are configured in
-  [`frontend/vercel.json`](../frontend/vercel.json). There is no Content-Security-Policy.
-- At 375 px width there is no horizontal scroll; the hamburger menu button is 44 px high;
-  hero buttons stack full width. Fonts are self-hosted by `next/font` with `display: swap`.
-- The contact endpoint validates before doing anything else: `POST /api/contact` with an
-  empty body returns `400 {"success":false,"message":"Missing name."}`. (I did not submit
-  a real message.)
-- Each page has a title, an `<h1>`, `lang="en"`, and a viewport tag. Error and loading
-  boundaries exist.
-- The code is tested (Vitest) and the structure is clean (see
-  [CODEBASE_STRUCTURE.md](CODEBASE_STRUCTURE.md)).
-
-### What is broken or placeholder
-
-| Area | Finding |
-|---|---|
-| Identity | Name is "V", tagline "Night City Developer", location "Night City, NC", email `v@nightcity.dev`. The hero `<h1>` is the single letter "V". |
-| Experience | Four invented jobs at Arasaka, Militech, Kang Tao, NetWatch (fictional corporations from the game) with invented metrics. A recruiter reading this would take it as fiction at best, or as fabricated claims at worst. |
-| Projects | Five fake projects. Demo links go to `example.com/demo1` and `/demo3`; repo links go to `github.com/you/…`. Every link is dead or wrong. |
-| Social links | `github.com/yourhandle`, `linkedin.com/in/yourhandle`, `twitter.com/yourhandle`. |
-| CV | `frontend/public/cv.pdf` is 309 bytes: one empty US-letter page, no text, no metadata. **It contains no real profile details**, so there is nothing that conflicts with the placeholder content; it is just blank. The "Download CV" button on the home page serves it. |
-| Social preview | `public/og.png` is a 67-byte solid-colour 1200×630 image. Worse, the live `og:image` URL is `https://frontend-liard-theta-28.vercel.app/og.png`, the old Vercel address, because `NEXT_PUBLIC_SITE_URL` is not set on the Vercel project (listed as a to-do in [DEPLOYMENT.md](DEPLOYMENT.md)). Link unfurls on LinkedIn, Slack, iMessage and X will therefore show a blank image from a different host. |
-| Per-page metadata | Page titles are set (e.g. "Projects // Night City Ops \| V // Night City Dev") but `og:title`/`og:description` are the site-wide ones on every page, and there is no canonical URL, no JSON-LD (`Person`), no `theme-color`. |
-| Crawling | `/robots.txt` and `/sitemap.xml` both return 404. Unknown URLs return the default Next.js 404 page (no custom `not-found`). |
-| Contact | The form posts to `/api/contact`, which relays to the API; with no API it answers "channel offline" (HTTP 502). Visitors cannot reach the owner through the site. There is no fallback `mailto:` and the only email shown is the placeholder one. |
-| Skills | Twelve skills as self-rated percentage bars (e.g. "Java 90%", "Figma 60%"). See the recruiter research below: self-ratings carry little weight. |
-| Avatar | `avatarUrl` exists in the data but is never rendered; there is no photo anywhere. |
-| Footer | "© 2026 · Compiled in Night City". No legal or credit information (see the brand-risk section). |
-| Admin | `apps/admin` is not deployed; `/admin/login` on the live domain is a 404, as expected. |
-
-### Accessibility basics
-
-Contrast ratios computed from the theme tokens in
-[`globals.css`](../frontend/src/app/globals.css) against the page background `#000`
-(WCAG AA needs 4.5:1 for normal text, 3:1 for large text and UI components,
-<https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html>):
-
-| Token | Ratio | Where it is used | Result |
-|---|---|---|---|
-| `cp-text` `#C8CDD8` | 13.2:1 | body text | pass |
-| `cp-teal` `#55EAD4` | 14.1:1 | labels, tags | pass |
-| `cp-yellow` `#F3E600` | 16.1:1 | headings, links | pass |
-| `cp-red` `#C5003C` | 3.4:1 (3.2:1 on `cp-panel`) | active nav link (12 px), skill percentages, error messages, REPO hover | **fails AA for small text**; passes only for large text and UI |
-| `cp-muted` `#4A4F6A` | 2.6:1 (2.5:1 on `cp-panel`) | location text on experience cards, error page body, input placeholders | **fails** |
-| `cp-border` `#1E2235` | 1.3:1 | input borders | below the 3:1 needed for UI component boundaries |
-
-Other findings (from the code and from the live DOM):
-
-- **Reduced motion: not handled.** There is no `prefers-reduced-motion` rule anywhere in
-  the shipped CSS (checked in the live stylesheets). Five animations run on page load:
-  the infinite glitch on every heading (`.glitch-text::before/::after`), the blinking
-  cursor, plus Framer Motion width animations on the skill bars. The scanline overlay is
-  always on. Users who ask the OS for reduced motion still get all of it. Clipped,
-  jittering text is also a risk for people sensitive to flicker.
-- **Focus:** no `:focus-visible` styles are defined. Links fall back to the browser default
-  outline, but `TerminalInput` sets `focus:outline-none` and replaces it with a 1 px
-  border colour change from 1.3:1 to teal, which is a weak indicator. Buttons use only
-  hover styles.
-- **Keyboard:** there is no skip-to-content link and `<main>` has no `id`. The mobile menu
-  does not close on `Escape` and does not manage focus. The skills filter buttons have no
-  `aria-pressed`.
-- **Forms:** inputs are wrapped in `<label>`, which is good. The status message after
-  submit has no `role="status"`/`aria-live`, so a screen reader user is not told whether
-  it sent. There is no spam protection (no honeypot) on the form, which matters once the
-  API is live.
-- **Target size:** WCAG 2.2 asks for 24×24 px minimum
-  (<https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html>). Measured on
-  the live home page at 375 px: social links are 20 px high, "DEMO"/"REPO" links 16 px,
-  the logo link 20 px.
-- **Glitch text:** `GlitchText` duplicates the string through `data-text` and CSS
-  pseudo-elements. Some screen readers announce CSS generated content, so headings may be
-  read twice (**unconfirmed**; test with VoiceOver).
-- **Headings:** one `<h1>` per page and logical `<h2>`/`<h3>` order. Good.
-
-### Performance basics
-
-- Pages are static with hourly revalidation, so TTFB is CDN-fast and the Vercel function
-  footprint is just `/api/contact`.
-- The home page has 14 `<script>` tags. Framer Motion (used by one component, `SkillBar`)
-  ships to the browser for a bar animation that could be CSS. Bundle size was not
-  measured **(unconfirmed)**.
-- There are no images at all (`document.images.length === 0`), so LCP is text. The one
-  image, `og.png`, is not rendered.
-- Three Google fonts are loaded (Rajdhani, Orbitron, Share Tech Mono). Rajdhani loads four
-  weights. Trimming weights is a small win.
-- Each build waits up to 5 s per page for the dead `BACKEND_URL` before falling back
-  (documented in DEPLOYMENT.md). Unsetting it until the API is live saves build time.
-- Lighthouse scores: **not measured** (see method limits).
-
-### Mobile layout
-
-Checked the home page at 375×812: single column, nothing overflowing, readable type. Two
-cosmetic points: the angled `hud-clip` corner cuts the top-right of every button's
-border so the border looks broken, and the hero "V" with its glitch layer renders as a
-small mark on the left. I did not check the other pages visually; they use the same
-responsive classes.
-
-### The admin app (`apps/admin`)
-
-Read the code and DEPLOYMENT.md rather than running it. It is a well-contained app: its own
-`package.json`, `noindex` metadata and `X-Robots-Tag` header, server-only API access with
-timeouts, an `httpOnly` cookie, an origin check, and tests. Notes:
-
-- It has never run against the real API (stated in DEPLOYMENT.md) and is not deployed.
-- UI primitives and theme tokens are copied from `frontend/`; the planned shared package
-  would remove the duplication.
-- TypeScript is 6.x in `apps/admin` after the Dependabot bump (#46) but `^5` in `frontend/`.
-  Harmless, but a monorepo move should settle on one version.
-- It only does the inbox. Every admin phase (11, 12, 13, 14, 16) adds pages here.
-
-### Backend
-
-Not deployed. Content endpoints, contact, and admin login exist with tests. A known gap
-from the Dependabot triage: the H2 test schema cannot create `JSONB` tables, so
-profile/projects/experience repositories are not exercised against a real schema in CI.
-Anything that adds tables (phases 11, 12, 15, 16) should fix that first or test against
-Postgres (for example Testcontainers).
+- **Lighthouse scores were never measured** (the PageSpeed API returned a quota error and
+  a local run was not permitted). Run one and record it (WP-A/WP-H).
+- **No Content-Security-Policy** header (other security headers are in
+  [`frontend/vercel.json`](../frontend/vercel.json)).
+- **No custom `not-found` page**; unknown URLs show the default Next.js 404.
+- **No form honeypot** on the contact form, which matters once the API is in use.
+- **Small link targets**: social links, "DEMO"/"REPO" links and the logo link were under
+  WCAG 2.2's 24 px minimum at 375 px
+  (<https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html>); not re-measured.
+- **`GlitchText`** duplicates its string in CSS pseudo-elements; whether screen readers
+  announce it twice is **unconfirmed** (test with VoiceOver).
+- **Performance**: Framer Motion ships to the browser for the skill bars, three Google
+  fonts are loaded (Rajdhani with four weights); bundle size was not measured.
+- **Mobile**: the angled `hud-clip` corner cut makes button borders look broken at the
+  top right; only the home page was checked visually.
+- **`avatarUrl`** exists in the data but is never rendered.
+- **TypeScript is 6.x in `apps/*` and `^5` in `frontend/`**: harmless, but the monorepo
+  move should settle on one version.
+- **Backend:** persistence is now tested against PostgreSQL in CI; the API still serves
+  the old placeholder persona until the database is updated (see
+  [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work)).
 
 ---
 
@@ -183,14 +77,14 @@ treat percentages as unverified. The advice is consistent across them:
 
 | Practice | This site today |
 |---|---|
-| Real, verifiable work | None: all placeholder (biggest gap) |
-| Live demos and public repos | Dead links |
-| Case-study depth | One-sentence descriptions; no problem, decision or outcome |
-| Working contact path and CV | Contact offline; CV blank |
+| Real, verifiable work | Real profile and certifications since WP-E |
+| Live demos and public repos | Live Kafka demo; GitHub activity section |
+| Case-study depth | Still short descriptions; no problem, decision or outcome (WP-F) |
+| Working contact path and CV | Form with SMTP and `mailto:` fallback (delivery not yet tested, variables not yet set); no CV file yet |
 | Works on mobile | Yes |
-| Fast, accessible, indexable | Fast; accessibility and SEO gaps above |
+| Fast, accessible, indexable | Fast; SEO and accessibility basics shipped; open items in Part 1 |
 | Distinctive design | Strong (the Cyberpunk look is memorable), but it is also the main risk: it must not read as a joke at the expense of credibility |
-| Self-ratings | Percentage skill bars; listing technologies by area and showing them used in projects is more credible |
+| Self-ratings | Dropped: skills are listed by category without percentages |
 | The repo itself as evidence | Strong: this monorepo (CI, Dependabot, micro-frontends, tests, docs) is real evidence of engineering practice, and nothing on the site points to it yet |
 
 The last row is the opportunity: a "how this site is built" project with an architecture
@@ -337,8 +231,7 @@ shows a need.
 - Limits listed for Free: 500 MB database, 5 GB egress plus 5 GB cached egress, 1 GB file
   storage, two active projects, 50,000 monthly active users (auth, which this repo does
   not use). Automatic backups are not included on Free per secondary sources
-  ([summary](https://dev.to/mahdi_benrhouma_fe1c6005/supabase-free-tier-limits-in-2026-what-you-actually-get-and-when-you-will-hit-them-4mhe));
-  confirm on the pricing page. The contact messages table is the only irreplaceable data.
+  (the page originally cited has been removed); confirm on the pricing page. The contact messages table is the only irreplaceable data.
 - Connection limits for Free are **not published on the pricing page** (it lists them for
   paid compute sizes only), so keep `DB_POOL_SIZE=5` as DEPLOYMENT.md says and use the
   session pooler.
@@ -405,9 +298,9 @@ How this applies, factually:
 | Element | Status |
 |---|---|
 | "Cyberpunk-inspired" colours, HUD panels, glitch effects, monospaced fonts | Generic visual language. No game artwork or logos appear to be shipped (the repo's own `CP2077_DESIGN_BIBLE.html` is the owner's reference document). Fonts are Google Fonts (Rajdhani, Orbitron, Share Tech Mono), which Google distributes under open licences; **licence text not re-read**. |
-| Arasaka, Militech, Kang Tao, NetWatch as "employers" | In-game corporation names. Fine as obviously fictional placeholders on a fan page; a problem on a job-seeking portfolio, because a recruiter would read them as the owner's work history. They must go when real content arrives. |
+| Arasaka, Militech, Kang Tao, NetWatch as "employers" | In-game corporation names. Fine as obviously fictional placeholders on a fan page; a problem on a job-seeking portfolio, because a recruiter would read them as the owner's work history. They have been removed from the site with the real content (WP-E); the API database still has them. |
 | "Night City" naming in copy and titles | Setting name from the game; low risk as an homage with a disclaimer; the guideline's "clearly unofficial" rule is the cautious path. |
-| Disclaimer | There is none on the site. The guideline asks for one. A footer line plus the credits page covers it. |
+| Disclaimer | Footer line and `/credits` page (WP-C). |
 | Soundtrack (phase 9) | Third-party music. An official Spotify embed streams from Spotify rather than copying audio, but logged-out visitors get a ~30 s preview. Whether embedding fits the guideline's music paragraph is **unconfirmed**; the guideline page lists `legal@cdprojektred.com` for questions. |
 | Job-seeking use | Not addressed by the guideline. The portfolio's purpose is career, which a strict reading of "no commercial use" could touch. That is a question for a lawyer or CD PROJEKT RED, not for this document. |
 

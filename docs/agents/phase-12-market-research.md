@@ -3,7 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Not started. Needs the `ADZUNA_*` variables, which were removed from `.env.example`.
 > No longer holds: admin pages inside the public app (planned `admin` micro-frontend instead) and any Railway/`ddl-auto` assumptions about the schema.
-> **Roadmap (2026-11-20):** Redesign; do after the backend is live and only if wanted (WP-L): weekly pull, `@Scheduled` with sleeping off or a Railway cron service, admin-only. Adzuna limits unconfirmed. Databricks is an optional offline exercise. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
+> **Roadmap (2026-11-20):** Wanted, not started (WP-L); the backend is deployed but the admin app and site integration come first: weekly pull, `@Scheduled` with sleeping off or a Railway cron service, admin-only. Adzuna limits unconfirmed. Databricks is an optional offline exercise. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Nightly job pulls real job listings via Adzuna API, extracts required skills,

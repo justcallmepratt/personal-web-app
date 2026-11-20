@@ -3,7 +3,7 @@
 > **Status and caveats (2026-11-20)**
 > Not started. The Amplitude key that was in this file has been replaced with a placeholder; there is no analytics code in the repo.
 > No longer holds: the key was "already set in Vercel" via CLI (not verified), and `NEXT_PUBLIC_AMPLITUDE_API_KEY` is no longer in `.env.example`.
-> **Roadmap (2026-11-20):** Redesign, then do now: use Vercel Web Analytics (cookieless, no key, no new project) instead of Amplitude (WP-D). Needs a dashboard toggle and a pricing check. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
+> **Roadmap (2026-11-20):** Decided, not started: use Vercel Web Analytics (cookieless, no key, no new project) instead of Amplitude (WP-D). Needs a dashboard toggle and a pricing check. See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Wire Amplitude into the frontend so every meaningful user interaction is tracked.

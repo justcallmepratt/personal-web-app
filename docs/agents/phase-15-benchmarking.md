@@ -4,7 +4,7 @@
 > **Superseded by WP-G (built):** the "my GitHub activity" section on the home page (`frontend/src/lib/github.ts`, `components/sections/GitHubActivity.tsx`). The plan below (peers, table, backend, `/benchmark`) is not being built.
 > Not started as written. `GITHUB_TOKEN`, `GITHUB_USERNAME` and `BENCHMARK_PEERS` were removed from `.env.example`.
 > No longer holds: admin endpoints reached from the public app, and Railway/`ddl-auto` schema assumptions.
-> **Roadmap (2026-11-20):** Redesign to a build-time "my GitHub activity" section in `frontend/`, no backend, no table, no peers (WP-G). See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
+> **Roadmap (2026-11-20):** Done as a "my GitHub activity" section in `frontend/`, no backend, no table, no peers (WP-G). See [`docs/ROADMAP.md`](../ROADMAP.md) and [`docs/RESEARCH.md`](../RESEARCH.md).
 
 ## Objective
 Use GitHub public API to compare your developer profile against a set of peer developers.
