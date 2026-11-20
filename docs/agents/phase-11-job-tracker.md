@@ -1,5 +1,9 @@
 # Phase 11 — Job Application Tracker Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started. No job controller, model or `/admin` pages exist.
+> No longer holds: Railway Postgres (the only database is Supabase), Flyway, `ddl-auto: update` (the repo uses `validate`; add tables to `supabase/init.sql`), and admin pages inside the public app (the plan is a separate `admin` micro-frontend).
+
 ## Objective
 Admin-only Kanban board to track job applications through their lifecycle.
 

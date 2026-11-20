@@ -1,5 +1,9 @@
 # Phase 15 — Developer Benchmarking Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started. `GITHUB_TOKEN`, `GITHUB_USERNAME` and `BENCHMARK_PEERS` were removed from `.env.example`.
+> No longer holds: admin endpoints reached from the public app, and Railway/`ddl-auto` schema assumptions.
+
 ## Objective
 Use GitHub public API to compare your developer profile against a set of peer developers.
 Results shown on a public `/benchmark` page — no auth required.

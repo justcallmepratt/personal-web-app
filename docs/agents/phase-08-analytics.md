@@ -1,5 +1,9 @@
 # Phase 8 — Amplitude Analytics Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started. The Amplitude key that was in this file has been replaced with a placeholder; there is no analytics code in the repo.
+> No longer holds: the key was "already set in Vercel" via CLI (not verified), and `NEXT_PUBLIC_AMPLITUDE_API_KEY` is no longer in `.env.example`.
+
 ## Objective
 Wire Amplitude into the frontend so every meaningful user interaction is tracked.
 Create an Amplitude dashboard with key metrics.
@@ -10,7 +14,7 @@ None.
 ## Environment variables needed
 | Var | Value | Where |
 |---|---|---|
-| `NEXT_PUBLIC_AMPLITUDE_API_KEY` | `f142bc85e37d520f7a5b05c43935b59c` | Vercel build env + `.env.local` |
+| `NEXT_PUBLIC_AMPLITUDE_API_KEY` | `<your-amplitude-api-key>` | Vercel build env + `.env.local` |
 
 ## Steps
 

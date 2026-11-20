@@ -10,10 +10,9 @@ Read this first. Then read the phase file for your assigned task.
 
 | Layer | Tech | Live URL |
 |---|---|---|
-| Frontend | Next.js 16 · React 19 · Tailwind 4 | https://frontend-liard-theta-28.vercel.app |
-| Backend | Spring Boot 3.5 · Java 21 · JPA | https://personal-web-app-backend-production.up.railway.app |
-| Database | Railway Postgres (internal) | postgres-hhrc.railway.internal:5432 |
-| Analytics DB | Supabase Postgres | nxqiuqlwyjimioosaiio.supabase.co |
+| Frontend | Next.js 16 · React 19 · Tailwind 4 | https://justcallmepratt.dev |
+| Backend | Spring Boot 4.1 · Java 21 · JPA | not live yet (planned: https://api.justcallmepratt.dev on Railway) |
+| Database | Supabase Postgres (the only database; schema in `supabase/init.sql`) | nxqiuqlwyjimioosaiio.supabase.co |
 | Repo | GitHub | https://github.com/justcallmepratt/personal-web-app |
 
 ## Local dev
@@ -26,12 +25,12 @@ cd frontend && pnpm dev      # :3000
 - **Backend package root:** `com.resume`
 - **Frontend src root:** `frontend/src/`
 - **All API routes** follow `/api/{resource}` (public) or `/api/admin/{resource}` (JWT-protected)
-- **DB changes** → always use `mcp__supabase__apply_migration` for Supabase; use JPA migration + Flyway or manual SQL for Railway Postgres
+- **DB changes** → Supabase is the only database. Apply schema changes with `mcp__supabase__apply_migration` and mirror them in `supabase/init.sql`. There is no Flyway; Hibernate runs with `ddl-auto: validate`
 - **Tailwind tokens** are CSS-first (`@theme` in `globals.css`): `cp-red`, `cp-teal`, `cp-yellow`, `cp-dark`, `cp-panel`, `cp-border`, `cp-muted`, `cp-text`
 - **HUDChrome** wraps every data panel; accepts `accent="red|yellow|teal"`
 - **NeonButton** for all CTAs; supports `className="w-full justify-center"` for mobile full-width
 - **Test requirement:** every new backend class ≥ 95% JaCoCo; every new frontend component has a Vitest test in `frontend/src/test/`
-- **Commit format:** `feat(phase-N): description` with `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` trailer
+- **Commit format:** `feat(phase-N): description` with a `Co-Authored-By` trailer for the assisting model
 
 ## Dependency graph
 ```
@@ -57,16 +56,18 @@ Batch D (run last):     17
 ```
 
 ## Phase index
+Status as of 2026-11-20. Briefs predate the current hosting; see the status block at the top of each phase file.
+
 | File | Phase | Status |
 |---|---|---|
-| `phase-07-polish.md` | Visual polish | pending |
-| `phase-08-analytics.md` | Amplitude analytics | pending |
-| `phase-09-spotify.md` | Spotify player | pending |
-| `phase-10-citations.md` | Credits page | pending |
-| `phase-11-job-tracker.md` | Job application tracker | pending |
-| `phase-12-market-research.md` | Market research engine | pending |
-| `phase-13-resume-updater.md` | Resume auto-updater | pending |
-| `phase-14-linkedin.md` | LinkedIn sync | pending |
-| `phase-15-benchmarking.md` | GitHub benchmarking | pending |
-| `phase-16-pro-dev.md` | Pro dev dashboard | pending |
-| `phase-17-production.md` | Cloud production deploy | pending |
+| `phase-07-polish.md` | Visual polish | partly done |
+| `phase-08-analytics.md` | Amplitude analytics | not started |
+| `phase-09-spotify.md` | Spotify player | not started |
+| `phase-10-citations.md` | Credits page | not started |
+| `phase-11-job-tracker.md` | Job application tracker | not started |
+| `phase-12-market-research.md` | Market research engine | not started |
+| `phase-13-resume-updater.md` | Resume auto-updater | not started |
+| `phase-14-linkedin.md` | LinkedIn sync | not started |
+| `phase-15-benchmarking.md` | GitHub benchmarking | not started |
+| `phase-16-pro-dev.md` | Pro dev dashboard | not started |
+| `phase-17-production.md` | Cloud production deploy | partly done by other means (Vercel Git integration, domain, CI hardening; see `docs/DEPLOYMENT.md`) |

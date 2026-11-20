@@ -1,5 +1,9 @@
 # Phase 14 — LinkedIn Sync Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started. Upload page at `/admin/linkedin` would belong to the planned `admin` micro-frontend, not the public app.
+> No Railway CLI or `NEXT_PUBLIC_API_URL` use in this brief that still applies; the browser never calls the API directly.
+
 ## Objective
 Import your LinkedIn data export (ToS-compliant) and sync it to your Supabase profile
 and experience tables. Also generate LinkedIn-ready copy from your existing profile data.

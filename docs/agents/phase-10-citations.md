@@ -1,5 +1,8 @@
 # Phase 10 — Citation / Credits Page Agent
 
+> **Status and caveats (2026-11-20)**
+> Not started. Frontend-only. The hosting credit lists Railway, which is not serving anything yet (Vercel and Supabase are).
+
 ## Objective
 Build a `/credits` route that cites all tech, design, music, fonts, and hosting used
 in the project. Styled with the CP2077 design system.
