@@ -67,7 +67,7 @@ Status as of 2026-11-20. Briefs predate the current hosting; see the status bloc
 | `phase-09-spotify.md` | Spotify player | dropped |
 | `phase-10-citations.md` | Credits page | done (WP-C) |
 | `phase-11-job-tracker.md` | Job application tracker | dropped (JobSync is used instead) |
-| `phase-12-market-research.md` | Market research engine | wanted, not started |
+| `phase-12-market-research.md` | Market research engine | replaced: built as the weekly market research that only proposes suggestions (WP-L, 2026-11-21) |
 | `phase-13-resume-updater.md` | Resume auto-updater | dropped |
 | `phase-14-linkedin.md` | LinkedIn sync | dropped |
 | `phase-15-benchmarking.md` | GitHub benchmarking | done as the GitHub activity section (WP-G); the brief itself is superseded |

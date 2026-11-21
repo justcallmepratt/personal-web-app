@@ -210,7 +210,7 @@ API's own message passed on for a 400, 404 or 409.
 
 ## Backend — Spring Boot 4.1 (Java 21)
 
-The service layer: content, contact messages and admin auth. Deployed on Railway from
+The service layer: content, contact messages, admin auth and the weekly market research. Deployed on Railway from
 `backend/` (service `personal-web-app-api`, see `backend/railway.toml` and
 [DEPLOYMENT.md](DEPLOYMENT.md#railway-the-api)); the production site calls it. Built
 and tested in CI.
@@ -228,13 +228,19 @@ backend/src/main/java/com/resume/
 │   └── AdminController           → POST /api/admin/auth/login,
 │                                   GET /api/admin/messages, PATCH /api/admin/messages/{id}/read
 │   └── SuggestionController      → /api/admin/suggestions (see Content suggestions below)
+│   └── MarketResearchController  → /api/admin/market-research (see Market research below)
+├── market/                       → The weekly market research: settings, allow-list, skill
+│                                   dictionary, Adzuna client, run, store, suggester, schedule
 ├── service/                      → Profile, Project, Experience, Contact,
 │                                   EmailValidation, RateLimit,
 │                                   Suggestion (the flow), SuggestionFields (the whitelist)
-├── repository/                   → Profile, Project, Experience, Message, ContentSuggestion (Spring Data JPA)
-├── model/                        → Profile, Project, Experience, Message, Skill, ContentSuggestion
+├── repository/                   → Profile, Project, Experience, Message, ContentSuggestion,
+│                                   MarketResearchRun, MarketSkillCount (Spring Data JPA)
+├── model/                        → Profile, Project, Experience, Message, Skill, ContentSuggestion,
+│                                   MarketResearchRun, MarketSkillCount
 ├── dto/                          → ApiResponse, ContactRequest, LoginRequest,
-│                                   SuggestionRequest, SuggestionResponse, SuggestionTarget
+│                                   SuggestionRequest, SuggestionResponse, SuggestionTarget,
+│                                   MarketSummaryResponse
 └── security/                     → JwtFilter, JwtUtil, LoginRateLimiter (admin sign-in: 5 per client and
                                     30 overall per 900 s by default; `ADMIN_LOGIN_*`)
 ```
@@ -283,8 +289,58 @@ All endpoints are under `/api/admin/**` and need the admin JWT (403 without it):
 - **After an accept** the public site shows the change at its next hourly re-render.
   `frontend/src/content/index.ts`, the site's fallback when the API is down, is **not**
   updated by this flow: bring it in step by hand after accepting a change.
-- Nothing creates suggestions automatically yet. The form in the admin app is the only
-  source; JobSync and market research are later work ([ROADMAP.md](ROADMAP.md)).
+- Two things create suggestions: the form in the admin app (source `manual`) and the
+  weekly market research (source `market-research`, next section), which is off until the
+  owner turns it on. JobSync is later work ([ROADMAP.md](ROADMAP.md)).
+
+### Market research (weekly, suggestions only)
+
+The owner's rules (2026-11-21): the target role is software developer in financial
+services; only companies that are both on the Fortune 500 and FINRA-regulated count; and
+results arrive as suggestions, never as edits. Everything is in `com.resume.market`:
+
+| Class | Does |
+|---|---|
+| `MarketResearchSettings` | `market-research.*` settings. Reads every value as text, so a bad variable falls back to its default instead of stopping startup |
+| `AllowList` | Loads `resources/market/allow-list.json`. An entry counts only if `included` is true and it has a Fortune 500 rank, a FINRA firm with a CRD number and an alias; matches a listing's employer against the aliases as whole words |
+| `SkillDictionary` | Loads `resources/market/skills.json`; whole-word matching of names and aliases ("Java" is not "JavaScript") |
+| `AdzunaClient` (`ListingsClient`) | One request per company to Adzuna's search API. 5 s connect and 10 s read timeouts; 429, 5xx and network errors retried up to 3 times with a doubling wait; a refused key is not retried. Error messages never contain the request address, which carries the key |
+| `MarketResearchService` | One run: fetch, keep listings whose employer matches the company and whose title is a developer role, count each skill once per listing, store the week, then call the suggester. Never throws |
+| `MarketSummaryStore` | The two tables. One row per week; a week's counts are replaced in one transaction; a failure never overwrites a completed week |
+| `MarketSuggester` | Turns a completed week into suggestions (rules below) |
+| `MarketResearchJob` | The schedule (set up after startup, inside a catch) and the manual trigger; one flag keeps two runs from overlapping |
+
+Endpoints, under `/api/admin/**` like the others (admin JWT, 403 without it):
+
+| Endpoint | Does |
+|---|---|
+| `GET /api/admin/market-research/latest` | Whether the job is on (and why not), the thresholds, the newest completed week with its skill counts, and the newest week of any status |
+| `POST /api/admin/market-research/run` | Starts a run for the current week in the background (202). `?force=true` fetches again even if the week is done. 409 `disabled` or `already_running` |
+
+- **Off by default.** It runs only with `MARKET_RESEARCH_ENABLED=true` and both
+  `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`; otherwise startup logs one line,
+  `Market research is disabled: <reason>`. Default schedule: Mondays 06:00 UTC.
+- **Idempotent per week** (weeks start on Monday, UTC). A week that is already summarised
+  is not fetched again; the suggestion step still runs and repeats nothing.
+- **Only counts are stored**: `market_research_runs` (week, status, listings examined,
+  companies queried, API calls, suggestions created, error) and `market_skill_counts`
+  (skill, listings that mentioned it). No listing text, id or link is stored or logged.
+- **What a suggestion can be.** Exactly one thing: add one dictionary skill name to the
+  profile's `techStack`, as a pending row made through `SuggestionService.create`, with a
+  reason of the form "Market research, week of 2026-11-16: "Kubernetes" was mentioned in
+  14 of 60 software-developer listings examined at allow-listed firms (source: Adzuna).
+  This is what those listings ask for, not a statement about you. Accept only if you have
+  real experience with Kubernetes; otherwise reject." It never targets an experience
+  entry, a project or any free text, and never writes content.
+- **When it suggests.** At least 30 listings examined that week; the skill in at least 5
+  of them and at least 20%; at most 3 new suggestions per run and never more than 5 from
+  market research pending. Not for a skill already in the profile's tech stack or skills,
+  any experience's technologies or any project's stack or tags (other spellings in the
+  dictionary count as the same skill); not for one already pending; never again for one
+  the owner rejected.
+- **To change the companies or skills**, edit the two JSON files
+  ([DEPLOYMENT.md](DEPLOYMENT.md#the-allow-list-and-the-skills-dictionary)); the limits of
+  the data are listed there too.
 
 Profiles: `dev` (Supabase Postgres via `SUPABASE_DB_PASSWORD`), `docker`
 (`SPRING_DATASOURCE_*`), `test` (H2 in memory). Hibernate runs with
@@ -301,8 +357,13 @@ round-trips each entity, checks the JSONB columns and indexes, and calls every
 repository query method. `persistence/PostgresSuggestionTest` does the same for
 `content_suggestions` and the suggestion flow (accept applies the change, conflict, reject,
 requests without a token refused) and checks that the migration file builds the same
-table as `init.sql`. Both need Docker and are skipped with a message without it; CI
-fails if either is skipped. Any new table or entity should get a case there. `mvn verify`
+table as `init.sql`. `persistence/PostgresMarketResearchTest` covers the market-research
+tables the same way and runs the whole weekly flow with only the listings API replaced
+(counts stored, suggestions proposed, no content changed, nothing repeated after a
+rejection, a failed run leaves the previous summary). The market-research unit tests
+(`market/`) use a mocked HTTP layer for Adzuna, so no test makes a network request. All
+three PostgreSQL classes need Docker and are skipped with a message without it; CI
+fails if any is skipped. Any new table or entity should get a case there. `mvn verify`
 also enforces the JaCoCo gate (95% instructions).
 
 The `dev` profile's default datasource host is Supabase's direct host
@@ -314,11 +375,14 @@ The `dev` profile's default datasource host is Supabase's direct host
 
 Schema: [`supabase/init.sql`](../supabase/init.sql), applied automatically by
 `docker compose` and already applied to the Supabase project the API uses. Tables: `profile`, `projects`, `experience`, `messages`,
-and `content_suggestions` (proposed content changes; values stored as JSON text; row level
-security on with no policies, so Supabase's public Data API cannot reach it). A change to
+`content_suggestions` (proposed content changes; values stored as JSON text), and
+`market_research_runs` with `market_skill_counts` (the weekly market summary: counts
+only). The last three have row level security on with no policies, so Supabase's public
+Data API cannot reach them. A change to
 the schema of a live database goes in `supabase/migrations/` as an idempotent file the
 owner runs once, **before** the code that needs it is merged (see
-[DEPLOYMENT.md](DEPLOYMENT.md#content-suggestions-run-the-migration-before-merging)). List-like
+[DEPLOYMENT.md](DEPLOYMENT.md#content-suggestions-run-the-migration-before-merging) and
+[the market-research one](DEPLOYMENT.md#market-research-run-the-migration-before-merging)). List-like
 fields (`tech_stack`, `skills`, `tags`, `stack`, `highlights`, `technologies`,
 `socials`) are `JSONB`; `tags`, `stack`, `technologies` and `skills` have GIN indexes.
 The `DEFAULT '[]'` on those columns does not apply to rows written through JPA

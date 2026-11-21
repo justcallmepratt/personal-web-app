@@ -54,6 +54,11 @@ One list, in order. Nothing done is on it; what is done is in [ROADMAP.md](ROADM
 ([steps and order](#content-suggestions-run-the-migration-before-merging)). The API will
 not start without that table.
 
+**And before merging the market-research pull request:** run
+`supabase/migrations/2026-11-21_market_research.sql` the same way
+([steps and order](#market-research-run-the-migration-before-merging)). The job itself
+stays off until its three variables are set ([turn it on](#turn-on-market-research)).
+
 1. **Delete the two unused Vercel projects `personal-web-app` and `backend`.** Checked
    2026-11-21: the team has exactly three projects (`frontend`, `backend`,
    `personal-web-app`). The last two never had a working deployment but still build on
@@ -83,7 +88,8 @@ not start without that table.
 7. **Dependabot PR #38** (Maven wrapper 3.10.0 → 3.10.1) is held: its diff rewrites
    `backend/mvnw.cmd` with CRLF line endings. Merge or close it deliberately.
 8. **Product work, not operations:** Vercel Web Analytics (decided, not
-   added); market research (phase 12, wanted, not started); the monorepo move (later);
+   added); turning on the weekly market research (built, off:
+   [steps](#turn-on-market-research)); the monorepo move (later);
    an optional microfrontends group (`/admin` on the main domain) and an optional
    separate `kafka` project. See [ROADMAP.md](ROADMAP.md).
 
@@ -237,6 +243,7 @@ holds the Kafka demo services), created from this GitHub repository with root di
 | `ADMIN_LOGIN_MAX_ATTEMPTS`, `ADMIN_LOGIN_MAX_ATTEMPTS_OVERALL`, `ADMIN_LOGIN_WINDOW_SECONDS` | optional sign-in rate limit; defaults 5 per client address, 30 overall, 900 s |
 | `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`) | SMTP credentials for notifications |
 | `CORS_ORIGIN` | `https://justcallmepratt.dev` (only matters for browser calls; the site calls the API server-side) |
+| `MARKET_RESEARCH_ENABLED`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | not set; the weekly market research is off until all three are ([turn it on](#turn-on-market-research), with the optional variables) |
 
 On the `docker` profile `SeedRunner` fills **empty** tables with the old placeholder
 persona; the Supabase tables hold the real content, so it does nothing there. Free Supabase projects
@@ -312,6 +319,140 @@ What to know when using it:
 - Rolling back: reverting the pull request is safe with the table left in place. To undo
   one accepted change, make and accept a suggestion that puts the old value back (the
   history view shows what it was).
+
+## Market research: run the migration before merging
+
+The weekly market research adds two tables, `market_research_runs` and
+`market_skill_counts`. As with content suggestions, the API runs Hibernate with
+`ddl-auto: validate`, so **the API will not start if they are missing**, and Railway
+deploys `main` on every push. The order that is safe:
+
+1. **Run the migration first.** Supabase dashboard → SQL editor → paste
+   [`supabase/migrations/2026-11-21_market_research.sql`](../supabase/migrations/2026-11-21_market_research.sql)
+   → Run. It only creates the two new tables and turns row level security on for them;
+   it changes no existing table or row and can be run again without effect. The API that
+   is running now ignores the extra tables, so doing this early is harmless.
+2. **Check it:** `select count(*) from market_research_runs;` answers `0`.
+3. **Then merge the pull request.** Railway redeploys the API. Nothing else changes: the
+   job is **off** until you turn it on (below), and the log says so once at startup:
+   `Market research is disabled: MARKET_RESEARCH_ENABLED is not true`.
+4. **Confirm** `/actuator/health` on the API answers 200.
+
+If the pull request is merged before step 1, the new API deployment fails at startup with
+a schema-validation error naming `market_research_runs`. Run the migration, then redeploy
+the service from the Railway dashboard. It also needs `content_suggestions`
+([above](#content-suggestions-run-the-migration-before-merging)), which is already merged.
+Rolling back: reverting the pull request is safe with the tables left in place.
+
+### Turn on market research
+
+All on the Railway service `personal-web-app-api` → Variables. No key is in the
+repository, and none should ever be.
+
+1. **Get the API keys.** Register at <https://developer.adzuna.com/signup> (free, no
+   payment details) and create an application; the dashboard shows an *application id*
+   and an *application key*. While there, **read the rate limits shown in your account**:
+   Adzuna publishes no numbers, and this job makes about 63 requests in one weekly run
+   (one per company),
+   at most one every 3 seconds (see [limits](#what-it-does-and-the-limits-of-the-data)).
+2. **Set three variables:** `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` and
+   `MARKET_RESEARCH_ENABLED=true`. Railway redeploys. The startup log now says
+   `Market research is enabled: schedule '0 0 6 * * MON' (UTC)`. With any of the three
+   missing the job stays off and the log says which.
+3. **Keep the service always on.** The schedule lives inside the API process, so
+   Railway's serverless / app-sleeping option must stay off for this service
+   ([RESEARCH.md 2.4](RESEARCH.md#24-scheduled-and-background-jobs-on-railway-and-the-supabase-free-tier)).
+4. **Run it once by hand** instead of waiting for Monday (needs [admin](#turn-on-admin)
+   switched on, for the token): `POST /api/admin/market-research/run` with the admin
+   `Authorization: Bearer …` header answers 202 and runs in the background (three to
+   four minutes). `GET /api/admin/market-research/latest` then shows the week's counts. There
+   is no page for this in the admin app; Swagger UI on the API has both calls.
+5. **Read the first run's log.** It lists the companies for which no listing was counted
+   (`no listing counted for N of M companies: …`). That usually means the `searchName`
+   or `aliases` for that company in the allow-list do not match what Adzuna calls it:
+   they were written from Fortune's and FINRA's names and **have not been checked
+   against Adzuna**. Fix them in the allow-list and merge.
+6. **Decide the suggestions** at `/admin/suggestions`. Each has source `market-research`
+   and a reason giving the numbers. Accept only skills you really have experience with;
+   reject the rest. A rejected skill is never proposed again.
+
+| Variable | Value |
+|---|---|
+| `MARKET_RESEARCH_ENABLED` | `true` to switch the job on (default off) |
+| `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | from the Adzuna developer dashboard; both required |
+| `MARKET_RESEARCH_CRON` | optional; Spring cron in UTC, default `0 0 6 * * MON` (Mondays 06:00). A value that is not a cron expression falls back to the default with a warning |
+| `MARKET_RESEARCH_MIN_LISTINGS` | optional; default `30`. With fewer listings examined in a week, no suggestion is made |
+| `MARKET_RESEARCH_MIN_SHARE_PERCENT` | optional; default `20`. A skill must be mentioned in at least this share of the listings (and in at least 5) |
+| `MARKET_RESEARCH_MAX_SUGGESTIONS` | optional; default `3` per run, `0` for none. Never more than 5 from market research waiting at once |
+
+To switch it off again, remove `MARKET_RESEARCH_ENABLED` (or set it to `false`). Stored
+summaries and suggestions stay.
+
+### What it does, and the limits of the data
+
+- **Once a week** it asks Adzuna, company by company, for recent software listings at
+  the companies on the allow-list, keeps the ones whose employer name matches that
+  company and whose title is a developer or software-engineer role, and counts how many
+  mention each skill in the dictionary. It stores **counts only** (skill, listings that
+  mentioned it, listings examined, week): no listing text, id or link is stored or logged.
+- **Then it proposes.** For a skill that is common that week and is not on the profile, in
+  any experience entry or in any project, it creates one pending suggestion to add that
+  skill's name to the profile's tech stack. The reason states the evidence and asks you
+  to accept only if you have that experience. It never edits anything itself, never
+  touches experience or project text, and never words a claim about you.
+- **Safe to run twice.** One summary per week (weeks start on Monday, UTC). A second run
+  in the same week fetches nothing and only re-checks suggestions; `?force=true` on the
+  manual call fetches again and replaces that week. Two runs never overlap.
+- **A failed run** (Adzuna down, rate limited, bad key) is retried per request up to
+  three times with a growing wait, then the run stops, logs
+  `Market research run FAILED for the week of …` with the reason, stores no counts, and
+  leaves earlier summaries exactly as they were. Nothing retries it until the next
+  scheduled run or a manual call.
+- **Accepting one suggestion supersedes the others still pending** for the tech stack
+  (the suggestions queue does that for any field: they were made against the old list).
+  Trigger a run, or wait for the next one, and the remaining skills are proposed again
+  against the new list.
+
+Limits to keep in mind when reading the numbers:
+
+- Adzuna returns only the first **500 characters** of a description, so counts are
+  undercounts and favour skills named in titles and opening lines.
+- At most **50 listings per company**, from the last 30 days, in Adzuna's IT category in
+  the US; consecutive weeks overlap, so week-to-week changes are small by construction.
+- The skill list is a fixed dictionary; a technology that is not in it is never counted.
+- Adzuna's **rate limits and its matching of the `company` filter are not documented**,
+  and none of this has been run against the real API (no key was available). Expect to
+  adjust search names after the first run.
+- Adzuna's terms allow personal research and job search; anything published must credit
+  Adzuna. Nothing here is published, so keep it that way or add the credit
+  ([RESEARCH.md](RESEARCH.md#adzuna-jobs-api-market-research)).
+
+### The allow-list and the skills dictionary
+
+Both are data files in the repository, read at startup; change them with a pull request.
+
+- **[`backend/src/main/resources/market/allow-list.json`](../backend/src/main/resources/market/allow-list.json)**:
+  the companies that count. The rule (yours, 2026-11-21): on the current Fortune 500
+  **and** is, or owns, a FINRA member broker-dealer. Compiled 2026-11-21 from the 2026
+  Fortune 500 and FINRA BrokerCheck: 63 companies count, each with its rank, the
+  broker-dealer's name and CRD number, a BrokerCheck link and the ownership chain. 56
+  more are listed with `"included": false` and the reason (no FINRA member found, not on
+  the list, or not confirmed). To change it: edit the entry. A company is used only when
+  `included` is `true` **and** it has a rank from 1 to 500, a FINRA firm with a CRD
+  number and at least one alias, so a half-finished edit can only shrink the list.
+  `aliases` are matched as whole words inside a listing's employer name; keep them
+  specific (`aliasesLeftOut` records the short names deliberately not used, such as
+  "chase" or "citizens"). Review the list when a new Fortune 500 comes out and update
+  `compiledOn`. **Two decisions are yours:** CBRE Group and Jones Lang LaSalle meet both
+  tests but are real-estate companies, so they are switched off; and companies outside
+  Fortune's Financials sector were not screened.
+- **[`backend/src/main/resources/market/skills.json`](../backend/src/main/resources/market/skills.json)**:
+  the skills looked for, with other spellings. The `name` is exactly what would be added
+  to your tech stack, so write it the way you want it shown. Ambiguous words (Go, R, C)
+  are left out on purpose.
+
+If either file cannot be read, the job stays off and says so in the log; the API still
+starts.
 
 ## Turn on admin
 
@@ -446,6 +587,13 @@ its own micro-frontend (see
 | `NEXT_PUBLIC_CONTACT_EMAIL` unset or malformed | No `mailto:` link or "email me directly" line |
 | A suggestion is accepted after its target was edited some other way | The API refuses with 409 and applies nothing; the admin page shows the value on the site now. Reject it and make a new one |
 | A suggestion's target row was deleted, or the suggestion was already decided | 409 with the reason; nothing changes |
+| Market research variables missing, or a data file unreadable | The API starts normally; one log line says the job is disabled and why; the manual trigger answers 409 `disabled` |
+| Adzuna is down, slow (5 s connect, 10 s read), rate limiting (429) or erroring (5xx) | Each request is tried up to 3 times with a growing wait (a `Retry-After` header is honoured up to 60 s); then the run fails, is logged as `FAILED`, stores no counts, and the previous summary stays |
+| Adzuna refuses the key (401, 403 or its 410 "Authorisation failed") | No retry; the run fails and the log says to check `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`. The key never appears in a log line or in the stored error |
+| The weekly run and a manual trigger arrive together, or the trigger is sent twice | The second is refused (409 `already_running`) or skipped; one row per week in the database either way |
+| The same week is run again | Nothing is fetched; suggestions already pending or rejected are not repeated |
+| Too few listings in a week (fewer than 30 by default), or no profile row | The counts are stored; no suggestion is made |
+| The API restarts at the scheduled minute, or mid-run | That week's run is missed or lost (nothing half-written: counts are saved in one transaction at the end). Trigger it by hand, or wait a week |
 | API down or slow while using `/admin/suggestions` | The page stays signed in, says why, and offers Refresh; no decision is half-applied (accept is one transaction) |
 | Invalid or oversized contact payload | Rejected by the site (400 / 413) without calling the API |
 | `BACKEND_URL` not set | Fully static site; contact handled over SMTP, or 503 if not configured |

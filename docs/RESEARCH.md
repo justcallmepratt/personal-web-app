@@ -128,18 +128,108 @@ shows a need.
 - Cost: free. Footprint: an iframe loaded only on click adds nothing to page load. Once
   loaded, Spotify may set its own cookies, which belongs on the credits page.
 
-#### Adzuna jobs API (phase 12)
+#### Adzuna jobs API (market research)
 
-- Free key, no payment details ([terms](https://developer.adzuna.com/docs/terms_of_service)).
-  The terms say the free tier is for evaluating the API and that commercial, government or
-  academic organisations get a 14-day trial; that wording matters if this ever becomes
-  more than a personal tool.
-- **Rate limits could not be confirmed from an official page.** The brief says 250
-  calls/day; third-party sites quote anything from about 33/day to about 1,000/month.
-  Check the developer dashboard after registering.
-- Attribution ("Jobs by Adzuna") is mentioned by secondary sources; the **exact
-  requirement is unconfirmed**. Keeping market data admin-only avoids the question.
-- Cache results; a weekly pull is enough for skill-frequency counts.
+Re-checked 2026-11-21 for the weekly market research, from Adzuna's own pages (read in
+full): the [terms of service](https://developer.adzuna.com/docs/terms_of_service), the
+[overview](https://developer.adzuna.com/overview), the
+[search docs](https://developer.adzuna.com/docs/search) and the OpenAPI description behind
+the [interactive docs](https://developer.adzuna.com/activedocs)
+(`https://developer.adzuna.com/swagger/spec/test2.json`). No key was created and the API
+was not called, so behaviour is as documented, not as observed.
+
+- **Decision: Adzuna.** Its terms permit "Personal job search" and "Personal and academic
+  research"; it documents a `company` filter, a `category` filter, `max_days_old` and
+  title keywords; and it is a first-party aggregator with a keyed API, so nothing is
+  scraped.
+- **Terms that matter here.** Written agreement is needed for commercial analysis, resale
+  or lead generation. A section headed "Commercial use" (commercial, government and
+  academic organisations) carries a 14-day trial and a ban on using the data in
+  aggregation; reading that as not applying to an individual's personal use is **my
+  interpretation, not something Adzuna has confirmed**. An email to Adzuna would settle
+  it. Attribution is required where results are displayed or research is published; the
+  tool publishes nothing. There is no clause on storing or caching; on termination data
+  from Adzuna must be removed. One account per person.
+- **What is stored:** weekly counts only (skill, listings mentioning it, listings
+  examined). No listing text, id or link, which keeps the tool clear of any question
+  about holding Adzuna's content.
+- **Rate limits: unconfirmed.** No public page gives numbers; the terms say the limits
+  "are shown in your account". The often-quoted 25 a minute / 250 a day / 1,000 a week /
+  2,500 a month come from third parties only. The job makes about 63 requests a week,
+  spaced 3 seconds apart, which is inside even those figures; read the real ones in the
+  dashboard after registering.
+- **Request.** `GET https://api.adzuna.com/v1/api/jobs/us/search/1` with `app_id`,
+  `app_key`, `content-type=application/json`, `what`, `category` (`it-jobs`), `company`
+  ("The canonical company name"), `max_days_old`, `results_per_page`, `sort_by`. **Not
+  documented:** whether `company` matches exactly or loosely, and the maximum
+  `results_per_page` (50 is the commonly cited figure). The job therefore re-checks every
+  listing's employer name itself and logs companies that returned nothing usable.
+- **Response.** `results[]` with `id`, `title`, `description`, `company.display_name`
+  and more. The description is "truncated to 500 characters", so skill counts are
+  undercounts. Following a listing's link to read the full text would be scraping the
+  advertiser's site and is not done.
+- **Errors.** Documented: 400, 404, 410 "Authorisation failed", 500. A 429 is not
+  documented; the client handles one anyway.
+- **Registration:** <https://developer.adzuna.com/signup> (free; has a CAPTCHA, so the
+  owner does it).
+
+**Alternative considered: JSearch** (OpenWeb Ninja, also sold on RapidAPI). It returns
+full descriptions, which Adzuna does not. Not chosen: its data is collected from Google
+for Jobs (LinkedIn, Indeed and others), so the provenance is scraping; it has no
+structured company or title filter (both go into a free-text query); the vendor's free
+plan is a one-off 50 requests at 10 results each, which cannot cover about 60 companies a
+week; and its terms on storage and attribution could not be read (the pages returned
+nothing usable). Sources:
+[service manifest](https://agents.openwebninja.com/manifest.json),
+[RapidAPI pricing page](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch/pricing)
+(free quota **unconfirmed**: the page would not render). Also looked at and set aside: The
+Muse (its developer pages now redirect and the public endpoint answered 403/404) and
+Jooble (the key needs an application form aimed at job portals; no public limits).
+
+#### Company allow-list for market research: Fortune 500 and FINRA
+
+The rule is the owner's (2026-11-21): a company counts only if it is on the current
+Fortune 500 **and** is, or owns, a FINRA member broker-dealer. The list, with the
+evidence per company, is
+[`backend/src/main/resources/market/allow-list.json`](../backend/src/main/resources/market/allow-list.json),
+compiled 2026-11-21.
+
+- **Fortune 500:** <https://fortune.com/ranking/fortune500/>, the 2026 list (page data
+  marked 2026, modified 2026-10-05). The page carries 1,000 ranked companies; ranks 1 to
+  500 were taken as the Fortune 500.
+- **FINRA:** [BrokerCheck](https://brokercheck.finra.org/). For each broker-dealer the
+  firm record (`https://brokercheck.finra.org/firm/summary/<CRD>`) was read and showed an
+  active, approved FINRA registration. The link from broker-dealer to parent comes from
+  the same source: either the parent is the direct owner in the BrokerCheck record, or it
+  is named among the indirect owners in the firm's Form BD detailed report
+  (`https://files.brokercheck.finra.org/firm/firm_<CRD>.pdf`). The chain read for each
+  company is in the file's `ownership` field.
+- **Result:** 65 companies passed both tests. 63 are switched on. **CBRE Group and Jones
+  Lang LaSalle pass both tests but are commercial real-estate companies**, so they are
+  recorded and switched off; whether "financial services" should include them is the
+  owner's call. 40 Fortune 500 companies are recorded as excluded because no FINRA member
+  was confirmed (among them American Express, Visa, Mastercard, PayPal, AIG, Progressive,
+  Berkshire Hathaway), and 14 because they are not on the 2026 Fortune 500 (among them
+  T. Rowe Price at 509, Coinbase, CME Group, Stifel, Robinhood, and Fidelity Investments,
+  which is private).
+- **Not confirmed, and marked so in the file:**
+  - "No FINRA member found" means a BrokerCheck name search on the parent's name found no
+    active firm. A broker-dealer under an unrelated name would be missed, so an exclusion
+    is not proof of absence.
+  - Only Fortune's Financials sector and a handful of named fintech companies were
+    screened. A Fortune 500 company in another sector that owns a broker-dealer is not on
+    the list.
+  - Farmers Insurance Exchange: an active member (Farmers Financial Solutions, CRD
+    103863) exists, but the ownership chain read stops short of the Fortune entity, so it
+    is excluded as unconfirmed.
+  - Interactive Brokers Group is included although BrokerCheck shows it holding 25% to
+    under 50% of the intermediate owner (it directs its management).
+  - For State Street, Nasdaq and Prudential, a second broker-dealer is listed whose chain
+    was not separately read; each inclusion rests on the first.
+  - SEC filings (10-K, Exhibit 21) were not used: EDGAR full-text search refused the
+    request. Every parent link rests on FINRA's Form BD data.
+  - The employer names used to match listings (`searchName`, `aliases`) are best guesses
+    from the Fortune and BrokerCheck names and were **not** checked against Adzuna.
 
 #### LinkedIn data export (phase 14)
 
@@ -192,7 +282,8 @@ shows a need.
 
 ### 2.4 Scheduled and background jobs on Railway, and the Supabase free tier
 
-**Railway** (needed for phases 12 and 13 only):
+**Railway** (needed for the weekly market research, which uses option 1 below: a schedule
+inside the API process, set up in code so a bad setting cannot stop startup):
 
 - Railway has native cron: a service with a cron schedule starts on a five-field UTC
   expression, runs, and must **exit**. Minimum interval is 5 minutes; timing is not exact

@@ -43,6 +43,15 @@ person can ship, and I can reach them". Work is judged against that.
   [DEPLOYMENT.md](DEPLOYMENT.md#content-suggestions-run-the-migration-before-merging)
   run before the merge. Accepted changes show within the hour;
   `frontend/src/content/index.ts` (the fallback) is not updated by it.
+- **Weekly market research (WP-L, replaces phase 12 as written):** a weekly job in the API
+  reads software-developer listings (Adzuna) at an allow-list of companies that are on the
+  Fortune 500 and own a FINRA member broker-dealer, counts the skills they mention
+  against a dictionary in the repository, stores the weekly counts, and proposes common
+  skills that are missing from the profile as suggestions (source `market-research`). It
+  never edits content and never words a claim: each suggestion asks the owner to accept
+  only if they have that experience. Built and **off**: needs the one-time migration in
+  [DEPLOYMENT.md](DEPLOYMENT.md#market-research-run-the-migration-before-merging) before
+  the merge, then Adzuna keys and a flag on Railway. Not run against the real API yet.
 - **Backend persistence tests** against real PostgreSQL in the required backend CI job;
   branch protection requires the backend, frontend and admin jobs.
 
@@ -60,7 +69,10 @@ person can ship, and I can reach them". Work is judged against that.
 5. **WP-H ops hardening** (Supabase keep-alive, uptime check, backup of the `messages`
    table, secret-rotation notes, Lighthouse baseline).
 6. **WP-F case-study projects.**
-7. **WP-L market research (phase 12)**, wanted, not started; after admin is live.
+7. **Turn on the weekly market research** (built, off): register for Adzuna keys and set
+   three variables on Railway ([steps](DEPLOYMENT.md#turn-on-market-research)), run it
+   once by hand, fix the allow-list names the first log flags, and decide whether CBRE
+   and JLL count. Needs admin live, for the manual trigger and to decide suggestions.
 8. **WP-J monorepo move**, later, in a quiet window.
 9. **WP-M suggestion sources**, later: automatic sources that write to the suggestions
    pipeline and nothing else (see Work packages).
@@ -107,7 +119,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | 9 Spotify | Dropped | Third-party music and brand question; logged-out visitors get a 30 s preview. |
 | 10 Credits | Done | WP-C. |
 | 11 Job tracker | Dropped | Owner uses the external tool [JobSync](https://github.com/Gsync/jobsync), run separately; nothing from this phase is in the repository. |
-| 12 Market research | Wanted, not started | Weekly Adzuna pull, admin-only, simple scheduler (RESEARCH.md 2.4). Needs backend and admin deployed, Adzuna keys. WP-L. |
+| 12 Market research | Replaced; built, off | The brief (nightly pull, salary table, insights page) was not built. In its place: a weekly pull for allow-listed firms only, counts only, results as suggestions the owner decides (WP-L). Off until the owner sets the Adzuna keys and the flag. |
 | 13 Resume updater | Dropped as written; replaced | The brief applied changes too freely. Its useful part is rebuilt as content suggestions (done, PR #78): nothing is applied without the owner's accept. Automatic sources are WP-M. |
 | 14 LinkedIn sync | Dropped | Content was updated by hand in WP-E. |
 | 15 Benchmarking | Done, redesigned | Built as the GitHub activity section (WP-G); peers, table and backend endpoints were never built. |
@@ -129,8 +141,8 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | WP-I Admin deploy | Ready, waiting on the owner | The app handles every answer the live API gives (sign-in off, wrong password, rate limit, expired session, outages) and runs on its own Vercel address without the microfrontends group. Checked against the live API as far as possible without a password (2026-11-21). Remaining, owner only: [Turn on admin](DEPLOYMENT.md#turn-on-admin) (create the Vercel project, set `ADMIN_PASSWORD_HASH`, sign in); optional `/admin` route on the main domain (`frontend/microfrontends.json` lists only `frontend` today). Username `psachan`; rate limits 5 per client and 30 overall per 15 minutes. |
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |
-| WP-M Suggestion sources | Later, not started | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): the owner's separately run job tracker; not installed and no integration exists. **Market research** (`market-research`): depends on WP-L. Each needs a way to call the API without the owner's browser session (a scoped credential, not built), and rules against overstating: suggestions must be grounded in facts the owner has confirmed. |
-| WP-L Market research | Wanted, not started | Adzuna client, weekly scheduler, table in `supabase/init.sql` and `PostgresPersistenceTest`, admin insights page. Databricks is deferred. |
+| WP-M Suggestion sources | Later, not started | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): the owner's separately run job tracker; not installed and no integration exists. **Market research** (`market-research`): done as WP-L; it runs inside the API, so it needs no credential. An outside source still needs a way to call the API without the owner's browser session (a scoped credential, not built), and rules against overstating: suggestions must be grounded in facts the owner has confirmed. |
+| WP-L Market research | Built, off, waiting on the owner | Owner: run the migration before merging, register for Adzuna keys, set `MARKET_RESEARCH_ENABLED`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` on Railway ([DEPLOYMENT.md](DEPLOYMENT.md#turn-on-market-research)). Then: check Adzuna's real rate limits in the dashboard, correct allow-list search names after the first run (never checked against Adzuna), decide on CBRE and JLL, review the list yearly. Not built: a page for the summary in the admin app (the API has `GET /api/admin/market-research/latest`), trends across weeks, salaries. Databricks is deferred. |
 
 ## Decisions
 
@@ -140,7 +152,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | 2 | Real content, links and CV | **Answered** | Content and certifications are in. No CV file is needed: `/resume.pdf` is generated from the content. Open: the graduation date. |
 | 3 | Analytics | **Answered** | Vercel Web Analytics, not Amplitude. Not added yet. |
 | 4 | Cyberpunk branding | **Answered** | Look kept with the unofficial-fan-work disclaimer on `/credits` and in the footer; game-corp names gone with the real content; soundtrack dropped. |
-| 5 | Private tools | **Answered** | Job tracker: no (JobSync). Market research: wanted (phase 12). |
+| 5 | Private tools | **Answered** | Job tracker: no (JobSync). Market research: built as a weekly, suggestions-only job (WP-L), off until the owner turns it on. |
 | 6 | Railway Hobby plan for the backend | **Answered** | Deployed. Cost of an always-on JVM is unconfirmed (RESEARCH.md 2.4); check Railway's usage estimate and set a spend limit. |
 | 7 | Contact fallback while the API is offline | **Answered** | Built (`mailto:` plus SMTP fallback). Needs `NEXT_PUBLIC_CONTACT_EMAIL` and the mail variables set on Vercel. |
 | 8 | Monorepo move timing | **Answered** | Later, in a quiet window (WP-J). |
@@ -150,3 +162,5 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | 12 | `Admin — Node 22 / pnpm` as a required check | **Answered** | Already required. |
 | 13 | Make `Kafka — Node 22 / pnpm` a required check | **Open** | Runs on every PR but is not required. |
 | 14 | How tools may change resume and profile content | **Answered** (2026-11-21) | Suggest-and-approve only: tools propose, nothing is public until the owner accepts it in the admin app. |
+| 15 | Which companies market research looks at | **Answered** (2026-11-21) | Software-developer roles in financial services, only at companies that are both on the Fortune 500 and FINRA-regulated (they are, or own, a FINRA member broker-dealer). The list and its evidence: `backend/src/main/resources/market/allow-list.json`. |
+| 16 | Do CBRE Group and Jones Lang LaSalle count? | **Open** | Both meet the two tests in decision 15 but are real-estate companies. Switched off in the allow-list until decided. |
