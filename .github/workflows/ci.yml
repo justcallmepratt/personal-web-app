@@ -51,11 +51,13 @@ jobs:
       # on a laptop and wrong here: a skip must not look like a pass.
       - name: Check the PostgreSQL tests ran
         run: |
-          report=target/surefire-reports/TEST-com.resume.persistence.PostgresPersistenceTest.xml
-          test -f "$report" || { echo "::error::$report is missing: the PostgreSQL tests did not run"; exit 1; }
-          head -n 5 "$report" | grep -o '<testsuite [^>]*' | tee /dev/stderr | grep -q ' skipped="0"' \
-            || { echo "::error::PostgreSQL tests were skipped (is Docker available on the runner?)"; exit 1; }
-          if head -n 5 "$report" | grep -q ' tests="0"'; then echo "::error::No PostgreSQL tests ran"; exit 1; fi
+          for class in PostgresPersistenceTest PostgresSuggestionTest; do
+            report=target/surefire-reports/TEST-com.resume.persistence.$class.xml
+            test -f "$report" || { echo "::error::$report is missing: the PostgreSQL tests did not run"; exit 1; }
+            head -n 5 "$report" | grep -o '<testsuite [^>]*' | tee /dev/stderr | grep -q ' skipped="0"' \
+              || { echo "::error::$class was skipped (is Docker available on the runner?)"; exit 1; }
+            if head -n 5 "$report" | grep -q ' tests="0"'; then echo "::error::No tests ran in $class"; exit 1; fi
+          done
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v7
