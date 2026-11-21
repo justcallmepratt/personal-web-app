@@ -116,7 +116,8 @@ apps.
 ## Admin — Next.js 16 (TypeScript, Tailwind 4)
 
 `apps/admin` is a self-contained app with its own `package.json` and lockfile: admin
-sign-in and the contact-message inbox, served under `/admin/*`. Not deployed yet; see
+sign-in and the contact-message inbox, served under `/admin/*`. Ready but not deployed (no
+Vercel project, and sign-in is off until `ADMIN_PASSWORD_HASH` is set on the API); see
 [DEPLOYMENT.md](DEPLOYMENT.md#turn-on-admin). `apps/admin/AGENTS.md` applies here too.
 `apps/kafka/AGENTS.md` likewise.
 
@@ -186,7 +187,8 @@ backend/src/main/java/com/resume/
 ├── repository/                   → Profile, Project, Experience, Message (Spring Data JPA)
 ├── model/                        → Profile, Project, Experience, Message, Skill
 ├── dto/                          → ApiResponse, ContactRequest, LoginRequest
-└── security/                     → JwtFilter, JwtUtil
+└── security/                     → JwtFilter, JwtUtil, LoginRateLimiter (admin sign-in: 5 per client and
+                                    30 overall per 900 s by default; `ADMIN_LOGIN_*`)
 ```
 
 Contact messages are guarded in layers: `EmailValidationService` rejects disposable

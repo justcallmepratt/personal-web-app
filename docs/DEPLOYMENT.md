@@ -47,34 +47,40 @@ How the site is built, deployed and configured, and what is still outstanding. S
 
 ## Outstanding work
 
-1. **Attach `api.justcallmepratt.dev`:** add it as a custom domain on the Railway
-   service, create the CNAME Railway shows in the Vercel DNS zone, then change
-   `BACKEND_URL` on Vercel to `https://api.justcallmepratt.dev` and redeploy. Set
-   `CORS_ORIGIN` on Railway to `https://justcallmepratt.dev`.
-2. **Turn on admin** ([checklist](#turn-on-admin)): create the Vercel `admin` project,
-   then set `ADMIN_PASSWORD_HASH` on the Railway service. The sign-in rate limiter this
-   was waiting for is live (PR #73). Until the hash is set, admin sign-in answers 503
-   "Admin not configured", by design.
-3. **Turn on contact email.** The contact form now relays to the API, which stores each
+One list, in order. Nothing done is on it; what is done is in [ROADMAP.md](ROADMAP.md).
+
+1. **Delete the two unused Vercel projects `personal-web-app` and `backend`.** Checked
+   2026-11-21: the team has exactly three projects (`frontend`, `backend`,
+   `personal-web-app`). The last two never had a working deployment but still build on
+   every push. Then delete the GitHub environments they created (`… – backend`,
+   `… – personal-web-app`).
+2. **Turn on admin** ([checklist](#turn-on-admin)): create the Vercel `admin` project in
+   the team that owns `frontend`, then set `ADMIN_PASSWORD_HASH` on the Railway service.
+   The sign-in rate limiter is live (PR #73), so nothing blocks this. Until the hash is
+   set, admin sign-in answers 503 "Admin not configured", by design.
+3. **Turn on contact email.** The contact form relays to the API, which stores each
    message but sends no email until `MAIL_USER` and `MAIL_PASS` are set on the Railway
    service. Also set the Vercel variables ([steps](#turn-on-contact-email)) for the SMTP
    fallback and the `mailto:` link.
-4. **Microfrontends group: optional.** Admin works on its own Vercel address
-   ([Turn on admin](#turn-on-admin)); routing `/admin` on the main domain needs the group
-   ([steps](#microfrontends-kafka-and-admin)). Nothing is needed for the Kafka demo:
-   `/kafka` redirects to `/projects/kafka`. A separate `kafka` project is optional and
-   likely a paid extra ([checklist](#if-you-want-the-separate-kafka-project-later)).
-5. **Delete the two unused Vercel projects** `personal-web-app` and `backend` if they
-   still exist (they never had a working deployment), then the GitHub environments they
-   created (`… – backend`, `… – personal-web-app`).
-6. **Security follow-ups** (API surface, CSP, code-scanning alerts, rate limits) are
-   listed in [ROADMAP.md](ROADMAP.md#security-follow-ups).
-7. **Content fixes (not docs):** make `SeedRunner` seed the real profile, and correct the
-   project description in `frontend/src/content/index.ts` (line 58) that still says the
-   API is "built and tested in CI but not deployed yet".
-
-Product work (analytics, ops hardening, market research, monorepo move) is in
-[ROADMAP.md](ROADMAP.md).
+4. **Attach `api.justcallmepratt.dev`:** add it as a custom domain on the Railway
+   service, create the CNAME Railway shows in the Vercel DNS zone, then change
+   `BACKEND_URL` on Vercel to `https://api.justcallmepratt.dev` and redeploy. Set
+   `CORS_ORIGIN` on Railway to `https://justcallmepratt.dev`.
+5. **Fix stale content about the API itself:**
+   - the Supabase `projects` row for `justcallmepratt.dev` still says the API is "built
+     and tested in CI but not deployed yet" (the content file in the repo is already
+     correct), so the live site shows the old text;
+   - `SeedRunner.java` still seeds the old placeholder persona into *empty* tables, so a
+     fresh database would get it.
+6. **Security follow-ups** (Swagger behind GitHub sign-in, Content-Security-Policy,
+   contact rate limit, two CodeQL alerts to dismiss) are in
+   [ROADMAP.md](ROADMAP.md#security-follow-ups).
+7. **Dependabot PR #38** (Maven wrapper 3.10.0 → 3.10.1) is held: its diff rewrites
+   `backend/mvnw.cmd` with CRLF line endings. Merge or close it deliberately.
+8. **Product work, not operations:** a real `cv.pdf`; Vercel Web Analytics (decided, not
+   added); market research (phase 12, wanted, not started); the monorepo move (later);
+   an optional microfrontends group (`/admin` on the main domain) and an optional
+   separate `kafka` project. See [ROADMAP.md](ROADMAP.md).
 
 ## Vercel
 
@@ -88,8 +94,9 @@ Every push to `main` deploys production and every PR gets a preview; CI does not
 - **Settings worth turning on** (dashboard, not in the repo): skip builds when nothing
   under the project's root directory changed, and a spend limit under Billing → Spend
   Management.
-- **Footprint:** two projects (`frontend`, and `admin` once created), none for services.
-  A third, `kafka`, is optional and not planned.
+- **Footprint:** the target is two projects (`frontend`, and `admin` once created), none
+  for services; today there are three (`frontend` plus the two unused ones). A separate
+  `kafka` project is optional and not planned.
   Pages are static and re-rendered at most hourly (`REVALIDATE_SECONDS` in
   `frontend/src/lib/api.ts`), so the API sees about one request per page per hour. The
   functions are `POST /api/contact` (25 s max; bodies over 16 KB rejected before reading;
@@ -136,23 +143,9 @@ no microfrontends group. In the repository:
   `basePath`, which Vercel Microfrontends does not support. Neither has a `public/`
   directory: files there are not covered by the asset prefix.
 
-To deploy `admin` (by hand, in this order; re-check
-<https://vercel.com/docs/microfrontends/quickstart> first in case it changed):
-
-1. **Create the project.** A new Vercel project from this repository named `admin` (root
-   `apps/admin`; variable `BACKEND_URL`), for Production and Preview, **in the team that
-   owns `frontend`** (`prathamsachan-8729's projects`). A project in another team or a
-   personal account cannot join the group. Check `https://<project>.vercel.app/admin/login`
-   loads. Do not attach domains.
-2. **Create the group** (Team Settings → Microfrontends → Create Group) with `frontend`
-   as the default application, and add `admin`.
-3. **Add the `admin` route** to `frontend/microfrontends.json` and deploy `frontend`;
-   the exact entry is in step 5 of [Turn on admin](#turn-on-admin).
-
-4. **Redeploy `admin`** once the group is live, so its assets get their own prefix
-   (`/vc-ap-…`) and cannot collide with the public site's `/_next/` files.
-5. **Check** `/admin/login` signs in (needs the API and `ADMIN_PASSWORD_HASH`) and the
-   public pages are unchanged.
+To deploy `admin`, follow [Turn on admin](#turn-on-admin); serving it on the main
+domain is its optional last step (it needs the group, with `frontend` as the default
+application, and an `admin` entry in `frontend/microfrontends.json`).
 
 Notes: moving between the public site and an app is a full page load. **Rollback:**
 remove the app's entry from `microfrontends.json` and redeploy `frontend`.
@@ -211,9 +204,10 @@ holds the Kafka demo services), created from this GitHub repository with root di
   `SPRING_PROFILES_ACTIVE=docker`, `DB_POOL_SIZE` and `CORS_ORIGIN` are set is not
   confirmed; the service is healthy, so the profile and datasource are right.
 - **`ADMIN_USERNAME`** is set to `psachan` on the service (the code default is `admin`).
+  The sign-in rate limit needs no variables (defaults below).
 - **Variables not set:** `ADMIN_PASSWORD_HASH` (admin sign-in answers 503 "Admin not configured" until the owner sets it; see [Turn on admin](#turn-on-admin)) and
   `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`, `CONTACT_NOTIFY_TO`; contact
-  contact messages are stored in the database but no notification email is sent).
+  messages are stored in the database but no notification email is sent).
 
 | Variable | Value |
 |---|---|
@@ -224,6 +218,8 @@ holds the Kafka demo services), created from this GitHub repository with root di
 | `DB_POOL_SIZE` | `5` (the pooler caps connections on the free plan) |
 | `JWT_SECRET` | `openssl rand -base64 32` |
 | `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password ([how to make it](#turn-on-admin)) |
+| `ADMIN_USERNAME` | admin username (default `admin`; `psachan` in production) |
+| `ADMIN_LOGIN_MAX_ATTEMPTS`, `ADMIN_LOGIN_MAX_ATTEMPTS_OVERALL`, `ADMIN_LOGIN_WINDOW_SECONDS` | optional sign-in rate limit; defaults 5 per client address, 30 overall, 900 s |
 | `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`) | SMTP credentials for notifications |
 | `CORS_ORIGIN` | `https://justcallmepratt.dev` (only matters for browser calls; the site calls the API server-side) |
 
@@ -422,7 +418,7 @@ its own micro-frontend (see
 - **Images:** `docker-build.yml` (every push to `main`) and `release.yml` (`v*.*.*` tags)
   publish to GHCR, for hosting somewhere other than Railway.
 - **Environments:** the `… – backend` and `… – personal-web-app` environments were created
-  by the two unused Vercel projects; delete them after the projects ([item 7](#outstanding-work)).
+  by the two unused Vercel projects; delete them after the projects ([item 1](#outstanding-work)).
 - **Supabase:** its security advisors reported no issues on 2026-11-20; re-check after any
   schema change.
 

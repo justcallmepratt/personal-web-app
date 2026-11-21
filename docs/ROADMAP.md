@@ -21,65 +21,68 @@ person can ship, and I can reach them". Work is judged against that.
 - **Phase 15 / WP-G:** replaced by a GitHub activity section on the home page.
 - **Contact fallback** (PR #66): SMTP fallback when the API is down, `mailto:` path,
   delivery logs. Needs the Vercel variables in [DEPLOYMENT.md](DEPLOYMENT.md).
-- **Kafka live demo** at `/projects/kafka`, its only home; `/kafka` redirects there. The
-  `apps/kafka` micro-frontend is built but not deployed and not planned (a third Vercel
-  microfrontends project is a paid extra; checklist in
-  [DEPLOYMENT.md](DEPLOYMENT.md#if-you-want-the-separate-kafka-project-later)). The
-  `admin` micro-frontend `apps/admin` is built, not deployed.
-- **Backend deployed on Railway** (`personal-web-app-api`), healthy, and used by the production site (`BACKEND_URL`); the database holds the real profile, projects and experience.
+- **Kafka live demo** at `/projects/kafka`, its only home; `/kafka` redirects there
+  (PR #74). `apps/kafka` is built and kept for later, not deployed and not planned (a
+  third Vercel microfrontends project is a paid extra; checklist in
+  [DEPLOYMENT.md](DEPLOYMENT.md#if-you-want-the-separate-kafka-project-later)).
+- **Admin app** `apps/admin`: ready (PR #75), handles every answer the live API gives;
+  not deployed, and sign-in is off until `ADMIN_PASSWORD_HASH` is set.
+- **Admin sign-in rate limiter** (PR #73): 5 failed attempts per client address and 30
+  overall per 15 minutes, then 429 with `Retry-After`.
+- **Backend deployed on Railway** (`personal-web-app-api`), healthy, and read by the
+  production site (`BACKEND_URL`) with `frontend/src/content/index.ts` as the fallback;
+  the database holds the real profile, projects and experience.
 - **Backend persistence tests** against real PostgreSQL in the required backend CI job;
   branch protection requires the backend, frontend and admin jobs.
 
 ## Next, in order
 
-1. The operations checklist in [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work): the API
-   domain, turning on admin (the owner's five steps in
-   [Turn on admin](DEPLOYMENT.md#turn-on-admin): Vercel `admin` project, then
-   `ADMIN_PASSWORD_HASH`), contact email (mail variables on Railway), deleting two unused
-   Vercel projects, and the `SeedRunner` and content-file description fixes.
-2. **WP-E leftovers:** the owner's real `cv.pdf` (none exists; the button is hidden until
+1. The operations checklist in [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work): delete the
+   two unused Vercel projects, turn on admin, turn on contact email, attach
+   `api.justcallmepratt.dev`, fix the stale API-project row and `SeedRunner`, decide on
+   Dependabot PR #38.
+2. **WP-E leftover:** the owner's real `cv.pdf` (none exists; the button is hidden until
    `profile.cvUrl` is set).
 3. **WP-D Vercel Web Analytics** (decided; not added).
-4. **WP-H ops hardening** (the site now uses the API) (Supabase keep-alive, uptime check,
-   backup of the `messages` table, secret-rotation notes, Lighthouse baseline).
-5. **WP-F case-study projects.**
-6. **WP-J monorepo move**, in a quiet window.
-7. **WP-L market research (phase 12)**, wanted, after the backend and admin are live.
+4. **Security follow-ups** below.
+5. **WP-H ops hardening** (Supabase keep-alive, uptime check, backup of the `messages`
+   table, secret-rotation notes, Lighthouse baseline).
+6. **WP-F case-study projects.**
+7. **WP-L market research (phase 12)**, wanted, not started; after admin is live.
+8. **WP-J monorepo move**, later, in a quiet window.
 
 ## Security follow-ups
 
-Not started; no owner yet. Noted 2026-11-20 and checked against the repository and the
-live API that day.
+Checked against the repository, the live API and code scanning on 2026-11-21. No owner yet.
 
-1. **API surface.** On the Railway API, the Swagger UI (`/swagger-ui/index.html`, answers
-   200) and `POST /api/admin/auth/login` are public (`SecurityConfig` permits both).
-   **Done (PR #73):** failed sign-ins are rate limited in the Spring app (5 per client
-   address and 30 overall per 15 minutes, then 429 with `Retry-After`), so
-   `ADMIN_PASSWORD_HASH` can now be set ([Turn on admin](DEPLOYMENT.md#turn-on-admin)).
-   **Still open:** the limiter keys on the caller's address, and for sign-ins made
-   through the admin app that is Vercel's address, not the visitor's, so anyone's failed
-   attempts can lock the owner out for up to 15 minutes. Options if that bites: pass the
-   visitor's address from the admin app in a way the API can trust, a shared secret so
-   only Vercel can call the API, or an edge proxy in front of the API only.
+**Done**
+- **Admin sign-in rate limiter** (PR #73, `LoginRateLimiter`): failed sign-ins are limited
+  in the Spring app, so `ADMIN_PASSWORD_HASH` can be set.
+- **`java/log-injection` alerts**: none open in code scanning any more.
 
-   **Decided (owner):** Swagger must only be reachable after signing in with GitHub, and
-   only as the owner's account (`justcallmepratt`). Needs, none of it built yet: Spring
+**Open**
+1. **Swagger behind GitHub sign-in (decided, not built).** The Swagger UI
+   (`/swagger-ui/index.html`) and `POST /api/admin/auth/login` on the Railway API are
+   public (`SecurityConfig` permits both). The owner's decision: Swagger is reachable only
+   after signing in with GitHub, as the owner's account (`justcallmepratt`). Needs: Spring
    Security OAuth2 login with GitHub protecting `/swagger-ui/**` and `/v3/api-docs/**`;
    an allow-list of one GitHub login; a GitHub OAuth App created by the owner, with its
-   client ID and client secret set as variables on the Railway `personal-web-app-api`
-   service; and a callback URL on the API's public address. **Open question:** should the
-   same GitHub sign-in replace the username-and-password admin login?
-2. **No Content-Security-Policy** header on the site; the other standard security headers
+   client ID and secret set as variables on the Railway `personal-web-app-api` service;
+   and a callback URL on the API's public address. **Open question:** should the same
+   GitHub sign-in replace the username-and-password admin login?
+2. **The login limiter keys on the caller's address.** For sign-ins made through the admin
+   app that is Vercel's address, so anyone's failed attempts can lock the owner out for up
+   to 15 minutes. Options if that bites: pass the visitor's address from the admin app in
+   a way the API can trust, a shared secret so only Vercel can call the API, or an edge
+   proxy in front of the API only (not the Vercel site).
+3. **No Content-Security-Policy** header on the site; the other standard security headers
    are sent from `frontend/vercel.json`.
-3. **Contact-form rate limiting is per server instance** (in-memory in both the API and
+4. **Contact-form rate limiting is per server instance** (in-memory in both the API and
    the site), so it slows casual abuse but is not a hard cap.
-4. **Code scanning.** Five `java/log-injection` alerts (`RateLimitService`,
-   `EmailValidationService`) are still open after the fix in PR #56. Two expected alerts,
+5. **Two expected CodeQL alerts**, candidates to dismiss with a reason:
    `java/spring-disabled-csrf-protection` (stateless JWT API) and
-   `js/empty-password-in-configuration-file` (test profile), are candidates to dismiss
-   with a reason.
-5. **Two unused Vercel projects** (`personal-web-app`, `backend`) still build on every
-   pull request; delete them ([DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work)).
+   `js/empty-password-in-configuration-file` (the test profile). Other open alerts are
+   lint-level (`java/deprecated-call`, `java/unused-parameter`, CSS/SQL style rules).
 
 ## Phases
 
@@ -95,7 +98,7 @@ live API that day.
 | 14 LinkedIn sync | Dropped | Content was updated by hand in WP-E. |
 | 15 Benchmarking | Done, redesigned | Built as the GitHub activity section (WP-G); peers, table and backend endpoints were never built. |
 | 16 Pro-dev dashboard | Dropped | Depended on 12 and 15 as written. |
-| 17 Production | Reduced, partly done | Domain, Git deploys, CI and the Railway deployment exist. Open: WP-H items and the admin deploy (WP-I). |
+| 17 Production | Reduced, partly done | Domain, Git deploys, CI and the Railway deployment exist. Open: WP-H items and turning on admin (WP-I). |
 
 ## Work packages
 
@@ -105,11 +108,11 @@ live API that day.
 | WP-B Accessibility and motion | Done (PR #61) | Check `GlitchText` with VoiceOver (unconfirmed); 24 px minimum targets for small links; no form honeypot. |
 | WP-C Credits and disclaimer | Done | none |
 | WP-D Vercel Web Analytics | Decided, not started | Add `@vercel/analytics` once to the layout; owner turns it on in the dashboard and confirms plan cost. |
-| WP-E Real content and CV | Mostly done | Real `cv.pdf` and `cvUrl`; `SeedRunner` still seeds the old persona and the project description in `content/index.ts` still says the API is not deployed (see DEPLOYMENT.md); the database itself holds the real content. |
+| WP-E Real content and CV | Mostly done | Real `cv.pdf` and `cvUrl`. `SeedRunner` still seeds the old persona, and the database row for the site's own project still says the API is not deployed (see DEPLOYMENT.md). |
 | WP-F Case-study projects | Not started | Problem, role, decisions, outcome per project; `/projects/[slug]`; a "How this site is built" entry. New fields optional in `types.ts`. |
 | WP-G GitHub activity | Done | none |
-| WP-H Ops hardening | Not started | Weekly keep-alive touching the database, uptime check, `messages` export, secret-rotation notes, Lighthouse baseline. The site is on the API now. |
-| WP-I Admin deploy | Ready, waiting on the owner | The app handles every answer the live API gives (sign-in off, wrong password, rate limit, expired session, outages) and runs on its own Vercel address without the microfrontends group. Checked against the live API as far as possible without a password (2026-11-21). Remaining, owner only: [Turn on admin](DEPLOYMENT.md#turn-on-admin) (create the Vercel project, set `ADMIN_PASSWORD_HASH`, sign in); optional `/admin` route on the main domain (`frontend/microfrontends.json` lists only `frontend` today). |
+| WP-H Ops hardening | Not started | Weekly keep-alive touching the database, uptime check, `messages` export, secret-rotation notes, Lighthouse baseline. |
+| WP-I Admin deploy | Ready, waiting on the owner | The app handles every answer the live API gives (sign-in off, wrong password, rate limit, expired session, outages) and runs on its own Vercel address without the microfrontends group. Checked against the live API as far as possible without a password (2026-11-21). Remaining, owner only: [Turn on admin](DEPLOYMENT.md#turn-on-admin) (create the Vercel project, set `ADMIN_PASSWORD_HASH`, sign in); optional `/admin` route on the main domain (`frontend/microfrontends.json` lists only `frontend` today). Username `psachan`; rate limits 5 per client and 30 overall per 15 minutes. |
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |
 | WP-L Market research | Wanted, not started | Adzuna client, weekly scheduler, table in `supabase/init.sql` and `PostgresPersistenceTest`, admin insights page. Databricks is deferred. |
