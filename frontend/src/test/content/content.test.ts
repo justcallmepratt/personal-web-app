@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { profile, projects, experience, certifications } from '@/content'
+import { profile, projects, experience, certifications, education, leadership } from '@/content'
 
 // Guards on the published content: the site is public, so the placeholder
 // persona, made-up links and private contact details must not come back.
 
-const everything = JSON.stringify({ profile, projects, experience, certifications })
+const everything = JSON.stringify({ profile, projects, experience, certifications, education, leadership })
 
 describe('site content', () => {
   it('is the real profile, not the placeholder persona', () => {
@@ -42,12 +42,30 @@ describe('site content', () => {
     expect(profile.skills.every((s) => s.level === undefined)).toBe(true)
   })
 
-  it('offers a CV only when the file exists in public/', () => {
-    if (profile.cvUrl) {
-      expect(existsSync(join(process.cwd(), 'public', profile.cvUrl))).toBe(true)
-    } else {
-      expect(existsSync(join(process.cwd(), 'public', 'cv.pdf'))).toBe(false)
-    }
+  it('keeps no hand-made CV: the PDF is generated at /resume.pdf', () => {
+    expect(profile.cvUrl).toBe('')
+    expect(existsSync(join(process.cwd(), 'public', 'cv.pdf'))).toBe(false)
+    expect(existsSync(join(process.cwd(), 'public', 'resume.pdf'))).toBe(false)
+  })
+
+  it('lists the degree without a graduation date, honours, link or image until the owner confirms them', () => {
+    expect(education).toEqual([
+      {
+        id: 1,
+        degree: 'B.S. in Computer Science',
+        minor: 'Business Management',
+        institution: 'University of Massachusetts Amherst',
+        school: 'College of Information and Computer Sciences',
+        sortOrder: 1,
+      },
+    ])
+  })
+
+  it('lists only the two known leadership roles, with no invented end date or description', () => {
+    expect(leadership).toEqual([
+      { id: 1, role: 'Co-founder and Vice President', organization: 'UMass F1 Club', startDate: '2023-01', sortOrder: 1 },
+      { id: 2, role: 'Team Lead', organization: 'Robotics team', startDate: '2018-01', endDate: '2020-05', sortOrder: 2 },
+    ])
   })
 
   it('marks exactly one role as current and leaves the unconfirmed internship end date empty', () => {

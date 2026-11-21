@@ -1,12 +1,15 @@
-import type { Profile, Project, Experience, Certification, PlannedProject } from '@/lib/types'
+import type {
+  Profile, Project, Experience, Certification, PlannedProject, Education, Leadership,
+} from '@/lib/types'
 
 // Site content. Edit this file and push to update the site — no database or
 // backend is involved. The site is public: publish only facts the owner has
 // confirmed, and leave a field empty rather than guessing.
 //
 // - `email` is empty on purpose: no email address is published.
-// - `cvUrl` is empty until a real CV exists. To turn the "Download CV" button
-//   on, add the file as `public/cv.pdf` and set `cvUrl: '/cv.pdf'`.
+// - `cvUrl` is unused and stays empty: the "Download CV" button always points
+//   at /resume.pdf, which is generated from this content (see lib/resume.ts).
+//   Never add a hand-made PDF to public/.
 // - `socials` holds LinkedIn only (owner decision, 2026-11-20).
 // - Skills carry no `level`: the page lists them by area without ratings.
 
@@ -202,4 +205,38 @@ export const certifications: Certification[] = [
   { id: 1, name: 'Microsoft Technology Associate', issuer: 'Microsoft', sortOrder: 1 },
   { id: 2, name: 'Java Programming Masterclass', issuer: 'Udemy', sortOrder: 2 },
   { id: 3, name: 'TensorFlow', issuer: 'Udemy', sortOrder: 3 },
+]
+
+// Shown on /certifications and on the resume. Only `degree` and `institution`
+// are required. `year` (ISO: '2024' or '2024-05') is left out until the owner
+// confirms the graduation date; add `honours`, `url` and `imageUrl` when known.
+export const education: Education[] = [
+  {
+    id: 1,
+    degree: 'B.S. in Computer Science',
+    minor: 'Business Management',
+    institution: 'University of Massachusetts Amherst',
+    school: 'College of Information and Computer Sciences',
+    sortOrder: 1,
+  },
+]
+
+// Shown on the resume only. Dates are ISO ('2023-01'); a role with a start
+// date, no end date and no `current: true` shows its start month only.
+export const leadership: Leadership[] = [
+  {
+    id: 1,
+    role: 'Co-founder and Vice President',
+    organization: 'UMass F1 Club',
+    startDate: '2023-01',
+    sortOrder: 1,
+  },
+  {
+    id: 2,
+    role: 'Team Lead',
+    organization: 'Robotics team',
+    startDate: '2018-01',
+    endDate: '2020-05',
+    sortOrder: 2,
+  },
 ]

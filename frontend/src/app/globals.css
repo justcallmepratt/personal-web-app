@@ -240,3 +240,64 @@ body {
     opacity: 1;
   }
 }
+
+/* ── Print ──────────────────────────────────────────────────────────────────
+   Paper is white: drop the black page, the grid and every glow. The navbar,
+   footer and scanline overlay hide themselves with Tailwind's `print:hidden`.
+   `.resume` (components/sections/ResumeDocument.tsx) becomes plain black text
+   so /resume prints like a normal resume; /resume.pdf is the generated copy. */
+@media print {
+  @page {
+    margin: 0.6in;
+  }
+
+  /* Sizes are in rem, so this one line makes the whole page more compact on paper. */
+  html {
+    font-size: 12px;
+  }
+
+  html,
+  body {
+    background: #FFFFFF !important;
+    background-image: none !important;
+    color: #000000 !important;
+  }
+
+  /* Off-screen already; `visibility` rather than `display`, which the
+     skip link must never use (it has to stay focusable on screen). */
+  .skip-link {
+    visibility: hidden !important;
+  }
+
+  .glitch-text {
+    color: #000000 !important;
+  }
+
+  .glitch-text::before,
+  .glitch-text::after {
+    content: none !important;
+  }
+
+  .resume,
+  .resume * {
+    color: #000000 !important;
+    background: transparent !important;
+    border-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .resume a {
+    text-decoration: none !important;
+  }
+
+  /* Keep an entry on one page and a heading with what follows it. */
+  .resume-entry {
+    break-inside: avoid;
+  }
+
+  .resume h2,
+  .resume h3 {
+    break-after: avoid;
+  }
+}

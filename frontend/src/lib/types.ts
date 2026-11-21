@@ -62,6 +62,39 @@ export interface Certification {
   sortOrder?: number
 }
 
+/** A degree or diploma. Repo content only: the API has no endpoint for it yet. */
+export interface Education {
+  id: number
+  /** The qualification as it should be read, e.g. "B.S. in Computer Science". */
+  degree: string
+  institution: string
+  /** College or school within the institution. */
+  school?: string
+  minor?: string
+  /** Graduation date, ISO, as precise as is known: '2024' or '2024-05'. Leave out until confirmed. */
+  year?: string
+  honours?: string
+  /** Link to the programme or a verification page. */
+  url?: string
+  /** Picture of the diploma: a path under public/ or an https URL. None are published yet. */
+  imageUrl?: string
+  sortOrder?: number
+}
+
+/** A leadership or volunteer role. Repo content only: the API has no endpoint for it yet. */
+export interface Leadership {
+  id: number
+  role: string
+  organization: string
+  /** ISO dates, as precise as is known: '2023' or '2023-01'. */
+  startDate?: string
+  endDate?: string
+  /** True only when the owner has confirmed the role is ongoing. */
+  current?: boolean
+  description?: string
+  sortOrder?: number
+}
+
 /**
  * An idea with no code yet. Deliberately not a Project: it has no links, dates
  * or `featured` flag, and the Spring API never returns it.

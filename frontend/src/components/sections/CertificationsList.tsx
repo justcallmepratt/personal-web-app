@@ -1,4 +1,5 @@
 import HUDChrome from '@/components/layout/HUDChrome'
+import { formatIsoDate } from '@/lib/dates'
 import type { Certification } from '@/lib/types'
 
 /**
@@ -7,18 +8,19 @@ import type { Certification } from '@/lib/types'
  * shown, so a typo never renders as "Invalid Date".
  */
 export function formatCertDate(date: string | undefined): string | null {
-  const match = date?.trim().match(/^(\d{4})(?:-(\d{2}))?(?:-\d{2})?$/)
-  if (!match) return null
-  const [, year, month] = match
-  if (!month) return year
-  if (Number(month) < 1 || Number(month) > 12) return null
-  const d = new Date(Date.UTC(Number(year), Number(month) - 1, 1))
-  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+  return formatIsoDate(date)
 }
 
 const isHttpUrl = (url: string | undefined): url is string => !!url && /^https?:\/\//i.test(url)
 
-export default function CertificationsList({ items }: { items: Certification[] }) {
+interface Props {
+  items: Certification[]
+  /** 2 when the cards sit directly under the page's h1, 3 under a section h2. */
+  headingLevel?: 2 | 3
+}
+
+export default function CertificationsList({ items, headingLevel = 2 }: Props) {
+  const Heading = `h${headingLevel}` as const
   return (
     <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {items.map((c) => {
@@ -27,10 +29,9 @@ export default function CertificationsList({ items }: { items: Certification[] }
           <li key={c.id}>
             <HUDChrome accent="teal" title={date ?? 'Certification'} className="h-full">
               <div className="space-y-2">
-                {/* h2: each certification sits directly under the page's h1 */}
-                <h2 className="font-[var(--font-display)] text-lg text-cp-yellow tracking-wider">
+                <Heading className="font-[var(--font-display)] text-lg text-cp-yellow tracking-wider">
                   {c.name}
-                </h2>
+                </Heading>
                 <p className="text-cp-teal text-sm uppercase tracking-widest">{c.issuer}</p>
                 {c.credentialId && (
                   <p className="text-xs font-[var(--font-mono)] text-cp-text/80 break-all">

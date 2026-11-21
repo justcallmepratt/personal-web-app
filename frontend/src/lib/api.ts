@@ -1,7 +1,8 @@
 import type {
-  Profile, Project, Experience, Certification, PlannedProject, ContactPayload, ApiResponse, KafkaMessagesResponse,
+  Profile, Project, Experience, Certification, PlannedProject, Education, Leadership,
+  ContactPayload, ApiResponse, KafkaMessagesResponse,
 } from './types'
-import { profile, projects, experience, certifications, plannedProjects } from '@/content'
+import { profile, projects, experience, certifications, plannedProjects, education, leadership } from '@/content'
 
 // ── Content source ───────────────────────────────────────────────────────────
 //
@@ -52,6 +53,10 @@ export const api = {
   // Ideas with no code yet. Repo content only, like certifications, and kept
   // apart from getProjects() so they can never show up as shipped or featured.
   getPlannedProjects: (): Promise<PlannedProject[]> => Promise.resolve([...plannedProjects]),
+  // Degrees and leadership roles. Repo content only, like certifications: the
+  // Spring API has no endpoint for either. Used by /certifications and the resume.
+  getEducation: (): Promise<Education[]> => Promise.resolve(bySortOrder(education)),
+  getLeadership: (): Promise<Leadership[]> => Promise.resolve(bySortOrder(leadership)),
 
   sendContact: (body: ContactPayload): Promise<ApiResponse> =>
     fetch('/api/contact', {

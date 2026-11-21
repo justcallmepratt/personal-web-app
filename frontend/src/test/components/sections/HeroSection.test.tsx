@@ -21,7 +21,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     email: 'person@example.test',
     location: 'Testville, TS',
     avatarUrl: '',
-    cvUrl: '/cv.pdf',
+    cvUrl: '',
     techStack: ['Java', 'React'],
     socials: { linkedin: 'https://linkedin.example.test/in/person' },
     skills: [],
@@ -53,14 +53,14 @@ describe('HeroSection', () => {
     expect(screen.getByRole('link', { name: /contact/i })).toBeInTheDocument()
   })
 
-  it('links the CV button to the configured file', () => {
-    render(<HeroSection profile={makeProfile({ cvUrl: '/cv.pdf' })} />)
-    expect(screen.getByRole('link', { name: /download cv/i })).toHaveAttribute('href', '/cv.pdf')
+  it('links the CV button to the generated resume PDF', () => {
+    render(<HeroSection profile={makeProfile()} />)
+    expect(screen.getByRole('link', { name: /download cv/i })).toHaveAttribute('href', '/resume.pdf')
   })
 
-  it('hides the CV button when no CV is configured, keeping the other two', () => {
-    render(<HeroSection profile={makeProfile({ cvUrl: '' })} />)
-    expect(screen.queryByRole('link', { name: /download cv/i })).not.toBeInTheDocument()
+  it('ignores a cvUrl from the content source, so a stale value cannot become a dead link', () => {
+    render(<HeroSection profile={makeProfile({ cvUrl: '/cv.pdf' })} />)
+    expect(screen.getByRole('link', { name: /download cv/i })).toHaveAttribute('href', '/resume.pdf')
     expect(screen.getByRole('link', { name: /view projects/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /contact/i })).toBeInTheDocument()
   })

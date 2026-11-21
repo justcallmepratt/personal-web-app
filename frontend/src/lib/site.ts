@@ -29,8 +29,16 @@ export const siteDescription =
   'Pratham Sachan — backend software developer in Tampa, FL. Java, Spring Boot and Kafka.'
 
 /** Public, indexable routes. `/api/*` is deliberately absent. */
-export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/certifications', '/contact', '/credits'] as const
+export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/certifications', '/resume', '/contact', '/credits'] as const
 export type PublicRoute = (typeof publicRoutes)[number]
+
+export const RESUME_PATH = '/resume' satisfies PublicRoute
+/**
+ * Stable address of the PDF generated from the site content
+ * (src/app/resume.pdf/route.ts). The "Download CV" button points here. It is a
+ * copy of /resume, so it is not in the sitemap.
+ */
+export const RESUME_PDF_PATH = '/resume.pdf'
 
 /** Absolute URL for a site path; the home page has no trailing slash. */
 export function absoluteUrl(path: string = '/'): string {

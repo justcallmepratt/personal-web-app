@@ -1,6 +1,7 @@
 import HUDChrome from '@/components/layout/HUDChrome'
 import GlitchText from '@/components/ui/GlitchText'
 import NeonButton from '@/components/ui/NeonButton'
+import { RESUME_PDF_PATH } from '@/lib/site'
 import type { Profile } from '@/lib/types'
 
 export default function HeroSection({ profile }: { profile: Profile | null }) {
@@ -31,12 +32,11 @@ export default function HeroSection({ profile }: { profile: Profile | null }) {
           <NeonButton href="/projects" accent="teal" className="w-full sm:w-auto justify-center">
             View Projects
           </NeonButton>
-          {/* Only when the content names a real CV file; there is no placeholder PDF. */}
-          {profile.cvUrl && (
-            <NeonButton href={profile.cvUrl} accent="yellow" className="w-full sm:w-auto justify-center">
-              Download CV
-            </NeonButton>
-          )}
+          {/* Always the PDF generated from the site content, never `profile.cvUrl`:
+              a stale value from the API must not turn this into a dead link. */}
+          <NeonButton href={RESUME_PDF_PATH} accent="yellow" className="w-full sm:w-auto justify-center">
+            Download CV
+          </NeonButton>
           <NeonButton href="/contact" accent="red" className="w-full sm:w-auto justify-center">
             Contact
           </NeonButton>
