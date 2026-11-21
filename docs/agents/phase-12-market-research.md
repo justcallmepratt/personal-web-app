@@ -1,5 +1,7 @@
 # Phase 12 — Market Research Engine Agent
 
+> **Replaced (2026-11-21).** This brief was not built as written. What exists instead is the weekly market research described in [`docs/CODEBASE_STRUCTURE.md`](../CODEBASE_STRUCTURE.md#market-research-weekly-suggestions-only) and [`docs/DEPLOYMENT.md`](../DEPLOYMENT.md#market-research-run-the-migration-before-merging): weekly, allow-listed companies only, counts only (no listings, salaries or `market_insights` table), and results arrive as suggestions the owner accepts or rejects. Nothing below is current.
+>
 > **Status and caveats (2026-11-20)**
 > Not started. Needs the `ADZUNA_*` variables, which were removed from `.env.example`.
 > No longer holds: admin pages inside the public app (planned `admin` micro-frontend instead) and any Railway/`ddl-auto` assumptions about the schema.
