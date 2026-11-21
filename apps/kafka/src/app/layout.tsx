@@ -16,7 +16,7 @@ const shareTechMono = Share_Tech_Mono({
   display: 'swap',
 })
 
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? 'V // Night City Dev'
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Pratham Sachan'
 
 export const metadata: Metadata = {
   title: { default: 'Kafka Live Demo', template: `%s | ${siteName}` },
@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="flex-1">{children}</main>
         <footer className="border-t border-cp-border py-6 text-center text-xs uppercase tracking-widest text-cp-muted">
-          © {new Date().getFullYear()} · Compiled in Night City
+          © {new Date().getFullYear()} · Compiled in Tampa, FL
         </footer>
       </body>
     </html>
