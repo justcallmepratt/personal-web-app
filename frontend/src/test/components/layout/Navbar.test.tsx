@@ -26,6 +26,11 @@ describe('Navbar', () => {
     expect(screen.getByRole('link', { name: 'CERTIFICATIONS' })).toHaveAttribute('href', '/certifications')
   })
 
+  it('links to the resume page', () => {
+    render(<Navbar />)
+    expect(screen.getByRole('link', { name: 'RESUME' })).toHaveAttribute('href', '/resume')
+  })
+
   it('opens mobile menu on hamburger click', async () => {
     render(<Navbar />)
     const hamburger = screen.getByRole('button', { name: /open menu/i })

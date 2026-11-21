@@ -18,6 +18,10 @@ person can ship, and I can reach them". Work is judged against that.
   from the package: a custom `not-found` page, and no Lighthouse scores were recorded.
 - **WP-E real content** (PR #67): the owner's real profile in `frontend/src/content/index.ts`,
   `/certifications`, and an "In the works" list of planned projects on `/projects`.
+- **Resume** (replaces the "real `cv.pdf`" item): a `/resume` page and a `/resume.pdf`
+  generated from the same content as the rest of the site, so there is no CV file to
+  maintain; "Download CV" links to it. `education` and `leadership` were added to the
+  content file, and `/certifications` gained an Education section.
 - **Phase 15 / WP-G:** replaced by a GitHub activity section on the home page.
 - **Contact fallback** (PR #66): SMTP fallback when the API is down, `mailto:` path,
   delivery logs. Needs the Vercel variables in [DEPLOYMENT.md](DEPLOYMENT.md).
@@ -41,8 +45,9 @@ person can ship, and I can reach them". Work is judged against that.
    two unused Vercel projects, turn on admin, turn on contact email, attach
    `api.justcallmepratt.dev`, fix the stale API-project row and `SeedRunner`, decide on
    Dependabot PR #38.
-2. **WP-E leftover:** the owner's real `cv.pdf` (none exists; the button is hidden until
-   `profile.cvUrl` is set).
+2. **Resume follow-ups (owner):** confirm the graduation date (then set `year` on the
+   education entry), the education and leadership wording, and whether a GitHub link
+   should join LinkedIn in `profile.socials`. The resume itself is done: see below.
 3. **WP-D Vercel Web Analytics** (decided; not added).
 4. **Security follow-ups** below.
 5. **WP-H ops hardening** (Supabase keep-alive, uptime check, backup of the `messages`
@@ -88,7 +93,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 
 | Phase | Status | Notes |
 |---|---|---|
-| 7 Polish | Partly done | Accessibility, reduced motion, SEO and real OG image shipped (WP-A, WP-B). Still open: real CV (7-G), custom 404, Lighthouse baseline. Typewriter, hover glitch and particle field are skipped. |
+| 7 Polish | Partly done | Accessibility, reduced motion, SEO and real OG image shipped (WP-A, WP-B). The CV (7-G) is now the generated `/resume.pdf`. Still open: custom 404, Lighthouse baseline. Typewriter, hover glitch and particle field are skipped. |
 | 8 Analytics | Decided, not started | Vercel Web Analytics instead of Amplitude (no key, no cookies, no extra project). WP-D. |
 | 9 Spotify | Dropped | Third-party music and brand question; logged-out visitors get a 30 s preview. |
 | 10 Credits | Done | WP-C. |
@@ -108,7 +113,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | WP-B Accessibility and motion | Done (PR #61) | Check `GlitchText` with VoiceOver (unconfirmed); 24 px minimum targets for small links; no form honeypot. |
 | WP-C Credits and disclaimer | Done | none |
 | WP-D Vercel Web Analytics | Decided, not started | Add `@vercel/analytics` once to the layout; owner turns it on in the dashboard and confirms plan cost. |
-| WP-E Real content and CV | Mostly done | Real `cv.pdf` and `cvUrl`. `SeedRunner` still seeds the old persona, and the database row for the site's own project still says the API is not deployed (see DEPLOYMENT.md). |
+| WP-E Real content and CV | Mostly done | The CV is the generated `/resume.pdf` (no file, `cvUrl` unused). `SeedRunner` still seeds the old persona, and the database row for the site's own project still says the API is not deployed (see DEPLOYMENT.md). |
 | WP-F Case-study projects | Not started | Problem, role, decisions, outcome per project; `/projects/[slug]`; a "How this site is built" entry. New fields optional in `types.ts`. |
 | WP-G GitHub activity | Done | none |
 | WP-H Ops hardening | Not started | Weekly keep-alive touching the database, uptime check, `messages` export, secret-rotation notes, Lighthouse baseline. |
@@ -122,7 +127,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | # | Decision | Status | Answer |
 |---|---|---|---|
 | 1 | Real portfolio under the real name, or a persona? | **Answered** | Real name and history; Cyberpunk look as styling only. |
-| 2 | Real content, links and CV | **Answered** (CV open) | Content and certifications are in. The CV file has not been provided. |
+| 2 | Real content, links and CV | **Answered** | Content and certifications are in. No CV file is needed: `/resume.pdf` is generated from the content. Open: the graduation date. |
 | 3 | Analytics | **Answered** | Vercel Web Analytics, not Amplitude. Not added yet. |
 | 4 | Cyberpunk branding | **Answered** | Look kept with the unofficial-fan-work disclaimer on `/credits` and in the footer; game-corp names gone with the real content; soundtrack dropped. |
 | 5 | Private tools | **Answered** | Job tracker: no (JobSync). Market research: wanted (phase 12). |

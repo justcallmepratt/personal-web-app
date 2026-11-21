@@ -10,6 +10,7 @@ const links = [
   { href: '/projects',   label: 'PROJECTS'   },
   { href: '/skills',     label: 'SKILLS'     },
   { href: '/certifications', label: 'CERTIFICATIONS' },
+  { href: '/resume',     label: 'RESUME'     },
   { href: '/contact',    label: 'CONTACT'    },
 ]
 
@@ -34,7 +35,7 @@ export default function Navbar() {
   }, [open])
 
   return (
-    <header className="sticky top-0 z-40 backdrop-blur bg-cp-dark/80 border-b border-cp-border">
+    <header className="sticky top-0 z-40 backdrop-blur bg-cp-dark/80 border-b border-cp-border print:hidden">
       <nav aria-label="Primary">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link
@@ -58,7 +59,8 @@ export default function Navbar() {
             {open ? '✕' : '≡ MENU'}
           </button>
 
-          {/* Six links: tighter spacing between md and lg so the row fits at 768 px */}
+          {/* Seven links: tighter spacing between md and lg so the row fits at 768 px
+              (it ends 16 px short of the edge there; an eighth would not fit) */}
           <ul className="hidden md:flex items-center gap-3 lg:gap-6 text-xs uppercase tracking-[0.15em] lg:tracking-[0.25em] font-[var(--font-mono)]">
             {links.map((l) => {
               const active = pathname === l.href

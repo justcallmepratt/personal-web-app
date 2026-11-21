@@ -18,23 +18,25 @@ frontend/src/
 │   ├── robots.ts, sitemap.ts, opengraph-image.tsx → Crawling and social-preview metadata
 │   ├── experience/page.tsx       → Career timeline
 │   ├── skills/page.tsx           → Skills by category (a bar only for skills with a `level`)
-│   ├── certifications/page.tsx   → Certifications, from the content file
+│   ├── certifications/page.tsx   → Certifications, then an Education section (degrees), from the content file
+│   ├── resume/page.tsx           → Resume: one print-friendly page built by lib/resume.ts
+│   ├── resume.pdf/route.ts       → The same resume as a generated PDF (static GET, hourly revalidation)
 │   ├── contact/page.tsx          → Contact form
 │   ├── credits/page.tsx          → Credits, licences and the unofficial-fan-work disclaimer (data in lib/credits.ts)
 │   ├── api/contact/route.ts      → POST handler: validate → relay to API, else rate-limit → SMTP
 │   ├── api/kafka/{produce,messages}/route.ts → Relay to the Kafka demo service
 │   ├── error.tsx, loading.tsx    → Error boundary and loading states
-│   └── globals.css               → Tailwind 4 theme (cp-* colours)
+│   └── globals.css               → Tailwind 4 theme (cp-* colours), reduced-motion and print rules
 │
 ├── content/
-│   └── index.ts                  → profile, projects, plannedProjects, experience,
-│                                   certifications — the site's content (the owner's real profile)
+│   └── index.ts                  → profile, projects, plannedProjects, experience, certifications,
+│                                   education, leadership — the site's content (the owner's real profile)
 │
 ├── components/
 │   ├── layout/                   → Navbar, Footer, SkipLink, HUDChrome, ScanlineOverlay
 │   ├── sections/                 → HeroSection, ProjectsGrid, ExperienceTimeline,
-│   │                               SkillsChart, CertificationsList, PlannedProjects, ContactForm,
-│   │                               GitHubActivity, KafkaDemo
+│   │                               SkillsChart, CertificationsList, EducationList, PlannedProjects,
+│   │                               ResumeDocument, ContactForm, GitHubActivity, KafkaDemo
 │   └── ui/                       → GlitchText, NeonButton, NeonCard, SkillBar, TerminalInput
 │
 ├── lib/
@@ -42,12 +44,18 @@ frontend/src/
 │   ├── contact.ts                → Server-only: validation, rate limit, SMTP send
 │   ├── contactEmail.ts           → Public `mailto:` address from NEXT_PUBLIC_CONTACT_EMAIL
 │   ├── kafka.ts                  → Server-only: Kafka demo relay (session ids, limits, timeout)
-│   ├── site.ts                   → Site name, URL and description for metadata
+│   ├── site.ts                   → Site name, URL and description for metadata; public routes;
+│   │                               RESUME_PATH and RESUME_PDF_PATH
+│   ├── resume.ts                 → The resume model: getResumeData() reads the api.ts getters and
+│   │                               returns cleaned, formatted text for the page and the PDF
+│   ├── resumePdf.ts              → Server-only: lays that model out as a US Letter PDF
+│   ├── pdf/{writer,metrics}.ts   → Server-only: minimal PDF writer and Helvetica metrics (no dependency)
+│   ├── dates.ts                  → ISO date and date-range formatting for content dates
 │   ├── credits.ts, theme.ts      → Credits page data, theme constants
 │   ├── github.ts                 → Server-only: owner's public repos from the GitHub API
 │   │                               (hourly, 5 s timeout, never throws), language summary
 │   └── types.ts                  → Profile, Project, PlannedProject, Experience, Certification,
-│                                   ContactPayload, ApiResponse
+│                                   Education, Leadership, ContactPayload, ApiResponse
 │
 └── test/                         → Vitest + React Testing Library, mirrors src/
 ```
@@ -70,13 +78,18 @@ the redirects in `src/lib/redirects.ts`: `/kafka` and everything under it go to
    API when `BACKEND_URL` is set and otherwise sends mail itself. `lib/contact.ts`
    uses Node APIs and must only be imported from server code.
 3. **Pages are static**, re-rendered at most hourly. Only `/api/contact` and the two
-   `/api/kafka/*` handlers run per request.
-4. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
+   `/api/kafka/*` handlers run per request. `/resume.pdf` is a route handler but is
+   static too (`dynamic = 'force-static'`, `revalidate = 3600`).
+4. **The resume has one source.** `/resume` and `/resume.pdf` both draw what
+   `lib/resume.ts` returns, which comes from the same `lib/api.ts` getters as the other
+   pages. Never add a hand-made PDF to `public/`, and change resume content in the
+   content source, not in either renderer.
+5. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
 
 ### Content shape
 
 `content/index.ts` is the fallback for the API content and the only source of
-certifications and planned projects; in production the database is what visitors see for
+certifications, education, leadership and planned projects; in production the database is what visitors see for
 profile, projects and experience, so keep the two in step. The site is public, so it holds only facts the owner has confirmed; `test/content/content.test.ts`
 guards against placeholder links, an email address or a phone number coming back.
 
@@ -84,9 +97,24 @@ guards against placeholder links, an email address or a phone number coming back
   page lists names by category with no percentage. `Profile.email` is `''` (the hero
   hides the row). An experience entry with `current: false` and `endDate: null` shows
   its start month only, never "PRESENT"; use that when an end date is not confirmed.
-- **CV.** There is no `public/cv.pdf`. The "Download CV" button renders only when
-  `profile.cvUrl` is set: add the real file as `frontend/public/cv.pdf` and set
-  `cvUrl: '/cv.pdf'`.
+- **CV / resume.** There is no PDF file in the repo. The "Download CV" button always
+  links to `/resume.pdf`, which `app/resume.pdf/route.ts` generates from the site
+  content; `profile.cvUrl` is ignored (and `''` in the content file), so a stale value
+  from the API cannot produce a dead link. The header shows name, tagline, location and
+  the links in `profile.socials`; it never shows an email address, phone number or
+  street address. Sections with no entries are left out. The PDF uses the standard
+  Helvetica fonts (WinAnsi encoding): a character outside that set is replaced by a
+  plain equivalent or `?`, so keep resume text to Latin characters.
+- **Education** is `{ id, degree, institution, school?, minor?, year?, honours?, url?,
+  imageUrl?, sortOrder? }`, read by `api.getEducation()` (repo content only). It feeds
+  the Education section on `/certifications` and on the resume. `year` is ISO (`'2024'`
+  or `'2024-05'`) and is left out until the graduation date is confirmed, so the degree
+  shows without a date. `imageUrl` (a path under `public/` or an `https` address) shows
+  a picture of the diploma on `/certifications`; none is set today.
+- **Leadership** is `{ id, role, organization, startDate?, endDate?, current?,
+  description?, sortOrder? }`, read by `api.getLeadership()` (repo content only) and
+  shown on the resume only. A start date with no end date and no `current: true` shows
+  the start month alone, never "Present".
 - **Certifications** are `{ id, name, issuer, date?, credentialId?, url?, sortOrder? }`.
   `date` is ISO at whatever precision is known (`'2023'`, `'2023-05'`). The Spring API
   has no certifications endpoint, so `api.getCertifications()` always reads this file.

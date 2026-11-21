@@ -7,6 +7,7 @@ import { metadata as experienceMetadata } from '@/app/experience/page'
 import { metadata as projectsMetadata } from '@/app/projects/layout'
 import { metadata as skillsMetadata } from '@/app/skills/page'
 import { metadata as certificationsMetadata } from '@/app/certifications/page'
+import { metadata as resumeMetadata } from '@/app/resume/page'
 import { metadata as contactMetadata } from '@/app/contact/page'
 import { metadata as creditsMetadata } from '@/app/credits/page'
 import { publicRoutes, siteName } from '@/lib/site'
@@ -32,14 +33,16 @@ describe('sitemap.xml', () => {
       `${HOST}/projects`,
       `${HOST}/skills`,
       `${HOST}/certifications`,
+      `${HOST}/resume`,
       `${HOST}/contact`,
       `${HOST}/credits`,
     ])
     expect(urls).toHaveLength(publicRoutes.length)
   })
 
-  it('never lists API routes and has no duplicates', () => {
+  it('never lists API routes or the PDF copy of the resume, and has no duplicates', () => {
     expect(urls.some((u) => u.includes('/api'))).toBe(false)
+    expect(urls.some((u) => u.endsWith('.pdf'))).toBe(false)
     expect(new Set(urls).size).toBe(urls.length)
   })
 })
@@ -52,6 +55,7 @@ describe('per-page metadata', () => {
     ['/projects', projectsMetadata, 'Projects'],
     ['/skills', skillsMetadata, 'Skills // Loadout'],
     ['/certifications', certificationsMetadata, 'Certifications'],
+    ['/resume', resumeMetadata, 'Resume'],
     ['/contact', contactMetadata, 'Contact // Open Channel'],
     ['/credits', creditsMetadata, 'Credits // Citations'],
   ]

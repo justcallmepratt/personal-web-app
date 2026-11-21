@@ -77,7 +77,7 @@ One list, in order. Nothing done is on it; what is done is in [ROADMAP.md](ROADM
    [ROADMAP.md](ROADMAP.md#security-follow-ups).
 7. **Dependabot PR #38** (Maven wrapper 3.10.0 → 3.10.1) is held: its diff rewrites
    `backend/mvnw.cmd` with CRLF line endings. Merge or close it deliberately.
-8. **Product work, not operations:** a real `cv.pdf`; Vercel Web Analytics (decided, not
+8. **Product work, not operations:** Vercel Web Analytics (decided, not
    added); market research (phase 12, wanted, not started); the monorepo move (later);
    an optional microfrontends group (`/admin` on the main domain) and an optional
    separate `kafka` project. See [ROADMAP.md](ROADMAP.md).
@@ -101,6 +101,16 @@ Every push to `main` deploys production and every PR gets a preview; CI does not
   `frontend/src/lib/api.ts`), so the API sees about one request per page per hour. The
   functions are `POST /api/contact` (25 s max; bodies over 16 KB rejected before reading;
   relay 4 s, MX lookup 2 s, SMTP 10 s) and the two Kafka relay routes.
+- **How the resume PDF stays current:** `/resume.pdf` is never a file in the repo. It is
+  a `GET` route handler (`frontend/src/app/resume.pdf/route.ts`) marked
+  `dynamic = 'force-static'` with `revalidate = 3600`, so it behaves exactly like a
+  page: rendered once at build time, served from Vercel's cache, and re-rendered in
+  the background at most once an hour, when it reads the content API again. A content
+  change in the API therefore reaches the PDF within about an hour with no deploy; a
+  change to `frontend/src/content/index.ts` reaches it with the deploy that push
+  triggers. No visitor request runs the generator, and nothing needs a headless
+  browser: the PDF is written by about 500 lines of code in `frontend/src/lib/pdf/` and
+  `lib/resumePdf.ts`, with no added dependency. To force a refresh sooner, redeploy.
 
 ### Environment variables for `frontend`
 
@@ -390,6 +400,8 @@ its own micro-frontend (see
 | Situation | Behaviour |
 |---|---|
 | API down, erroring, slower than 5 s, or returning bad JSON | Pages render from `src/content`; a warning is logged; the next hourly re-render tries again |
+| The same, when `/resume` or `/resume.pdf` is re-rendered | Both render from `src/content`, like every page. API rows with missing or wrongly typed fields are dropped, a section with no entries is left out, and if the live content still cannot be laid out the PDF is generated from `src/content` (warning logged) |
+| Resume text that is very long, has no spaces, or uses characters outside Latin-1 | The PDF wraps it (splitting an unbroken string between characters), continues on another page, and replaces unsupported characters with a plain equivalent or `?`; the page wraps it with CSS |
 | GitHub unreachable, slow (5 s), rate limited, 404, 5xx, bad JSON or no public repos | The GitHub activity section shrinks to a link to the profile; build and page still succeed |
 | API down, or relay slower than 4 s / 5xx / non-JSON, when the form is submitted | Falls back to SMTP if `MAIL_USER` / `MAIL_PASS` are set (warning logged); otherwise 503 and the `mailto:` link |
 | API answers 4xx (validation, 429) | Passed to the visitor; no fallback |
