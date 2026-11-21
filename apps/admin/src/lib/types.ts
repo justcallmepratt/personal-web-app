@@ -18,7 +18,9 @@ export type FailureKind =
   | 'bad_response' // answer was not the JSON we expect
   | 'unauthorized' // 401 / 403: no session, or the token expired
   | 'invalid_credentials' // 401 on login
-  | 'admin_not_configured' // 503 on login: the API has no admin password
+  | 'admin_not_configured' // 503 "Admin not configured" on login: the API has no admin password
+  | 'rate_limited' // 429 on login: too many failed attempts
+  | 'unavailable' // 502 / 503 / 504: the API or its host is restarting or overloaded
   | 'not_found' // 404
   | 'error' // any other status
 
@@ -26,4 +28,6 @@ export type FailureKind =
 export interface ErrorBody {
   error: string
   kind: FailureKind | 'bad_request' | 'too_large' | 'forbidden'
+  /** Seconds to wait before signing in again; only with `rate_limited`. */
+  retryAfter?: number
 }

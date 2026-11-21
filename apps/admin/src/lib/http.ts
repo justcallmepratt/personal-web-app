@@ -12,23 +12,38 @@ const FAILURES: Record<FailureKind, { status: number; error: string }> = {
   timeout: { status: 504, error: 'The API took too long to answer.' },
   bad_response: { status: 502, error: 'The API sent a response this app could not read.' },
   unauthorized: { status: 401, error: 'Your session has expired. Sign in again.' },
-  invalid_credentials: { status: 401, error: 'Invalid credentials.' },
-  admin_not_configured: { status: 503, error: 'Admin sign-in is not configured on the API.' },
+  invalid_credentials: { status: 401, error: 'Wrong username or password.' },
+  admin_not_configured: {
+    status: 503,
+    error:
+      'Admin sign-in is not switched on yet. The API has no admin password set (ADMIN_PASSWORD_HASH), so nobody can sign in. This is not a wrong password.',
+  },
+  rate_limited: { status: 429, error: 'Too many sign-in attempts. Wait before trying again.' },
+  unavailable: { status: 503, error: 'The API is temporarily unavailable. It may be restarting; try again in a moment.' },
   not_found: { status: 404, error: 'That message no longer exists.' },
   error: { status: 502, error: 'The API reported an error.' },
 }
 
-export function errorResponse(kind: ErrorBody['kind'], status: number, error: string): NextResponse {
-  return Res.json({ error, kind } satisfies ErrorBody, {
+export function errorResponse(
+  kind: ErrorBody['kind'],
+  status: number,
+  error: string,
+  retryAfter?: number,
+): NextResponse {
+  const body: ErrorBody = retryAfter === undefined ? { error, kind } : { error, kind, retryAfter }
+  return Res.json(body, {
     status,
-    headers: { 'Cache-Control': 'no-store' },
+    headers: {
+      'Cache-Control': 'no-store',
+      ...(retryAfter === undefined ? {} : { 'Retry-After': String(retryAfter) }),
+    },
   })
 }
 
 /** Maps a failed API call to this app's reply; an expired session also clears the cookie. */
 export function failureResponse(failure: Extract<BackendResult<unknown>, { ok: false }>): NextResponse {
   const { status, error } = FAILURES[failure.kind]
-  const res = errorResponse(failure.kind, status, error)
+  const res = errorResponse(failure.kind, status, error, failure.retryAfterSeconds)
   if (failure.kind === 'unauthorized') res.cookies.set(clearedSessionCookie())
   return res
 }

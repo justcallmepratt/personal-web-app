@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Inbox from '@/components/Inbox'
-import { jsonResponse, message, mockFetch, unreachable } from '../helpers'
+import { jsonResponse, message, mockFetch, timedOut, unreachable } from '../helpers'
 
 const assign = vi.fn()
 beforeEach(() => {
@@ -59,7 +59,10 @@ describe('Inbox', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Mark as read' }))
     expect(await screen.findByText('0 unread · 2 total')).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenCalledWith('/admin/api/messages/2/read', { method: 'PATCH' })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/admin/api/messages/2/read',
+      expect.objectContaining({ method: 'PATCH', signal: expect.any(AbortSignal) }),
+    )
 
     await userEvent.click(screen.getByRole('button', { name: 'Mark as unread' }))
     expect(await screen.findByText('1 unread · 2 total')).toBeInTheDocument()
@@ -132,13 +135,25 @@ describe('Inbox', () => {
     expect(screen.getByText('1 unread · 2 total')).toBeInTheDocument()
   })
 
+  it('says so when a request to this app times out', async () => {
+    const fetchMock = mockFetch(timedOut)
+    render(<Inbox initialMessages={two} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/took too long/i)
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal)
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled()
+  })
+
   it('signs out through this app and leaves, even if the request fails', async () => {
     const fetchMock = mockFetch(unreachable)
     render(<Inbox initialMessages={two} />)
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/admin/login'))
-    expect(fetchMock).toHaveBeenCalledWith('/admin/api/session', { method: 'DELETE' })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/admin/api/session',
+      expect.objectContaining({ method: 'DELETE', signal: expect.any(AbortSignal) }),
+    )
   })
 
   it('labels messages with missing fields', async () => {

@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DELETE, POST } from '@/app/admin/api/session/route'
 import { GET as EXPIRED } from '@/app/admin/api/session/expired/route'
-import { BACKEND_TIMEOUT_MS } from '@/lib/backend'
+import { BACKEND_TIMEOUT_MS, clearLoginBlock, DEFAULT_RETRY_AFTER_SECONDS } from '@/lib/backend'
 import { BACKEND, jsonResponse, mockFetch, timedOut, tokenExpiringIn, unreachable } from '../helpers'
 
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
@@ -20,6 +20,7 @@ describe('POST /admin/api/session', () => {
   beforeEach(() => {
     vi.stubEnv('BACKEND_URL', BACKEND)
     vi.spyOn(console, 'error').mockImplementation(() => {})
+    clearLoginBlock()
   })
 
   it('signs in: relays credentials and stores the token in a locked-down cookie', async () => {
@@ -104,7 +105,7 @@ describe('POST /admin/api/session', () => {
     mockFetch(() => jsonResponse({ error: 'Invalid credentials' }, 401))
     const res = await POST(loginRequest(creds))
     expect(res.status).toBe(401)
-    expect(await res.json()).toEqual({ kind: 'invalid_credentials', error: 'Invalid credentials.' })
+    expect(await res.json()).toEqual({ kind: 'invalid_credentials', error: 'Wrong username or password.' })
     expect(res.headers.get('set-cookie')).toBeNull()
   })
 
@@ -112,7 +113,88 @@ describe('POST /admin/api/session', () => {
     mockFetch(() => jsonResponse({ error: 'Admin not configured' }, 503))
     const res = await POST(loginRequest(creds))
     expect(res.status).toBe(503)
-    expect((await res.json()).kind).toBe('admin_not_configured')
+    const body = await res.json()
+    expect(body.kind).toBe('admin_not_configured')
+    // Says sign-in is off, and that the password was not the problem.
+    expect(body.error).toMatch(/not switched on yet/i)
+    expect(body.error).toMatch(/not a wrong password/i)
+    expect(res.headers.get('set-cookie')).toBeNull()
+  })
+
+  it.each([
+    ['a 503 page from the API host', () => new Response('<html>Application failed to respond</html>', { status: 503 })],
+    ['a 503 with some other JSON', () => jsonResponse({ error: 'Service Unavailable' }, 503)],
+    ['a 502 from the API host', () => new Response('Bad Gateway', { status: 502 })],
+    ['a 504 from the API host', () => new Response('', { status: 504 })],
+  ])('reports the API as unavailable, not as "sign-in off", for %s', async (_name, respond) => {
+    mockFetch(respond)
+    const res = await POST(loginRequest(creds))
+    expect(res.status).toBe(503)
+    expect((await res.json()).kind).toBe('unavailable')
+  })
+
+  it('passes on 429 with the wait from Retry-After', async () => {
+    mockFetch(
+      () =>
+        new Response(JSON.stringify({ error: 'Too many failed sign-in attempts. Try again later.' }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': '900' },
+        }),
+    )
+    const res = await POST(loginRequest(creds))
+    expect(res.status).toBe(429)
+    expect(res.headers.get('retry-after')).toBe('900')
+    expect(await res.json()).toMatchObject({ kind: 'rate_limited', retryAfter: 900 })
+    expect(res.headers.get('set-cookie')).toBeNull()
+  })
+
+  it.each([
+    ['no Retry-After header', undefined, DEFAULT_RETRY_AFTER_SECONDS],
+    ['an unreadable Retry-After', 'soon', DEFAULT_RETRY_AFTER_SECONDS],
+    ['a Retry-After of zero', '0', 1],
+    ['an absurdly long Retry-After', '999999', 3600],
+    ['a Retry-After given as a date', new Date(Date.now() + 120_000).toUTCString(), 120],
+  ])('handles a 429 with %s', async (_name, header, expected) => {
+    mockFetch(() => new Response('', { status: 429, headers: header === undefined ? {} : { 'Retry-After': header } }))
+    const res = await POST(loginRequest(creds))
+    expect(res.status).toBe(429)
+    const { retryAfter } = await res.json()
+    // A date header loses up to a second to rounding.
+    expect(retryAfter).toBeGreaterThanOrEqual(expected - 1)
+    expect(retryAfter).toBeLessThanOrEqual(expected)
+  })
+
+  it('stops calling the API while it is rate limited, then resumes', async () => {
+    const token = tokenExpiringIn(60)
+    let limited = true
+    const fetchMock = mockFetch(() =>
+      limited ? new Response('', { status: 429, headers: { 'Retry-After': '60' } }) : jsonResponse({ token }),
+    )
+    const start = Date.now()
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(start)
+
+    expect((await POST(loginRequest(creds))).status).toBe(429)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // 20 s later: answered here with the remaining wait, without reaching the API.
+    clock.mockReturnValue(start + 20_000)
+    const again = await POST(loginRequest(creds))
+    expect(again.status).toBe(429)
+    expect((await again.json()).retryAfter).toBe(40)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // After the wait the next attempt goes through.
+    limited = false
+    clock.mockReturnValue(start + 60_000)
+    expect((await POST(loginRequest(creds))).status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats a 403 on sign-in as an API error, not as a session', async () => {
+    mockFetch(() => jsonResponse({ status: 403, error: 'Forbidden' }, 403))
+    const res = await POST(loginRequest(creds))
+    expect(res.status).toBe(502)
+    expect((await res.json()).kind).toBe('error')
   })
 
   it('reports 502 for any other API status', async () => {

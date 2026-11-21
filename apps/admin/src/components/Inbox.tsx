@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { fetchErrorMessage, timeoutSignal } from '@/lib/client'
 import { formatSentAt } from '@/lib/messages'
 import type { ErrorBody, Message } from '@/lib/types'
 import { NeonButton, Notice, Panel } from './ui'
 
-const NETWORK_ERROR = 'Could not reach the admin app. Check your connection and try again.'
 const LOGIN_EXPIRED = '/admin/login?reason=expired'
 
 /** Full-page navigation: the session is gone, so drop all client state with it. */
@@ -39,7 +39,7 @@ export default function Inbox({ initialMessages, loadError }: Props) {
     if (busy) return
     setBusy(true)
     try {
-      const res = await fetch('/admin/api/messages', { cache: 'no-store' })
+      const res = await fetch('/admin/api/messages', { cache: 'no-store', signal: timeoutSignal() })
       if (res.status === 401) return leave(LOGIN_EXPIRED)
       if (!res.ok) {
         setError((await errorOf(res)).error)
@@ -48,8 +48,8 @@ export default function Inbox({ initialMessages, loadError }: Props) {
         setLoaded(true)
         setError(null)
       }
-    } catch {
-      setError(NETWORK_ERROR)
+    } catch (e) {
+      setError(fetchErrorMessage(e))
     }
     setBusy(false)
   }
@@ -58,7 +58,7 @@ export default function Inbox({ initialMessages, loadError }: Props) {
     if (busy) return
     setBusy(true)
     try {
-      const res = await fetch(`/admin/api/messages/${id}/read`, { method: 'PATCH' })
+      const res = await fetch(`/admin/api/messages/${id}/read`, { method: 'PATCH', signal: timeoutSignal() })
       if (res.status === 401) return leave(LOGIN_EXPIRED)
       if (res.ok) {
         const updated = (await res.json()) as Message
@@ -73,15 +73,15 @@ export default function Inbox({ initialMessages, loadError }: Props) {
         }
         setError(failure.error)
       }
-    } catch {
-      setError(NETWORK_ERROR)
+    } catch (e) {
+      setError(fetchErrorMessage(e))
     }
     setBusy(false)
   }
 
   async function signOut() {
     // Best effort: even if this request fails, leave the inbox.
-    await fetch('/admin/api/session', { method: 'DELETE' }).catch(() => undefined)
+    await fetch('/admin/api/session', { method: 'DELETE', signal: timeoutSignal() }).catch(() => undefined)
     leave('/admin/login')
   }
 
