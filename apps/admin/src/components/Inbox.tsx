@@ -1,23 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { fetchErrorMessage, timeoutSignal } from '@/lib/client'
+import { LOGIN_EXPIRED, errorOf, fetchErrorMessage, leave, timeoutSignal } from '@/lib/client'
 import { formatSentAt } from '@/lib/messages'
-import type { ErrorBody, Message } from '@/lib/types'
-import { NeonButton, Notice, Panel } from './ui'
-
-const LOGIN_EXPIRED = '/admin/login?reason=expired'
-
-/** Full-page navigation: the session is gone, so drop all client state with it. */
-const leave = (to: string) => window.location.assign(to)
-
-async function errorOf(res: Response): Promise<ErrorBody> {
-  const body = (await res.json().catch(() => null)) as Partial<ErrorBody> | null
-  return {
-    kind: body?.kind ?? 'error',
-    error: body?.error ?? `Request failed (HTTP ${res.status}).`,
-  }
-}
+import type { Message } from '@/lib/types'
+import { NavLink, NeonButton, Notice, Panel } from './ui'
 
 interface Props {
   initialMessages: Message[]
@@ -96,7 +83,8 @@ export default function Inbox({ initialMessages, loadError }: Props) {
             {loaded ? `${unread} unread · ${messages.length} total` : 'Not loaded'}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <NavLink href="/admin/suggestions">Suggestions</NavLink>
           <NeonButton onClick={refresh} disabled={busy}>
             {busy ? 'Working…' : 'Refresh'}
           </NeonButton>

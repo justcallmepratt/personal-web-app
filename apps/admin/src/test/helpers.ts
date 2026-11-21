@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { Message } from '@/lib/types'
+import type { Message, Suggestion, SuggestionTarget } from '@/lib/types'
 
 export const BACKEND = 'https://api.test'
 
@@ -14,7 +14,46 @@ export const message = (over: Partial<Message> = {}): Message => ({
   ...over,
 })
 
-export const jsonResponse = (body: unknown, status = 200) =>
+export const suggestion = (over: Partial<Suggestion> = {}): Suggestion => ({
+  id: 1,
+  targetType: 'experience',
+  targetId: 7,
+  targetLabel: 'Engineer at Acme',
+  field: 'role',
+  fieldKind: 'text',
+  currentValue: 'Engineer',
+  proposedValue: 'Senior Engineer',
+  reason: 'Promoted in 2025',
+  source: 'manual',
+  status: 'pending',
+  createdAt: '2026-11-21T10:15:30',
+  decidedAt: null,
+  ...over,
+})
+
+export const targets = (): SuggestionTarget[] => [
+  {
+    targetType: 'profile',
+    targetId: 1,
+    label: 'Profile',
+    fields: [
+      { name: 'tagline', kind: 'text', required: false, maxLength: 255, value: 'Engineer' },
+      { name: 'techStack', kind: 'list', required: true, maxLength: 255, value: ['Java', 'Postgres'] },
+    ],
+  },
+  {
+    targetType: 'experience',
+    targetId: 7,
+    label: 'Engineer at Acme',
+    fields: [
+      { name: 'role', kind: 'text', required: true, maxLength: 255, value: 'Engineer' },
+      { name: 'description', kind: 'text', required: false, maxLength: 10000, value: null },
+      { name: 'highlights', kind: 'list', required: true, maxLength: 255, value: ['Shipped X'] },
+    ],
+  },
+]
+
+export const jsonResponse =(body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 /** Replaces global fetch with a mock that answers with `impl`. */

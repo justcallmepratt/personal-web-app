@@ -1,4 +1,21 @@
+import type { ErrorBody } from './types'
+
 // Shared by the client components: how the browser calls this app's own handlers.
+
+export const LOGIN_EXPIRED = '/admin/login?reason=expired'
+
+/** Full-page navigation: the session is gone, so drop all client state with it. */
+export const leave = (to: string) => window.location.assign(to)
+
+/** The error body of a failed reply from this app, with fallbacks for an unreadable one. */
+export async function errorOf(res: Response): Promise<ErrorBody> {
+  const body = (await res.json().catch(() => null)) as Partial<ErrorBody> | null
+  return {
+    ...body,
+    kind: body?.kind ?? 'error',
+    error: body?.error ?? `Request failed (HTTP ${res.status}).`,
+  }
+}
 
 /** Longer than the server's limit on API calls, so the server's reason arrives first. */
 export const CLIENT_TIMEOUT_MS = 15000

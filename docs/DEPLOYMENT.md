@@ -49,6 +49,11 @@ How the site is built, deployed and configured, and what is still outstanding. S
 
 One list, in order. Nothing done is on it; what is done is in [ROADMAP.md](ROADMAP.md).
 
+**First, before merging the content-suggestions pull request:** run
+`supabase/migrations/2026-11-21_content_suggestions.sql` on the Supabase database
+([steps and order](#content-suggestions-run-the-migration-before-merging)). The API will
+not start without that table.
+
 1. **Delete the two unused Vercel projects `personal-web-app` and `backend`.** Checked
    2026-11-21: the team has exactly three projects (`frontend`, `backend`,
    `personal-web-app`). The last two never had a working deployment but still build on
@@ -276,6 +281,38 @@ previews should send):
 Also set `MAIL_*` on the Railway service so the API emails notifications for relayed
 messages; the Vercel variables then serve as the fallback.
 
+## Content suggestions: run the migration before merging
+
+The suggest-and-approve feature adds a table, `content_suggestions`. The API runs
+Hibernate with `ddl-auto: validate`, so **the API will not start if the table is
+missing**, and Railway deploys `main` on every push. The order that is safe:
+
+1. **Run the migration first.** Supabase dashboard → SQL editor → paste
+   [`supabase/migrations/2026-11-21_content_suggestions.sql`](../supabase/migrations/2026-11-21_content_suggestions.sql)
+   → Run. It only creates the new table, its two indexes and row level security on it;
+   it changes no existing table or row and can be run again without effect. The API
+   that is running now ignores the extra table, so doing this early is harmless.
+2. **Check it:** `select count(*) from content_suggestions;` answers `0`.
+3. **Then merge the pull request.** Railway redeploys the API and Vercel the admin app.
+4. **Confirm** `/actuator/health` on the API answers 200, then open `/admin/suggestions`.
+
+If the pull request is merged before step 1, the new API deployment fails at startup with
+a schema-validation error naming `content_suggestions`. Railway's health check should keep
+the previous deployment serving, but do not rely on that: run the migration, then
+redeploy the service from the Railway dashboard.
+
+What to know when using it:
+
+- A suggestion changes nothing until it is accepted at `/admin/suggestions`. Accepting
+  writes the one field to the database; the public site shows it at its next hourly
+  re-render (so within the hour), with no deploy.
+- `frontend/src/content/index.ts`, the fallback the site uses when the API is down, is
+  **not** updated by accepting a suggestion. Update it by hand to match, or the fallback
+  drifts from the database.
+- Rolling back: reverting the pull request is safe with the table left in place. To undo
+  one accepted change, make and accept a suggestion that puts the old value back (the
+  history view shows what it was).
+
 ## Turn on admin
 
 `apps/admin` is sign-in and the contact-message inbox: `/admin` (inbox), `/admin/login`,
@@ -407,6 +444,9 @@ its own micro-frontend (see
 | API answers 4xx (validation, 429) | Passed to the visitor; no fallback |
 | SMTP rejects (bad app password, etc.) or takes over 10 s | 502, logged as `undeliverable`; the form offers the `mailto:` link |
 | `NEXT_PUBLIC_CONTACT_EMAIL` unset or malformed | No `mailto:` link or "email me directly" line |
+| A suggestion is accepted after its target was edited some other way | The API refuses with 409 and applies nothing; the admin page shows the value on the site now. Reject it and make a new one |
+| A suggestion's target row was deleted, or the suggestion was already decided | 409 with the reason; nothing changes |
+| API down or slow while using `/admin/suggestions` | The page stays signed in, says why, and offers Refresh; no decision is half-applied (accept is one transaction) |
 | Invalid or oversized contact payload | Rejected by the site (400 / 413) without calling the API |
 | `BACKEND_URL` not set | Fully static site; contact handled over SMTP, or 503 if not configured |
 | `KAFKA_DEMO_URL` not set | `/projects/kafka` shows "broker offline" and a disabled form |

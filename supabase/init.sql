@@ -61,6 +61,36 @@ CREATE TABLE IF NOT EXISTS messages (
     sent_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- content_suggestions: proposed changes to profile, experience and project fields.
+-- Nothing here is public; a row only changes the tables above when the owner accepts it.
+-- current_value and proposed_value hold JSON text (a string, or an array of strings).
+-- An existing database gets this table from
+-- supabase/migrations/2026-11-21_content_suggestions.sql; keep the two definitions in step.
+CREATE TABLE IF NOT EXISTS content_suggestions (
+    id             BIGSERIAL PRIMARY KEY,
+    target_type    VARCHAR(20)  NOT NULL CHECK (target_type IN ('profile', 'experience', 'project')),
+    target_id      BIGINT       NOT NULL,
+    field          VARCHAR(50)  NOT NULL,
+    current_value  TEXT,
+    proposed_value TEXT         NOT NULL,
+    reason         VARCHAR(500) NOT NULL,
+    source         VARCHAR(50)  NOT NULL DEFAULT 'manual',
+    status         VARCHAR(20)  NOT NULL DEFAULT 'pending'
+                   CHECK (status IN ('pending', 'accepted', 'rejected', 'superseded')),
+    created_at     TIMESTAMP    NOT NULL DEFAULT NOW(),
+    decided_at     TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_content_suggestions_status_created
+    ON content_suggestions (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_content_suggestions_target
+    ON content_suggestions (target_type, target_id, field);
+
+-- Private data: with row level security on and no policies, Supabase's public Data API
+-- roles (anon, authenticated) cannot read or write this table. The API connects as the
+-- table owner, which row level security does not restrict.
+ALTER TABLE content_suggestions ENABLE ROW LEVEL SECURITY;
+
 -- indexes
 CREATE INDEX IF NOT EXISTS idx_projects_featured  ON projects(featured);
 CREATE INDEX IF NOT EXISTS idx_projects_sort      ON projects(sort_order);

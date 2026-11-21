@@ -11,6 +11,9 @@ export const LOAD_ERRORS: Record<Exclude<FailureKind, 'unauthorized'>, string> =
   rate_limited: 'The API is refusing requests for now. Try again later.',
   unavailable: 'The API is temporarily unavailable. It may be restarting; try again in a moment.',
   not_found: 'The API has no inbox endpoint at the expected address.',
+  invalid: 'The API rejected the request.',
+  conflict: 'The API reported a conflict.',
+  refused: 'The API refused the request.',
   error: 'The API reported an error.',
 }
 
