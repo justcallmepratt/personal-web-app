@@ -54,9 +54,11 @@ frontend/src/
 
 Outside `src/`: `frontend/vercel.json` sets the security headers (HSTS, X-Frame-Options,
 Referrer-Policy and others), cache headers and build commands for Vercel;
-`frontend/microfrontends.json` routes `/kafka` to `apps/kafka` and
 `frontend/next.config.ts` wraps the config in `withMicrofrontends` (this app is the
-default application of the Vercel microfrontends group).
+default application of the planned Vercel microfrontends group) and
+`frontend/microfrontends.json` lists only this app for now. `next.config.ts` also serves
+the redirects in `src/lib/redirects.ts`: `/kafka` and everything under it go to
+`/projects/kafka`.
 
 ### Rules
 
@@ -104,12 +106,12 @@ guards against placeholder links, an email address or a phone number coming back
 
 A self-contained app like `apps/admin`, with its own `package.json` and lockfile: the
 live Kafka demo, served under `/kafka/*` (`src/app/kafka/page.tsx` and
-`src/app/kafka/api/{produce,messages}`). Not routable yet (the Vercel project and
-microfrontends group are missing); see
-[DEPLOYMENT.md](DEPLOYMENT.md#microfrontends-kafka-and-admin). Its page, relay routes and
-helpers are copies of the ones in `frontend/` (`KafkaDemo.tsx`, `lib/kafka.ts`,
-`app/api/kafka/*`), which stay live until the cutover described there. Checks as for
-the other apps.
+`src/app/kafka/api/{produce,messages}`). Not deployed and not planned: there is no Vercel
+`kafka` project, and `frontend` redirects `/kafka` to `/projects/kafka`; see
+[DEPLOYMENT.md](DEPLOYMENT.md#if-you-want-the-separate-kafka-project-later). Its page,
+relay routes and helpers are copies of the ones in `frontend/` (`KafkaDemo.tsx`,
+`lib/kafka.ts`, `app/api/kafka/*`), which are the live ones. Checks as for the other
+apps.
 
 ## Admin — Next.js 16 (TypeScript, Tailwind 4)
 
