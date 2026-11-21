@@ -62,7 +62,7 @@ public class SuggestionController {
 
     /** A body that is not JSON, or an id that is not a number, is the caller's mistake, not a 500. */
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
-    public ResponseEntity<Map<String, Object>> unreadable(Exception ex) {
+    public ResponseEntity<Map<String, Object>> unreadable() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("error", "The request could not be read.");
         body.put("code", "invalid");

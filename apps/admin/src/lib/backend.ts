@@ -72,7 +72,8 @@ async function call(path: string, { method = 'GET', token, body }: CallOptions):
   } catch (e) {
     const name = (e as { name?: string } | null)?.name
     const kind = name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'unreachable'
-    console.error(`Admin: API ${method} ${path} failed (${kind}).`, e)
+    // A constant format string, and no line breaks from the path: parts of it come from the request.
+    console.error('Admin: API %s %s failed (%s).', method, path.replace(/[\r\n]/g, ''), kind, e)
     return { ok: false, kind }
   }
 }
