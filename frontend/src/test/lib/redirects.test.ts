@@ -55,6 +55,11 @@ describe('microfrontends.json', () => {
     expect(config.applications.frontend.routing).toBeUndefined()
   })
 
+  it('routes /admin and everything under it to the admin project, and nothing else', () => {
+    const paths = config.applications.admin?.routing?.flatMap((r) => r.paths) ?? []
+    expect(paths.sort()).toEqual(['/admin', '/admin/:path*'])
+  })
+
   it('routes nothing to a kafka project while this app redirects /kafka', () => {
     expect(config.applications.kafka).toBeUndefined()
     const routed = Object.values(config.applications).flatMap((app) => app.routing?.flatMap((r) => r.paths) ?? [])

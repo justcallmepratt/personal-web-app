@@ -3,6 +3,9 @@
   "applications": {
     "frontend": {
       "development": { "fallback": "justcallmepratt.dev" }
+    },
+    "admin": {
+      "routing": [{ "paths": ["/admin", "/admin/:path*"] }]
     }
   }
 }
