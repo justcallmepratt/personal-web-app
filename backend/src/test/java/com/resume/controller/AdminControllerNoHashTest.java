@@ -35,6 +35,7 @@ class AdminControllerNoHashTest {
     @MockitoBean JwtUtil jwtUtil;
     @MockitoBean JwtFilter jwtFilter;
     @MockitoBean PasswordEncoder passwordEncoder;
+    @MockitoBean com.resume.security.LoginRateLimiter loginRateLimiter;
 
     @Test
     void login_whenAdminPassHashEmpty_returns503() throws Exception {

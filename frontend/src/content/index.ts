@@ -55,7 +55,7 @@ export const projects: Project[] = [
     description:
       'This site: a static Next.js app on Vercel that renders from content kept in its repository.',
     longDescription:
-      'The public pages are static and served from Vercel. A Spring Boot API backed by Postgres is in the same repository, built and tested in CI but not deployed yet; until it is, pages render from the content file in the repo.',
+      'The public pages are static and served from Vercel. A Spring Boot API backed by Postgres is in the same repository, and runs on Railway; the pages read their content from it and fall back to the content file in the repo if it is unavailable.',
     tags: ['Next.js', 'TypeScript', 'Tailwind CSS', 'Spring Boot'],
     stack: ['Next.js', 'React', 'TypeScript', 'Tailwind CSS', 'Spring Boot', 'Postgres'],
     demoUrl: '',

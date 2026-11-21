@@ -41,6 +41,11 @@ contact:
     window-seconds:  ${CONTACT_RATE_LIMIT_WINDOW:3600}
 
 admin:
+  # Failed sign-ins allowed per client address, and in total, within the window.
+  login-rate-limit:
+    max-attempts: ${ADMIN_LOGIN_MAX_ATTEMPTS:5}
+    max-attempts-overall: ${ADMIN_LOGIN_MAX_ATTEMPTS_OVERALL:30}
+    window-seconds: ${ADMIN_LOGIN_WINDOW_SECONDS:900}
   username: ${ADMIN_USERNAME:admin}
   password-hash: ${ADMIN_PASSWORD_HASH:}
 

@@ -32,7 +32,7 @@ public class ContactService {
 
     /** Strips line breaks so user-supplied text cannot forge extra log entries. */
     private static String oneLine(String s) {
-        return s == null ? null : s.replaceAll("[\\r\\n]", "_");
+        return s == null ? null : s.replaceAll("\\R", "_");
     }
 
     @Transactional
