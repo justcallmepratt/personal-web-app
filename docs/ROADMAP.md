@@ -21,8 +21,11 @@ person can ship, and I can reach them". Work is judged against that.
 - **Phase 15 / WP-G:** replaced by a GitHub activity section on the home page.
 - **Contact fallback** (PR #66): SMTP fallback when the API is down, `mailto:` path,
   delivery logs. Needs the Vercel variables in [DEPLOYMENT.md](DEPLOYMENT.md).
-- **Kafka live demo** at `/projects/kafka`, plus the `apps/kafka` micro-frontend (built,
-  not routable yet) and the `admin` micro-frontend `apps/admin` (built, not deployed).
+- **Kafka live demo** at `/projects/kafka`, its only home; `/kafka` redirects there. The
+  `apps/kafka` micro-frontend is built but not deployed and not planned (a third Vercel
+  microfrontends project is a paid extra; checklist in
+  [DEPLOYMENT.md](DEPLOYMENT.md#if-you-want-the-separate-kafka-project-later)). The
+  `admin` micro-frontend `apps/admin` is built, not deployed.
 - **Backend deployed on Railway** (`personal-web-app-api`), healthy, and used by the production site (`BACKEND_URL`); the database holds the real profile, projects and experience.
 - **Backend persistence tests** against real PostgreSQL in the required backend CI job;
   branch protection requires the backend, frontend and admin jobs.
@@ -31,7 +34,7 @@ person can ship, and I can reach them". Work is judged against that.
 
 1. The operations checklist in [DEPLOYMENT.md](DEPLOYMENT.md#outstanding-work): the API
    domain, `ADMIN_PASSWORD_HASH`, contact email (mail variables on Railway), the Vercel
-   `kafka` and `admin` projects and group, deleting two unused Vercel projects, and the
+   `admin` project and group, deleting two unused Vercel projects, and the
    `SeedRunner` and content-file description fixes.
 2. **WP-E leftovers:** the owner's real `cv.pdf` (none exists; the button is hidden until
    `profile.cvUrl` is set).
@@ -102,7 +105,7 @@ live API that day.
 | WP-F Case-study projects | Not started | Problem, role, decisions, outcome per project; `/projects/[slug]`; a "How this site is built" entry. New fields optional in `types.ts`. |
 | WP-G GitHub activity | Done | none |
 | WP-H Ops hardening | Not started | Weekly keep-alive touching the database, uptime check, `messages` export, secret-rotation notes, Lighthouse baseline. The site is on the API now. |
-| WP-I Admin deploy | Partly done | `withMicrofrontends` and the `kafka` route are in `frontend`. Remaining: the `admin` route in `frontend/microfrontends.json` after the owner creates the project and group; verify `/admin/login` against the real API. |
+| WP-I Admin deploy | Partly done | `withMicrofrontends` is in `frontend`; `microfrontends.json` lists only `frontend` (the `kafka` route was removed, `/kafka` redirects to `/projects/kafka`). Remaining: the `admin` route in `frontend/microfrontends.json` after the owner creates the project and group; verify `/admin/login` against the real API. |
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |
 | WP-L Market research | Wanted, not started | Adzuna client, weekly scheduler, table in `supabase/init.sql` and `PostgresPersistenceTest`, admin insights page. Databricks is deferred. |
