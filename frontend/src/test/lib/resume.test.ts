@@ -85,8 +85,7 @@ describe('resume from the repo content', () => {
   it('dates leadership from the content and never marks it ongoing by itself', () => {
     expect(leadership.every((l) => l.current === undefined)).toBe(true)
     expect(section(data, 'leadership')?.entries.map((e) => [e.title, e.subtitle, e.date])).toEqual([
-      ['Co-founder and Vice President', 'UMass F1 Club', 'Jan 2023'],
-      ['Team Lead', 'Robotics team', 'Jan 2018 – May 2020'],
+      ['Mentor for new post-college associates', 'Raymond James', undefined],
     ])
   })
 

@@ -226,17 +226,8 @@ export const education: Education[] = [
 export const leadership: Leadership[] = [
   {
     id: 1,
-    role: 'Co-founder and Vice President',
-    organization: 'UMass F1 Club',
-    startDate: '2023-01',
+    role: 'Mentor for new post-college associates',
+    organization: 'Raymond James',
     sortOrder: 1,
-  },
-  {
-    id: 2,
-    role: 'Team Lead',
-    organization: 'Robotics team',
-    startDate: '2018-01',
-    endDate: '2020-05',
-    sortOrder: 2,
   },
 ]
