@@ -1,0 +1,11 @@
+{
+  "note": "Companies whose tracked jobs the importer may use: only companies that are BOTH a Fortune 500 company AND FINRA-regulated. This local file is a fallback and ships EMPTY on purpose. The authoritative list is being compiled by the job-market research work into the backend; when that file exists the importer reads it instead (see docs/JOBSYNC_IMPORTER.md). The importer never guesses a company's status: an entry counts only when both 'fortune500' and 'finraRegulated' are literally true, and a company matches only by its name or a listed alias (case, punctuation and legal suffixes such as Inc. or & Co. are ignored; nothing fuzzy). Add only companies you have checked yourself, for example on the Fortune 500 list and FINRA BrokerCheck, and note where in 'source'.",
+  "example": {
+    "name": "Example Financial Group",
+    "aliases": ["Example Financial", "Example Securities LLC"],
+    "fortune500": true,
+    "finraRegulated": true,
+    "source": "Fortune 500 list 2026; FINRA BrokerCheck, checked 2026-11-21"
+  },
+  "companies": []
+}

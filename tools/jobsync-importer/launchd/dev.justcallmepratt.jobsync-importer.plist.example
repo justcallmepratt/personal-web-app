@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Weekly DRY RUN of the JobSync importer (see docs/JOBSYNC_IMPORTER.md).
+  It prints what it would file to the log and files nothing: there is no "file" flag here
+  and there must be no password in this file. File suggestions by hand.
+
+  Replace the three /Users/YOU paths, then copy to
+  ~/Library/LaunchAgents/dev.justcallmepratt.jobsync-importer.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.justcallmepratt.jobsync-importer</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- The output of: which node -->
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/YOU/Desktop/personal-web-app/tools/jobsync-importer/bin/jobsync-importer.mjs</string>
+    <string>--backup</string>
+    <!-- Keep backups outside Downloads, Desktop and Documents: macOS blocks scheduled jobs there. -->
+    <string>/Users/YOU/jobsync-backups</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- The API address is public. Never add SITE_ADMIN_PASSWORD here. -->
+    <key>SITE_API_URL</key>
+    <string>https://personal-web-app-api-production.up.railway.app</string>
+  </dict>
+
+  <!-- Mondays at 09:00; if the Mac is asleep, at the next wake. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>9</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOU/Library/Logs/jobsync-importer.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOU/Library/Logs/jobsync-importer.log</string>
+</dict>
+</plist>

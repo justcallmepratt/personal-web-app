@@ -161,6 +161,31 @@ jobs:
       - name: Build
         run: pnpm build
 
+  # ── JobSync importer (tools/jobsync-importer) ────────────────────────────
+  # A command-line tool with no dependencies: nothing to install, lint or build.
+  # Its tests use synthetic backups and a mock API on localhost; no network, no secrets.
+  jobsync-importer:
+    name: JobSync importer — Node 22
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: tools/jobsync-importer
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Test
+        run: npm test
+
+      # The command itself starts, and the shipped data files load.
+      - name: Smoke run
+        run: node bin/jobsync-importer.mjs --help
+
   # ── Kafka micro-frontend ─────────────────────────────────────────────────
   kafka:
     name: Kafka — Node 22 / pnpm
