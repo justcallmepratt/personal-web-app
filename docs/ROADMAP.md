@@ -57,9 +57,9 @@ person can ship, and I can reach them". Work is judged against that.
 - **JobSync importer** (WP-M, first source): `tools/jobsync-importer`, a local
   command-line tool that reads a JobSync backup and proposes tech-stack additions with
   source `jobsync`; dry run by default. Built from JobSync's source and tested on synthetic
-  data: not yet run against a real JobSync or the live API. Its company allow-list ships
-  empty, so it proposes nothing until it is pointed at a list (the reviewed one now exists
-  in the backend, in a different place and format: see WP-M). See
+  data: not yet run against a real JobSync or the live API. It reads the backend's reviewed
+  company list (`backend/src/main/resources/market/allow-list.json`), the same file the
+  market research uses, by the same rule; there is no second copy. See
   [JOBSYNC_IMPORTER.md](JOBSYNC_IMPORTER.md).
 - **Backend persistence tests** against real PostgreSQL in the required backend CI job;
   branch protection requires the backend, frontend and admin jobs.
@@ -84,9 +84,8 @@ person can ship, and I can reach them". Work is judged against that.
    and JLL count. Needs admin live, for the manual trigger and to decide suggestions.
 8. **WP-J monorepo move**, later, in a quiet window.
 9. **WP-M suggestion sources**: the JobSync importer is built; to use it the owner installs
-   JobSync, turns on admin, and a company allow-list has to exist
-   ([JOBSYNC_IMPORTER.md](JOBSYNC_IMPORTER.md)); the reviewed list now exists in the
-   backend and the tool still has to be pointed at it (see Work packages). Market research
+   JobSync, turns on admin, and runs it ([JOBSYNC_IMPORTER.md](JOBSYNC_IMPORTER.md)); it reads the backend's
+   reviewed company list, the same one the market research uses. Market research
    as a source is built (item 7).
 
 ## Security follow-ups
@@ -153,7 +152,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | WP-I Admin deploy | Ready, waiting on the owner | The app handles every answer the live API gives (sign-in off, wrong password, rate limit, expired session, outages) and runs on its own Vercel address without the microfrontends group. Checked against the live API as far as possible without a password (2026-11-21). Remaining, owner only: [Turn on admin](DEPLOYMENT.md#turn-on-admin) (create the Vercel project, set `ADMIN_PASSWORD_HASH`, sign in); optional `/admin` route on the main domain (`frontend/microfrontends.json` lists only `frontend` today). Username `psachan`; rate limits 5 per client and 30 overall per 15 minutes. |
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |
-| WP-M Suggestion sources | JobSync source and market research built; neither run for real yet | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): built as `tools/jobsync-importer` ([guide](JOBSYNC_IMPORTER.md)), run by the owner on their machine with the admin password asked for at run time, so no scoped credential was needed. Remaining: owner installs JobSync (not installed as of 2026-11-21) and turns on admin; a company allow-list (Fortune 500 and FINRA-regulated) must exist, since the tool's own ships empty and it reads the backend's when present. **Not joined up yet:** the tool looks for `backend/src/main/resources/target-companies.json` in its own format, while WP-L's reviewed list is `backend/src/main/resources/market/allow-list.json` (63 companies, with evidence) in another; the tool should read that file, rather than a second copy being kept; first run against a real JobSync backup and the live API; optionally a direct read-only database reader so no weekly download is needed. **Market research** (`market-research`): built as WP-L; it runs inside the API and creates suggestions through the same service, so it needs no credential. Rule for every source: a suggestion may say what the evidence shows and ask; it must not assert anything the owner has not confirmed. |
+| WP-M Suggestion sources | JobSync source and market research built; neither run for real yet | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): built as `tools/jobsync-importer` ([guide](JOBSYNC_IMPORTER.md)), run by the owner on their machine with the admin password asked for at run time, so no scoped credential was needed. **Company list joined up:** the tool reads WP-L's reviewed list, `backend/src/main/resources/market/allow-list.json` (63 companies counted as of 2026-11-21, with evidence), by the same rule as the backend's `AllowList.java` (included, a Fortune 500 rank, a FINRA firm with a CRD number, at least one alias; aliases matched as whole words; the company name is not an alias), so there is one list and no second copy; its own `data/companies-allowlist.json` stays empty as a fallback outside the repository. Remaining: owner installs JobSync (not installed as of 2026-11-21) and turns on admin; then a first run against a real JobSync backup and the live API; optionally a direct read-only database reader so no weekly download is needed. **Market research** (`market-research`): built as WP-L; it runs inside the API and creates suggestions through the same service, so it needs no credential. Rule for every source: a suggestion may say what the evidence shows and ask; it must not assert anything the owner has not confirmed. |
 | WP-L Market research | Built, off, waiting on the owner | Owner: run the migration before merging, register for Adzuna keys, set `MARKET_RESEARCH_ENABLED`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` on Railway ([DEPLOYMENT.md](DEPLOYMENT.md#turn-on-market-research)). Then: check Adzuna's real rate limits in the dashboard, correct allow-list search names after the first run (never checked against Adzuna), decide on CBRE and JLL, review the list yearly. Expect few forward deployed engineer listings: a role needs 30 in a week before it produces suggestions. Not built: a page for the summary in the admin app (the API has `GET /api/admin/market-research/latest`), trends across weeks, salaries. Databricks is deferred. |
 
 ## Decisions

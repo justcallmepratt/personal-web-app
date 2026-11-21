@@ -26,7 +26,7 @@ Node 22 or newer. No dependencies, so there is nothing to install.
 | `src/analyse.mjs` | Title and company matching, skill extraction, proposals, the "never assert a claim" guard, de-duplication |
 | `src/api.mjs` | The site's API: profile, one sign-in, suggestions |
 | `data/target-titles.json` | Job titles that count (edit freely) |
-| `data/companies-allowlist.json` | Fallback company allow-list; ships empty on purpose |
+| `data/companies-allowlist.json` | Fallback company allow-list, used only when the backend's `market/allow-list.json` is absent; ships empty on purpose |
 | `data/skills-dictionary.json` | Skills and their aliases (edit freely) |
 | `launchd/*.plist.example` | Weekly dry run on a Mac |
 | `test/` | `node --test`: synthetic backups and a mock API on localhost |
@@ -35,6 +35,10 @@ Rules the code keeps, each with tests:
 
 - The only thing it proposes is one item added to `profile.techStack`, with a reason that
   states the evidence and asks whether it applies (`assertSafeSuggestion`).
-- A company counts only if an allow-list entry has both `fortune500` and `finraRegulated`
-  set to `true`; its status is never guessed.
+- The company list is the backend's reviewed one
+  (`backend/src/main/resources/market/allow-list.json`), read by the backend's own rule:
+  an entry counts only when it is `included` and has a Fortune 500 rank, a FINRA firm with
+  a CRD number and an alias; aliases match as whole words and the company name is not an
+  alias. In the tool's own format an entry needs both `fortune500` and `finraRegulated`
+  set to `true`. A company's status is never guessed.
 - One sign-in request per run, never retried. No password, token or state is stored.

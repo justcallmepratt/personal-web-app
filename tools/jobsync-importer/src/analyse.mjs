@@ -85,11 +85,49 @@ export function normaliseCompany(name) {
 }
 
 /**
- * Reads an allow-list: `{companies: [...]}` or a bare list. An entry counts only when it
- * is an object whose `fortune500` and `finraRegulated` are both literally true; anything
- * else is ignored and counted, because a company's status is never guessed.
- * @returns {{names: Map<string, string>, accepted: number, ignored: number}}
- *   `names` maps each normalised name or alias to the entry's display name
+ * An employer name as the backend's AllowList.java normalises it: lower case, with
+ * everything that is not an ASCII letter or digit turned into one space.
+ */
+export function normaliseEmployer(name) {
+  return String(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+const isPositiveInteger = (value) => Number.isInteger(value) && value > 0
+
+/** True for an entry written in the backend's format (market/allow-list.json). */
+function isBackendEntry(entry) {
+  return 'included' in entry || isObject(entry.fortune500) || Array.isArray(entry.finra)
+}
+
+/** The backend's evidence rule: a Fortune 500 rank from 1 to 500 and a FINRA firm with a name and a CRD number. */
+function hasBackendEvidence(entry) {
+  const rank = isObject(entry.fortune500) ? entry.fortune500.rank : undefined
+  const ranked = isPositiveInteger(rank) && rank <= 500
+  const member = Array.isArray(entry.finra) && entry.finra.some((f) => isObject(f) && isPositiveInteger(f.crd) && isText(f.firm))
+  return ranked && member
+}
+
+/**
+ * Reads an allow-list: `{companies: [...]}` or a bare list. Two entry formats are read,
+ * and a company's status is never guessed in either.
+ *
+ * - The backend's reviewed list (`backend/src/main/resources/market/allow-list.json`),
+ *   by the same rule as the backend's AllowList.java: an entry counts only when
+ *   `included` is literally true and it has a `fortune500.rank` from 1 to 500, a `finra`
+ *   firm with a name and a CRD number, and at least one alias. Its aliases match as whole
+ *   words inside an employer name; the company's own `name` is not an alias (a name like
+ *   "Block" is too generic). `"included": false` is the list's own decision and is
+ *   counted as excluded, not ignored.
+ * - This tool's own format: `fortune500` and `finraRegulated` both literally true. The
+ *   name and aliases match a whole employer name, ignoring a trailing legal form.
+ *
+ * Anything else is ignored and counted.
+ * @returns {{names: Map<string, string>, phrases: {alias: string, name: string}[], accepted: number, ignored: number, excluded: number}}
+ *   `names` maps each normalised whole name or alias (own format) to the entry's display
+ *   name; `phrases` are the backend entries' whole-word aliases, in file order
  */
 export function parseAllowlist(raw) {
   const entries = Array.isArray(raw) ? raw : isObject(raw) ? raw.companies : undefined
@@ -97,21 +135,57 @@ export function parseAllowlist(raw) {
     throw new ConfigError('The company allow-list must be a list, or an object with a "companies" list.')
   }
   const names = new Map()
+  const phrases = []
   let accepted = 0
   let ignored = 0
+  let excluded = 0
   for (const entry of entries) {
-    if (!isObject(entry) || !isText(entry.name) || entry.fortune500 !== true || entry.finraRegulated !== true) {
+    if (!isObject(entry)) {
       ignored++
       continue
     }
     const aliases = Array.isArray(entry.aliases) ? entry.aliases.filter(isText) : []
+    if (isBackendEntry(entry)) {
+      if (entry.included === false) {
+        excluded++
+        continue
+      }
+      const words = [...new Set(aliases.map(normaliseEmployer).filter(Boolean))]
+      if (entry.included !== true || !isText(entry.name) || !hasBackendEvidence(entry) || words.length === 0) {
+        ignored++
+        continue
+      }
+      for (const alias of words) phrases.push({ alias, name: entry.name.trim() })
+      accepted++
+      continue
+    }
+    if (!isText(entry.name) || entry.fortune500 !== true || entry.finraRegulated !== true) {
+      ignored++
+      continue
+    }
     for (const spelling of [entry.name, ...aliases]) {
       const key = normaliseCompany(spelling)
       if (key) names.set(key, entry.name.trim())
     }
     accepted++
   }
-  return { names, accepted, ignored }
+  return { names, phrases, accepted, ignored, excluded }
+}
+
+/**
+ * The allow-listed company an employer name belongs to, or null. A backend entry matches
+ * when one of its aliases appears as whole words in the name ("Citi" and "Citi Group"
+ * for the alias "citi"; never "Citizens Bank"); an entry in this tool's format matches
+ * the whole name only.
+ * @param {ReturnType<typeof parseAllowlist>} allowlist
+ * @param {string} employer
+ * @returns {string | null} the entry's display name
+ */
+export function matchCompany(allowlist, employer) {
+  const whole = allowlist.names.get(normaliseCompany(employer))
+  if (whole) return whole
+  const padded = ` ${normaliseEmployer(employer)} `
+  return allowlist.phrases.find(({ alias }) => padded.includes(` ${alias} `))?.name ?? null
 }
 
 // ── which tracked jobs count ────────────────────────────────────────────────
@@ -138,7 +212,7 @@ export function selectJobs(jobs, { titles, allowlist, excludeStatuses = [] }) {
       skipped.status++
     } else if (!matchesTitle(job.title, titles)) {
       skipped.title++
-    } else if (!allowlist.names.has(normaliseCompany(job.company))) {
+    } else if (matchCompany(allowlist, job.company) === null) {
       skipped.company++
       companiesNotListed.set(job.company, (companiesNotListed.get(job.company) ?? 0) + 1)
     } else {

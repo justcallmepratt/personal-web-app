@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   assertSafeSuggestion,
   buildSuggestions,
@@ -8,7 +9,9 @@ import {
   extractSkills,
   filterAgainstQueue,
   matchesTitle,
+  matchCompany,
   normaliseCompany,
+  normaliseEmployer,
   parseAllowlist,
   parseDictionary,
   parseTitleRules,
@@ -103,6 +106,114 @@ test('allow-list: an entry counts only with both flags literally true', () => {
   assert.equal(parseAllowlist([{ name: 'X', fortune500: true, finraRegulated: true }]).accepted, 1)
   assert.throws(() => parseAllowlist({ firms: [] }), ConfigError)
   assert.throws(() => parseAllowlist('x'), ConfigError)
+})
+
+// ── the backend's reviewed list (backend/src/main/resources/market/allow-list.json) ──
+
+const RANKED = { rank: 24, year: 2026, source: 'x' }
+const MEMBER = [{ firm: 'EXAMPLE GLOBAL MARKETS INC.', crd: 7059, source: 'x' }]
+const backendEntry = (name, extra = {}) => ({ name, included: true, fortune500: RANKED, finra: MEMBER, aliases: [name.toLowerCase()], ...extra })
+
+test('backend list: an entry counts only when included with a rank, a FINRA firm with a CRD, and an alias', () => {
+  const list = parseAllowlist({
+    compiledOn: '2026-11-21',
+    companies: [
+      backendEntry('Complete'),
+      backendEntry('Left Out', { included: false, excludedReason: 'not a financial-services employer' }),
+      backendEntry('Truthy Included', { included: 'true' }),
+      backendEntry('No Included Flag', { included: undefined }),
+      backendEntry('No Fortune', { fortune500: undefined }),
+      backendEntry('No Rank', { fortune500: { year: 2026 } }),
+      backendEntry('Rank Zero', { fortune500: { rank: 0 } }),
+      backendEntry('Rank 501', { fortune500: { rank: 501 } }),
+      backendEntry('Rank As Text', { fortune500: { rank: '24' } }),
+      backendEntry('No Finra', { finra: [] }),
+      backendEntry('No Crd', { finra: [{ firm: 'EXAMPLE SECURITIES LLC' }] }),
+      backendEntry('No Firm Name', { finra: [{ firm: ' ', crd: 7059 }] }),
+      backendEntry('No Aliases', { aliases: [] }),
+      backendEntry('Blank Aliases', { aliases: [' ', '&'] }),
+      backendEntry('Aliases Missing', { aliases: undefined }),
+      backendEntry('', { aliases: ['nameless'] }),
+      backendEntry('Edge Of The List', { fortune500: { rank: 500 }, finra: [null, { firm: 'X' }, ...MEMBER] }),
+    ],
+  })
+  assert.equal(list.accepted, 2)
+  assert.equal(list.excluded, 1)
+  assert.equal(list.ignored, 14)
+  assert.deepEqual(list.phrases.map((p) => p.name), ['Complete', 'Edge Of The List'])
+  assert.equal(list.names.size, 0)
+})
+
+test('backend list: aliases match as whole words, and the company name is not an alias', () => {
+  const list = parseAllowlist({
+    companies: [
+      backendEntry('Citigroup', { aliases: ['citi', 'Citigroup'] }),
+      backendEntry('Block', { aliases: ['cash app', 'block, inc.'] }),
+      backendEntry('JPMorgan Chase', { aliases: ['j.p. morgan'] }),
+    ],
+  })
+  for (const employer of ['Citi', 'CITI', 'Citigroup Inc.', 'The Citi Group', 'Citi (New York)']) {
+    assert.equal(matchCompany(list, employer), 'Citigroup', employer)
+  }
+  for (const employer of ['Citizens Bank', 'Citibank', 'Citigroupe', 'Felicity', '', '&']) {
+    assert.equal(matchCompany(list, employer), null, employer)
+  }
+  // "Block" alone is too generic to be matched on, so only the listed aliases count.
+  assert.equal(matchCompany(list, 'Block'), null)
+  assert.equal(matchCompany(list, 'H&R Block'), null)
+  assert.equal(matchCompany(list, 'Block, Inc.'), 'Block')
+  assert.equal(matchCompany(list, 'Cash App'), 'Block')
+  // The other entries of the list keep their own names out, too.
+  assert.equal(matchCompany(list, 'JPMorgan Chase'), null)
+  assert.equal(matchCompany(list, 'J.P. Morgan Securities LLC'), 'JPMorgan Chase')
+  assert.equal(normaliseEmployer('  J.P. Morgan & Co. '), 'j p morgan co')
+})
+
+test('backend list: selection uses whole-word aliases', () => {
+  const list = parseAllowlist({ companies: [backendEntry('Northwind Financial Group', { aliases: ['northwind'] })] })
+  const { matching, companiesNotListed } = selectJobs(jobsFrom(JOBS), { titles, allowlist: list })
+  assert.ok(matching.length > 0)
+  assert.ok(matching.every((job) => /northwind/i.test(job.company)))
+  assert.ok(![...companiesNotListed.keys()].some((name) => /northwind/i.test(name)))
+})
+
+test('the real backend list loads and yields the companies the backend uses', () => {
+  const path = fileURLToPath(new URL('../../../backend/src/main/resources/market/allow-list.json', import.meta.url))
+  const raw = JSON.parse(readFileSync(path, 'utf8'))
+  const list = parseAllowlist(raw)
+
+  // AllowList.java's rule, written out again here so the two cannot drift unnoticed.
+  const usable = raw.companies.filter(
+    (e) =>
+      e.included === true &&
+      e.fortune500?.rank >= 1 &&
+      e.fortune500?.rank <= 500 &&
+      (e.finra ?? []).some((f) => f?.crd > 0 && f?.firm?.trim()) &&
+      (e.aliases ?? []).some((a) => /[a-z0-9]/i.test(a)),
+  )
+  assert.ok(usable.length > 20)
+  assert.deepEqual([...new Set(list.phrases.map((p) => p.name))], usable.map((e) => e.name))
+  assert.equal(list.accepted, usable.length)
+  assert.equal(list.excluded, raw.companies.filter((e) => e.included === false).length)
+  assert.equal(list.accepted + list.excluded + list.ignored, raw.companies.length)
+  // Every entry of the reviewed list is complete: nothing in it is dropped for missing evidence.
+  assert.equal(list.ignored, 0)
+
+  // The same employer names the backend's own test checks against the real file.
+  assert.equal(matchCompany(list, 'Citi'), 'Citigroup')
+  assert.equal(matchCompany(list, 'JPMorganChase'), 'JPMorgan Chase')
+  assert.equal(matchCompany(list, 'Wells Fargo Bank'), 'Wells Fargo')
+  assert.equal(matchCompany(list, 'First Citizens Bank'), 'First Citizens BancShares')
+  for (const other of [
+    'Chase Brass', 'Citizens Bank of Edmond', 'H&R Block', 'Fidelity Investments', 'Huntington Ingalls Industries',
+    'Lincoln Electric', 'Hartford HealthCare', "Nationwide Children's Hospital", 'Guardian Pharmacy', 'Pershing Square',
+    'Apollo Education', 'Prudential plc', 'Acme Software',
+  ]) {
+    assert.equal(matchCompany(list, other), null, other)
+  }
+  // An entry the list marks "included": false is not matched, whatever its aliases.
+  const leftOut = raw.companies.find((e) => e.included === false && e.aliases?.length > 0)
+  assert.equal(matchCompany(list, leftOut.aliases[0]), null)
 })
 
 test('the shipped data files load, and the shipped allow-list names no company', () => {

@@ -32,11 +32,11 @@ const TOOL_DIR = fileURLToPath(new URL('..', import.meta.url))
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 
 /**
- * Where the authoritative company list is expected once the job-market research work
- * adds it to the backend (relative to the repository root). Unconfirmed until that work
- * lands; --allowlist or JOBSYNC_ALLOWLIST names any other file.
+ * The backend's reviewed company list (relative to the repository root): the one list
+ * both suggestion sources use. It is read by the same rule as the backend's
+ * AllowList.java (see parseAllowlist). --allowlist or JOBSYNC_ALLOWLIST names any other file.
  */
-export const BACKEND_ALLOWLIST = 'backend/src/main/resources/target-companies.json'
+export const BACKEND_ALLOWLIST = 'backend/src/main/resources/market/allow-list.json'
 
 const HELP = `jobsync-importer: propose profile tech-stack suggestions from the jobs tracked in JobSync.
 
@@ -52,8 +52,9 @@ Usage: node bin/jobsync-importer.mjs [options]
                          GET /api/profile instead of calling the API.
   --file                 File the suggestions for real. Signs in once with
                          SITE_ADMIN_USERNAME and SITE_ADMIN_PASSWORD, or asks for them.
-  --allowlist <path>     Company allow-list. Default: the backend's list if present, else
-                         data/companies-allowlist.json. Also: JOBSYNC_ALLOWLIST.
+  --allowlist <path>     Company allow-list. Default: the backend's reviewed list
+                         (backend/src/main/resources/market/allow-list.json) if present,
+                         else data/companies-allowlist.json. Also: JOBSYNC_ALLOWLIST.
   --titles <path>        Target job titles. Default: data/target-titles.json.
   --skills <path>        Skills dictionary. Default: data/skills-dictionary.json.
   --min-jobs <n>         Propose a skill only when at least n matching jobs ask for it. Default 2.
@@ -229,8 +230,11 @@ export async function run(argv, io = {}) {
 
     out(filing ? 'Mode: FILING suggestions (--file).' : 'Mode: dry run. Nothing will be filed.')
     out(`Company allow-list: ${allowlistPath} (${allowlist.accepted} ${allowlist.accepted === 1 ? 'company' : 'companies'}).`)
+    if (allowlist.excluded > 0) {
+      out(`  ${allowlist.excluded} ${allowlist.excluded === 1 ? 'entry is' : 'entries are'} marked "included": false in the list and left out.`)
+    }
     if (allowlist.ignored > 0) {
-      out(`  ${allowlist.ignored} ${allowlist.ignored === 1 ? 'entry was' : 'entries were'} ignored: an entry counts only with a name and both "fortune500": true and "finraRegulated": true.`)
+      out(`  ${allowlist.ignored} ${allowlist.ignored === 1 ? 'entry was' : 'entries were'} ignored: an entry counts only with a name and either the backend list's evidence ("included": true, a "fortune500" rank from 1 to 500, a "finra" firm with a "crd", and an alias) or both "fortune500": true and "finraRegulated": true.`)
     }
 
     // ── JobSync ──

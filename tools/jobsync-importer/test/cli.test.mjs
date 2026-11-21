@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { after, test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import { BACKEND_ALLOWLIST, EXIT_FAILED, EXIT_OK, EXIT_USAGE, promptOnTerminal, run } from '../src/cli.mjs'
 import { ALLOWLIST, JOBS, makeManifest, mockApi, PROFILE, tempDir, writeBackup } from './helpers.mjs'
 
@@ -234,18 +235,40 @@ test('with the shipped, empty allow-list no company matches and nothing is propo
   assert.equal(server.requests.length, 0)
 })
 
-test('the backend\'s company list is used when it exists, otherwise the local one', async () => {
+test('the backend\'s reviewed company list is used when it exists, otherwise the local one', async () => {
   const server = await api()
   const { dir } = workspace()
   const repoRoot = tempDir()
+  assert.equal(BACKEND_ALLOWLIST, 'backend/src/main/resources/market/allow-list.json')
   const backendFile = join(repoRoot, BACKEND_ALLOWLIST)
   mkdirSync(dirname(backendFile), { recursive: true })
-  writeFileSync(backendFile, JSON.stringify(ALLOWLIST))
+  const evidence = { fortune500: { rank: 40, year: 2026 }, finra: [{ firm: 'NORTHWIND SECURITIES LLC', crd: 1234 }] }
+  writeFileSync(
+    backendFile,
+    JSON.stringify({
+      compiledOn: '2026-11-21',
+      companies: [
+        { name: 'Northwind', included: true, ...evidence, aliases: ['northwind'] },
+        { name: 'Meridian Capital', included: true, ...evidence, aliases: ['meridian capital'] },
+        { name: 'Halfway Holdings', included: false, ...evidence, aliases: ['halfway'], excludedReason: 'made up' },
+        { name: 'No Evidence', included: true, aliases: ['no evidence'] },
+      ],
+    }),
+  )
   const { code, out } = await cli(['--backup', dir, '--api-url', server.url], { repoRoot })
   assert.equal(code, EXIT_OK)
   assert.ok(out.includes(`Company allow-list: ${backendFile} (2 companies).`))
+  assert.match(out, /1 entry is marked "included": false in the list and left out/)
   assert.match(out, /1 entry was ignored/)
   assert.match(out, /Would file 3 suggestions/)
+
+  // The old, assumed location is no longer looked at.
+  const stale = tempDir()
+  const old = join(stale, 'backend/src/main/resources/target-companies.json')
+  mkdirSync(dirname(old), { recursive: true })
+  writeFileSync(old, JSON.stringify(ALLOWLIST))
+  const local = await cli(['--backup', dir, '--api-url', server.url], { repoRoot: stale })
+  assert.match(local.out, /data\/companies-allowlist\.json \(0 companies\)/)
 
   // A broken backend list stops the run; it does not fall back silently.
   writeFileSync(backendFile, '{ not json')
@@ -382,4 +405,19 @@ test('--min-jobs, --max and --exclude-status shape the result', async () => {
   const fewer = await cli([...base, '--exclude-status', 'archived', '--min-jobs', '4'])
   assert.match(fewer.out, /1 left out: in an excluded status/)
   assert.match(fewer.out, /Nothing to propose/)
+})
+
+test('in this repository the default list is the backend\'s reviewed one', async () => {
+  const server = await api()
+  const { dir } = workspace()
+  const repoRoot = fileURLToPath(new URL('../../..', import.meta.url))
+  const { code, out } = await cli(['--backup', dir, '--api-url', server.url], { repoRoot })
+  assert.equal(code, EXIT_OK)
+  const line = out.split('\n').find((l) => l.startsWith('Company allow-list: '))
+  assert.match(line, /backend\/src\/main\/resources\/market\/allow-list\.json \((\d+) companies\)\.$/)
+  assert.ok(Number(/\((\d+) companies/.exec(line)[1]) > 20)
+  assert.doesNotMatch(out, /ignored/)
+  // The made-up firms in the test backup are not real companies, so nothing matches.
+  assert.match(out, /No tracked job matches your targets/)
+  assert.equal(server.requests.length, 0)
 })
