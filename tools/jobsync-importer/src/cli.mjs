@@ -327,7 +327,6 @@ export async function run(argv, io = {}) {
     if (username === '' || password === '') throw new UsageError('A username and a password are both needed to file suggestions.')
 
     await client.signIn(username, password)
-    password = ''
     out('Signed in.')
 
     const existing = await client.listSuggestions()

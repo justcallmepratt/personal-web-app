@@ -172,6 +172,7 @@ export const PROFILE = {
 export async function mockApi(routes) {
   const requests = []
   const calls = new Map()
+  const table = new Map(Object.entries(routes))
   const server = createServer((req, res) => {
     const chunks = []
     req.on('data', (chunk) => chunks.push(chunk))
@@ -180,7 +181,9 @@ export async function mockApi(routes) {
       const key = `${req.method} ${req.url}`
       const request = { method: req.method, url: req.url, key, headers: req.headers, text, body: text ? JSON.parse(text) : undefined }
       requests.push(request)
-      let route = routes[key]
+      // A Map lookup: the key comes from the request, and must only ever find a route
+      // the test defined, never something inherited from Object.prototype.
+      let route = table.get(key)
       if (Array.isArray(route)) {
         const n = calls.get(key) ?? 0
         calls.set(key, n + 1)

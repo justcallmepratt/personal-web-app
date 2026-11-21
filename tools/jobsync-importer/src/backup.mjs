@@ -6,7 +6,7 @@
 // a zip holding manifest.json and data.json. data.json has one array per table; a Job row
 // points at its title and company by id, and its tags travel as id pairs in _JobToTag.
 
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { closeSync, fstatSync, openSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { readEntry, ZipError } from './zip.mjs'
 
@@ -107,15 +107,20 @@ function parseJson(text, what) {
  */
 export function loadBackup(path) {
   let bytes
+  let fd = null
   try {
-    const stats = statSync(path)
-    if (stats.size > MAX_FILE_BYTES) {
+    // One read-only handle for both the size check and the read, so the file that is
+    // measured is the file that is loaded even if the path is replaced in between.
+    fd = openSync(path, 'r')
+    if (fstatSync(fd).size > MAX_FILE_BYTES) {
       throw new BackupError('unreadable', `${path} is larger than ${MAX_FILE_BYTES} bytes; refusing to load it.`)
     }
-    bytes = readFileSync(path)
+    bytes = readFileSync(fd)
   } catch (error) {
     if (error instanceof BackupError) throw error
     throw fileProblem(path, error)
+  } finally {
+    if (fd !== null) closeSync(fd)
   }
   if (bytes.length === 0) throw new BackupError('not_a_backup', `${path} is empty.`)
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { chmodSync, mkdirSync, readFileSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { chmodSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { BackupError, htmlToText, loadBackup, readJobs, resolveBackupPath } from '../src/backup.mjs'
@@ -48,10 +48,20 @@ test('reads a zip whose entries are stored uncompressed, and a bare data.json', 
 
 test('reading leaves the backup untouched', () => {
   const path = writeBackup(tempDir(), JOBS)
-  const before = { bytes: readFileSync(path), mtime: statSync(path).mtimeMs }
+  // Contents and modification time from one handle, so both describe the same file.
+  const snapshot = () => {
+    const fd = openSync(path, 'r')
+    try {
+      return { bytes: readFileSync(fd), mtime: fstatSync(fd).mtimeMs }
+    } finally {
+      closeSync(fd)
+    }
+  }
+  const before = snapshot()
   readJobs(loadBackup(resolveBackupPath(path)).data)
-  assert.ok(readFileSync(path).equals(before.bytes))
-  assert.equal(statSync(path).mtimeMs, before.mtime)
+  const after = snapshot()
+  assert.ok(after.bytes.equals(before.bytes))
+  assert.equal(after.mtime, before.mtime)
 })
 
 test('a folder means the newest jobsync-backup-*.zip in it', () => {
