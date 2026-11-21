@@ -67,7 +67,7 @@ describe('resume PDF from the site content', () => {
     for (const expected of [
       'Backend Software Developer at Raymond James', 'Tampa, FL', 'Jul 2024 – Present',
       'B.S. in Computer Science', 'Business Management', 'Kafka Producer & Consumer Demo',
-      'Microsoft Technology Associate', 'Co-founder and Vice President', 'Jan 2018 – May 2020',
+      'Microsoft Technology Associate', 'Mentor for new post-college associates',
     ]) {
       expect(text).toContain(expected)
     }

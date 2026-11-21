@@ -61,10 +61,9 @@ describe('site content', () => {
     ])
   })
 
-  it('lists only the two known leadership roles, with no invented end date or description', () => {
+  it('lists only the one leadership role the owner asked for, with no invented dates or description', () => {
     expect(leadership).toEqual([
-      { id: 1, role: 'Co-founder and Vice President', organization: 'UMass F1 Club', startDate: '2023-01', sortOrder: 1 },
-      { id: 2, role: 'Team Lead', organization: 'Robotics team', startDate: '2018-01', endDate: '2020-05', sortOrder: 2 },
+      { id: 1, role: 'Mentor for new post-college associates', organization: 'Raymond James', sortOrder: 1 },
     ])
   })
 
