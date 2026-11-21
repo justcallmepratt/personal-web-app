@@ -21,6 +21,9 @@ const FAILURES: Record<FailureKind, { status: number; error: string }> = {
   rate_limited: { status: 429, error: 'Too many sign-in attempts. Wait before trying again.' },
   unavailable: { status: 503, error: 'The API is temporarily unavailable. It may be restarting; try again in a moment.' },
   not_found: { status: 404, error: 'That message no longer exists.' },
+  invalid: { status: 400, error: 'The API refused those values.' },
+  conflict: { status: 409, error: 'The content has changed since this suggestion was made, so it was not applied.' },
+  refused: { status: 409, error: 'The API refused that for the current state of the suggestion.' },
   error: { status: 502, error: 'The API reported an error.' },
 }
 
@@ -29,8 +32,9 @@ export function errorResponse(
   status: number,
   error: string,
   retryAfter?: number,
+  extra: Pick<ErrorBody, 'currentValue'> = {},
 ): NextResponse {
-  const body: ErrorBody = retryAfter === undefined ? { error, kind } : { error, kind, retryAfter }
+  const body: ErrorBody = { error, kind, ...(retryAfter === undefined ? {} : { retryAfter }), ...extra }
   return Res.json(body, {
     status,
     headers: {
@@ -43,7 +47,14 @@ export function errorResponse(
 /** Maps a failed API call to this app's reply; an expired session also clears the cookie. */
 export function failureResponse(failure: Extract<BackendResult<unknown>, { ok: false }>): NextResponse {
   const { status, error } = FAILURES[failure.kind]
-  const res = errorResponse(failure.kind, status, error, failure.retryAfterSeconds)
+  const res = errorResponse(
+    failure.kind,
+    status,
+    // The API explains its own refusals (which value, which limit); pass that on.
+    failure.message ?? error,
+    failure.retryAfterSeconds,
+    failure.kind === 'conflict' ? { currentValue: failure.currentValue ?? null } : {},
+  )
   if (failure.kind === 'unauthorized') res.cookies.set(clearedSessionCookie())
   return res
 }
@@ -70,4 +81,27 @@ export function crossOrigin(request: Request): NextResponse | null {
   }
   if (originHost && hosts.includes(originHost)) return null
   return errorResponse('forbidden', 403, 'Cross-origin request refused.')
+}
+
+/**
+ * Reads a JSON request body of at most `maxBytes`. Returns the parsed value, or
+ * the reply to send instead (413 for an oversized body, 400 for anything that
+ * is not JSON).
+ */
+export async function readJsonBody(
+  request: Request,
+  maxBytes: number,
+): Promise<{ ok: true; body: unknown } | { ok: false; response: NextResponse }> {
+  const tooLarge = () => ({ ok: false as const, response: errorResponse('too_large', 413, 'Request too large.') })
+  // Refuse oversized bodies before reading them.
+  const declared = Number(request.headers.get('content-length') ?? 0)
+  if (!Number.isFinite(declared) || declared > maxBytes) return tooLarge()
+  try {
+    const text = await request.text()
+    // Content-Length can be absent (chunked); check what actually arrived too.
+    if (new TextEncoder().encode(text).length > maxBytes) return tooLarge()
+    return { ok: true, body: JSON.parse(text) }
+  } catch {
+    return { ok: false, response: errorResponse('bad_request', 400, 'Invalid request.') }
+  }
 }

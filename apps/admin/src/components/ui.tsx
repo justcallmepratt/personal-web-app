@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import Link from 'next/link'
 
 // Small copies of the public site's primitives (frontend/src/components). They
 // move to a shared package when the monorepo is set up.
@@ -28,6 +29,19 @@ export function NeonButton({
     >
       {children}
     </button>
+  )
+}
+
+/** Navigation between the admin pages. Not prefetched: every page here is private and per-request. */
+export function NavLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      prefetch={false}
+      className="inline-flex min-h-[44px] items-center px-2 text-xs uppercase tracking-[0.25em] text-cp-teal underline-offset-4 hover:underline"
+    >
+      {children}
+    </Link>
   )
 }
 
