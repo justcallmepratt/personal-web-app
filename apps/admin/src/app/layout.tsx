@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Rajdhani, Orbitron, Share_Tech_Mono } from 'next/font/google'
+import SiteHeader from '@/components/SiteHeader'
 import './globals.css'
 
 const rajdhani = Rajdhani({
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${rajdhani.variable} ${orbitron.variable} ${shareTechMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-cp-dark text-cp-text">
+        <SiteHeader />
         <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">{children}</main>
       </body>
     </html>
