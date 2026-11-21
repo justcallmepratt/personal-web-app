@@ -32,6 +32,13 @@ person can ship, and I can reach them". Work is judged against that.
 - **Backend deployed on Railway** (`personal-web-app-api`), healthy, and read by the
   production site (`BACKEND_URL`) with `frontend/src/content/index.ts` as the fallback;
   the database holds the real profile, projects and experience.
+- **Content suggestions, the foundation** (PR #78): suggest-and-approve for profile,
+  experience and project content. Tools may only propose; a change reaches the site when
+  the owner accepts it at `/admin/suggestions` (before/after view, conflict check, history).
+  Suggestions are created by hand for now. Needs the one-time migration in
+  [DEPLOYMENT.md](DEPLOYMENT.md#content-suggestions-run-the-migration-before-merging)
+  run before the merge. Accepted changes show within the hour;
+  `frontend/src/content/index.ts` (the fallback) is not updated by it.
 - **Backend persistence tests** against real PostgreSQL in the required backend CI job;
   branch protection requires the backend, frontend and admin jobs.
 
@@ -50,6 +57,8 @@ person can ship, and I can reach them". Work is judged against that.
 6. **WP-F case-study projects.**
 7. **WP-L market research (phase 12)**, wanted, not started; after admin is live.
 8. **WP-J monorepo move**, later, in a quiet window.
+9. **WP-M suggestion sources**, later: automatic sources that write to the suggestions
+   pipeline and nothing else (see Work packages).
 
 ## Security follow-ups
 
@@ -94,7 +103,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | 10 Credits | Done | WP-C. |
 | 11 Job tracker | Dropped | Owner uses the external tool [JobSync](https://github.com/Gsync/jobsync), run separately; nothing from this phase is in the repository. |
 | 12 Market research | Wanted, not started | Weekly Adzuna pull, admin-only, simple scheduler (RESEARCH.md 2.4). Needs backend and admin deployed, Adzuna keys. WP-L. |
-| 13 Resume updater | Dropped | The redeploy hook is unnecessary and market-driven edits invite overstating. |
+| 13 Resume updater | Dropped as written; replaced | The brief applied changes too freely. Its useful part is rebuilt as content suggestions (done, PR #78): nothing is applied without the owner's accept. Automatic sources are WP-M. |
 | 14 LinkedIn sync | Dropped | Content was updated by hand in WP-E. |
 | 15 Benchmarking | Done, redesigned | Built as the GitHub activity section (WP-G); peers, table and backend endpoints were never built. |
 | 16 Pro-dev dashboard | Dropped | Depended on 12 and 15 as written. |
@@ -115,6 +124,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | WP-I Admin deploy | Ready, waiting on the owner | The app handles every answer the live API gives (sign-in off, wrong password, rate limit, expired session, outages) and runs on its own Vercel address without the microfrontends group. Checked against the live API as far as possible without a password (2026-11-21). Remaining, owner only: [Turn on admin](DEPLOYMENT.md#turn-on-admin) (create the Vercel project, set `ADMIN_PASSWORD_HASH`, sign in); optional `/admin` route on the main domain (`frontend/microfrontends.json` lists only `frontend` today). Username `psachan`; rate limits 5 per client and 30 overall per 15 minutes. |
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |
+| WP-M Suggestion sources | Later, not started | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): the owner's separately run job tracker; not installed and no integration exists. **Market research** (`market-research`): depends on WP-L. Each needs a way to call the API without the owner's browser session (a scoped credential, not built), and rules against overstating: suggestions must be grounded in facts the owner has confirmed. |
 | WP-L Market research | Wanted, not started | Adzuna client, weekly scheduler, table in `supabase/init.sql` and `PostgresPersistenceTest`, admin insights page. Databricks is deferred. |
 
 ## Decisions
@@ -134,3 +144,4 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | 11 | Public GitHub comparison page | **Answered** | Replaced by the GitHub activity section (done). |
 | 12 | `Admin — Node 22 / pnpm` as a required check | **Answered** | Already required. |
 | 13 | Make `Kafka — Node 22 / pnpm` a required check | **Open** | Runs on every PR but is not required. |
+| 14 | How tools may change resume and profile content | **Answered** (2026-11-21) | Suggest-and-approve only: tools propose, nothing is public until the owner accepts it in the admin app. |

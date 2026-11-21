@@ -116,7 +116,7 @@ apps.
 ## Admin — Next.js 16 (TypeScript, Tailwind 4)
 
 `apps/admin` is a self-contained app with its own `package.json` and lockfile: admin
-sign-in and the contact-message inbox, served under `/admin/*`. Ready but not deployed (no
+sign-in, the contact-message inbox and the content-suggestions page, served under `/admin/*`. Ready but not deployed (no
 Vercel project, and sign-in is off until `ADMIN_PASSWORD_HASH` is set on the API); see
 [DEPLOYMENT.md](DEPLOYMENT.md#turn-on-admin). `apps/admin/AGENTS.md` applies here too.
 `apps/kafka/AGENTS.md` likewise.
@@ -128,24 +128,28 @@ apps/admin/src/
 │   ├── globals.css                   → Theme tokens copied from frontend/
 │   └── admin/
 │       ├── page.tsx                  → Inbox; redirects to login without a session
+│       ├── suggestions/page.tsx      → Content suggestions (pending, history, create form)
 │       ├── login/page.tsx            → Sign-in form
 │       ├── loading.tsx, error.tsx
 │       └── api/
 │           ├── session/route.ts          → POST sign in (sets cookie), DELETE sign out
 │           ├── session/expired/route.ts  → GET: clear cookie, redirect to login
 │           ├── messages/route.ts         → GET list
-│           └── messages/[id]/read/route.ts → PATCH toggle read
+│           ├── messages/[id]/read/route.ts → PATCH toggle read
+│           ├── suggestions/route.ts      → GET list (?status=), POST create
+│           ├── suggestions/targets/route.ts → GET rows and fields that may be changed
+│           └── suggestions/[id]/[decision]/route.ts → POST accept | reject
 │
 ├── components/
-│   ├── Inbox.tsx, LoginForm.tsx      → Client components
-│   └── ui.tsx                        → NeonButton, Panel, TerminalInput, Notice
+│   ├── Inbox.tsx, LoginForm.tsx, Suggestions.tsx → Client components
+│   └── ui.tsx                        → NeonButton, NavLink, Panel, TerminalInput, Notice
 │
 ├── lib/
 │   ├── backend.ts                    → Server-only: every call to the API (timeout,
 │   │                                   response validation, failure kinds)
 │   ├── session.ts                    → Server-only: session cookie options
 │   ├── http.ts                       → Server-only: handler replies, origin check
-│   ├── messages.ts, types.ts         → Shared by server and client
+│   ├── messages.ts, suggestions.ts, types.ts → Shared by server and client
 │   ├── client.ts                     → Browser side: request timeout, error and wait text
 │
 └── test/                             → Vitest + React Testing Library
@@ -162,6 +166,19 @@ apps/admin/src/
 4. **No `public/` directory** (see DEPLOYMENT.md). UI primitives and theme tokens are
    copies of the ones in `frontend/` until a shared package exists.
 5. Checks before pushing: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`.
+
+### Suggestions page
+
+`/admin/suggestions` (linked from the inbox) is the only place profile and resume content
+is changed through tools; see [Content suggestions](#content-suggestions-suggest-and-approve).
+It lists pending suggestions with the value before and after, the reason and the source;
+Accept asks for confirmation, Reject does not. When the API refuses an accept because the
+content changed since the suggestion was made, the card shows that and the value on the
+site now, and nothing is applied. History shows decided suggestions. The form creates a
+suggestion by hand (source `manual`) and only offers the rows and fields the API allows.
+The handlers follow the messages handlers: session token from the cookie, 8 s timeout, a
+64 KB body limit, same-origin check, 401/403 from the API treated as signed out, and the
+API's own message passed on for a 400, 404 or 409.
 
 ## Backend — Spring Boot 4.1 (Java 21)
 
@@ -182,11 +199,14 @@ backend/src/main/java/com/resume/
 │   ├── ContactController         → POST /api/contact, GET /api/contact/validate-email
 │   └── AdminController           → POST /api/admin/auth/login,
 │                                   GET /api/admin/messages, PATCH /api/admin/messages/{id}/read
+│   └── SuggestionController      → /api/admin/suggestions (see Content suggestions below)
 ├── service/                      → Profile, Project, Experience, Contact,
-│                                   EmailValidation, RateLimit
-├── repository/                   → Profile, Project, Experience, Message (Spring Data JPA)
-├── model/                        → Profile, Project, Experience, Message, Skill
-├── dto/                          → ApiResponse, ContactRequest, LoginRequest
+│                                   EmailValidation, RateLimit,
+│                                   Suggestion (the flow), SuggestionFields (the whitelist)
+├── repository/                   → Profile, Project, Experience, Message, ContentSuggestion (Spring Data JPA)
+├── model/                        → Profile, Project, Experience, Message, Skill, ContentSuggestion
+├── dto/                          → ApiResponse, ContactRequest, LoginRequest,
+│                                   SuggestionRequest, SuggestionResponse, SuggestionTarget
 └── security/                     → JwtFilter, JwtUtil, LoginRateLimiter (admin sign-in: 5 per client and
                                     30 overall per 900 s by default; `ADMIN_LOGIN_*`)
 ```
@@ -195,6 +215,48 @@ Contact messages are guarded in layers: `EmailValidationService` rejects disposa
 providers (a blocklist) and domains with no MX record (422), and `RateLimitService`
 allows 3 submissions per hour per address by default (429; `CONTACT_RATE_LIMIT_MAX`,
 `CONTACT_RATE_LIMIT_WINDOW`). `GET /api/contact/validate-email` exposes the first two.
+
+### Content suggestions (suggest-and-approve)
+
+The owner's rule (2026-11-21): tools may change profile and resume content only by
+proposing; nothing reaches the public site until the owner accepts it in the admin app.
+
+A suggestion is one proposed value for one field of one row, stored in
+`content_suggestions` with the value the field held when it was proposed. States:
+`pending`, then `accepted`, `rejected` or `superseded` (another suggestion for the same
+field was accepted first); a decided suggestion never changes again.
+
+All endpoints are under `/api/admin/**` and need the admin JWT (403 without it):
+
+| Endpoint | Does |
+|---|---|
+| `GET /api/admin/suggestions?status=` | List, newest first, at most 200; no status means all |
+| `GET /api/admin/suggestions/targets` | The rows and fields that may be changed, with live values |
+| `GET /api/admin/suggestions/{id}` | One suggestion |
+| `POST /api/admin/suggestions` | Create a pending suggestion (201). Body: `targetType`, `targetId` (optional for `profile`), `field`, `proposedValue` (text, or an array of text), `reason`, `source` (default `manual`) |
+| `POST /api/admin/suggestions/{id}/accept` | Apply that one field and mark it accepted, in one transaction |
+| `POST /api/admin/suggestions/{id}/reject` | Mark it rejected; nothing else changes |
+
+- **Whitelist** (`SuggestionFields`): profile `name`, `tagline`, `bio`, `location`,
+  `techStack`; experience `company`, `role`, `location`, `description`, `highlights`,
+  `technologies`; project `title`, `description`, `longDescription`, `tags`, `stack`.
+  Everything else is refused, including the contact email, URLs, socials, skills (objects
+  with a level), dates, flags and sort order. To allow another field, add one line there.
+- **Validation** mirrors the columns: 255 characters for the `VARCHAR(255)` fields, 10,000
+  for `TEXT` fields, required fields cannot be blank; a list is at most 50 distinct,
+  non-blank items of up to 255 characters. A reason (up to 500 characters) is required. A
+  value equal to the current one, or a copy of a pending suggestion, is refused.
+- **Accept** locks the suggestion and the target row, and applies the change only if the
+  field still holds the recorded value. Otherwise it answers 409 with `code: "conflict"`
+  and `currentValue` (the live value) and writes nothing. The stored value is validated
+  again at this point, so a row written by another tool cannot bypass the whitelist.
+- **Errors** are `{"error": text, "code": code}`: `invalid` (400), `not_found` (404), and
+  409 `conflict`, `not_pending`, `target_missing` (the row was deleted) or `duplicate`.
+- **After an accept** the public site shows the change at its next hourly re-render.
+  `frontend/src/content/index.ts`, the site's fallback when the API is down, is **not**
+  updated by this flow: bring it in step by hand after accepting a change.
+- Nothing creates suggestions automatically yet. The form in the admin app is the only
+  source; JobSync and market research are later work ([ROADMAP.md](ROADMAP.md)).
 
 Profiles: `dev` (Supabase Postgres via `SUPABASE_DB_PASSWORD`), `docker`
 (`SPRING_DATASOURCE_*`), `test` (H2 in memory). Hibernate runs with
@@ -208,8 +270,11 @@ tables. `persistence/PostgresPersistenceTest` covers them: Testcontainers starts
 PostgreSQL 15 (the major version in `docker-compose.yml`), `supabase/init.sql` is run
 unchanged, the application starts with Hibernate in `validate` mode, and the test
 round-trips each entity, checks the JSONB columns and indexes, and calls every
-repository query method. It needs Docker and is skipped with a message without it; CI
-fails if it is skipped. Any new table or entity should get a case there. `mvn verify`
+repository query method. `persistence/PostgresSuggestionTest` does the same for
+`content_suggestions` and the suggestion flow (accept applies the change, conflict, reject,
+requests without a token refused) and checks that the migration file builds the same
+table as `init.sql`. Both need Docker and are skipped with a message without it; CI
+fails if either is skipped. Any new table or entity should get a case there. `mvn verify`
 also enforces the JaCoCo gate (95% instructions).
 
 The `dev` profile's default datasource host is Supabase's direct host
@@ -220,7 +285,12 @@ The `dev` profile's default datasource host is Supabase's direct host
 ## Database — Postgres (backend only)
 
 Schema: [`supabase/init.sql`](../supabase/init.sql), applied automatically by
-`docker compose` and already applied to the Supabase project the API uses. Tables: `profile`, `projects`, `experience`, `messages`. List-like
+`docker compose` and already applied to the Supabase project the API uses. Tables: `profile`, `projects`, `experience`, `messages`,
+and `content_suggestions` (proposed content changes; values stored as JSON text; row level
+security on with no policies, so Supabase's public Data API cannot reach it). A change to
+the schema of a live database goes in `supabase/migrations/` as an idempotent file the
+owner runs once, **before** the code that needs it is merged (see
+[DEPLOYMENT.md](DEPLOYMENT.md#content-suggestions-run-the-migration-before-merging)). List-like
 fields (`tech_stack`, `skills`, `tags`, `stack`, `highlights`, `technologies`,
 `socials`) are `JSONB`; `tags`, `stack`, `technologies` and `skills` have GIN indexes.
 The `DEFAULT '[]'` on those columns does not apply to rows written through JPA
