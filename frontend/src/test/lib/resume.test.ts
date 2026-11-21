@@ -74,8 +74,8 @@ describe('resume from the repo content', () => {
     expect(education[0].year).toBeUndefined()
     expect(section(data, 'education')?.entries).toEqual([
       expect.objectContaining({
-        title: 'B.S. in Computer Science',
-        subtitle: 'University of Massachusetts Amherst · College of Information and Computer Sciences',
+        title: "Bachelor's in Computer Science",
+        subtitle: 'University of Massachusetts Amherst',
         date: undefined,
         details: [{ label: 'Minor', value: 'Business Management' }],
       }),
@@ -85,8 +85,7 @@ describe('resume from the repo content', () => {
   it('dates leadership from the content and never marks it ongoing by itself', () => {
     expect(leadership.every((l) => l.current === undefined)).toBe(true)
     expect(section(data, 'leadership')?.entries.map((e) => [e.title, e.subtitle, e.date])).toEqual([
-      ['Co-founder and Vice President', 'UMass F1 Club', 'Jan 2023'],
-      ['Team Lead', 'Robotics team', 'Jan 2018 – May 2020'],
+      ['Mentor for new post-college associates', 'Raymond James', undefined],
     ])
   })
 

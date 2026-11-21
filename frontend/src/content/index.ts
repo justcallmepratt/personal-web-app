@@ -19,7 +19,7 @@ export const profile: Profile = {
   tagline: 'Backend Software Developer at Raymond James',
   bio:
     'Backend developer in Tampa, FL, working with Java, Spring Boot and Kafka at Raymond James since July 2024. ' +
-    'I studied Computer Science (B.S.) with a minor in Business Management at the University of Massachusetts Amherst, ' +
+    'I have a bachelor\'s in Computer Science with a minor in Business Management from the University of Massachusetts Amherst, ' +
     'where I co-founded the UMass F1 club and was its vice president.',
   email: '',
   location: 'Tampa, FL',
@@ -159,8 +159,11 @@ export const experience: Experience[] = [
     endDate: null,
     current: true,
     description:
-      'Entry-level backend developer role, working with Spring Boot and Java (Amazon Corretto), Kafka and Confluent Kafka, SQL databases, and Splunk and Dynatrace.',
-    highlights: [],
+      'Application developer working with Spring Boot and Java (Amazon Corretto), Kafka and Confluent Kafka, SQL databases, and Splunk and Dynatrace.',
+    highlights: [
+      'Worked on a publish-subscribe Kafka service supporting a legacy database',
+      'Worked with data-intensive applications',
+    ],
     technologies: [
       'Java (Amazon Corretto)', 'Spring', 'Spring Boot', 'Kafka', 'Confluent Kafka',
       'Oracle SQL Developer', 'Microsoft SQL Server', 'Splunk', 'Dynatrace',
@@ -213,10 +216,9 @@ export const certifications: Certification[] = [
 export const education: Education[] = [
   {
     id: 1,
-    degree: 'B.S. in Computer Science',
+    degree: "Bachelor's in Computer Science",
     minor: 'Business Management',
     institution: 'University of Massachusetts Amherst',
-    school: 'College of Information and Computer Sciences',
     sortOrder: 1,
   },
 ]
@@ -226,17 +228,8 @@ export const education: Education[] = [
 export const leadership: Leadership[] = [
   {
     id: 1,
-    role: 'Co-founder and Vice President',
-    organization: 'UMass F1 Club',
-    startDate: '2023-01',
+    role: 'Mentor for new post-college associates',
+    organization: 'Raymond James',
     sortOrder: 1,
-  },
-  {
-    id: 2,
-    role: 'Team Lead',
-    organization: 'Robotics team',
-    startDate: '2018-01',
-    endDate: '2020-05',
-    sortOrder: 2,
   },
 ]

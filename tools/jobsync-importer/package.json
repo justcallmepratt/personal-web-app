@@ -1,0 +1,17 @@
+{
+  "name": "jobsync-importer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reads a JobSync backup read-only and proposes profile tech-stack suggestions through the site's admin suggestion endpoints. Dry run by default.",
+  "type": "module",
+  "bin": {
+    "jobsync-importer": "bin/jobsync-importer.mjs"
+  },
+  "scripts": {
+    "start": "node bin/jobsync-importer.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

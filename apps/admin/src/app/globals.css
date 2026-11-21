@@ -11,6 +11,7 @@
   --color-cp-border: #1E2235;
   --color-cp-muted: #4A4F6A;
   --color-cp-text: #C8CDD8;
+  --color-cp-focus: #FFFFFF;
 
   --font-ui: var(--font-ui), Rajdhani, sans-serif;
   --font-display: var(--font-display), Orbitron, sans-serif;
@@ -35,4 +36,13 @@ body {
 
 .hud-clip {
   clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+}
+
+/* Keyboard focus ring, matching the public site (frontend/src/app/globals.css).
+   In the base layer so a utility class can still opt out where needed. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-cp-focus);
+    outline-offset: 3px;
+  }
 }

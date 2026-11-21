@@ -54,6 +54,13 @@ person can ship, and I can reach them". Work is judged against that.
   only if they have that experience. Built and **off**: needs the one-time migration in
   [DEPLOYMENT.md](DEPLOYMENT.md#market-research-run-the-migration-before-merging) before
   the merge, then Adzuna keys and a flag on Railway. Not run against the real API yet.
+- **JobSync importer** (WP-M, first source): `tools/jobsync-importer`, a local
+  command-line tool that reads a JobSync backup and proposes tech-stack additions with
+  source `jobsync`; dry run by default. Built from JobSync's source and tested on synthetic
+  data: not yet run against a real JobSync or the live API. Its company allow-list ships
+  empty, so it proposes nothing until it is pointed at a list (the reviewed one now exists
+  in the backend, in a different place and format: see WP-M). See
+  [JOBSYNC_IMPORTER.md](JOBSYNC_IMPORTER.md).
 - **Backend persistence tests** against real PostgreSQL in the required backend CI job;
   branch protection requires the backend, frontend and admin jobs.
 
@@ -76,8 +83,11 @@ person can ship, and I can reach them". Work is judged against that.
    once by hand, fix the allow-list names the first log flags, and decide whether CBRE
    and JLL count. Needs admin live, for the manual trigger and to decide suggestions.
 8. **WP-J monorepo move**, later, in a quiet window.
-9. **WP-M suggestion sources**, later: automatic sources that write to the suggestions
-   pipeline and nothing else (see Work packages).
+9. **WP-M suggestion sources**: the JobSync importer is built; to use it the owner installs
+   JobSync, turns on admin, and a company allow-list has to exist
+   ([JOBSYNC_IMPORTER.md](JOBSYNC_IMPORTER.md)); the reviewed list now exists in the
+   backend and the tool still has to be pointed at it (see Work packages). Market research
+   as a source is built (item 7).
 
 ## Security follow-ups
 
@@ -143,7 +153,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | WP-I Admin deploy | Ready, waiting on the owner | The app handles every answer the live API gives (sign-in off, wrong password, rate limit, expired session, outages) and runs on its own Vercel address without the microfrontends group. Checked against the live API as far as possible without a password (2026-11-21). Remaining, owner only: [Turn on admin](DEPLOYMENT.md#turn-on-admin) (create the Vercel project, set `ADMIN_PASSWORD_HASH`, sign in); optional `/admin` route on the main domain (`frontend/microfrontends.json` lists only `frontend` today). Username `psachan`; rate limits 5 per client and 30 overall per 15 minutes. |
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |
-| WP-M Suggestion sources | Later, not started | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): the owner's separately run job tracker; not installed and no integration exists. **Market research** (`market-research`): done as WP-L; it runs inside the API, so it needs no credential. An outside source still needs a way to call the API without the owner's browser session (a scoped credential, not built), and rules against overstating: suggestions must be grounded in facts the owner has confirmed. |
+| WP-M Suggestion sources | JobSync source and market research built; neither run for real yet | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): built as `tools/jobsync-importer` ([guide](JOBSYNC_IMPORTER.md)), run by the owner on their machine with the admin password asked for at run time, so no scoped credential was needed. Remaining: owner installs JobSync (not installed as of 2026-11-21) and turns on admin; a company allow-list (Fortune 500 and FINRA-regulated) must exist, since the tool's own ships empty and it reads the backend's when present. **Not joined up yet:** the tool looks for `backend/src/main/resources/target-companies.json` in its own format, while WP-L's reviewed list is `backend/src/main/resources/market/allow-list.json` (63 companies, with evidence) in another; the tool should read that file, rather than a second copy being kept; first run against a real JobSync backup and the live API; optionally a direct read-only database reader so no weekly download is needed. **Market research** (`market-research`): built as WP-L; it runs inside the API and creates suggestions through the same service, so it needs no credential. Rule for every source: a suggestion may say what the evidence shows and ask; it must not assert anything the owner has not confirmed. |
 | WP-L Market research | Built, off, waiting on the owner | Owner: run the migration before merging, register for Adzuna keys, set `MARKET_RESEARCH_ENABLED`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` on Railway ([DEPLOYMENT.md](DEPLOYMENT.md#turn-on-market-research)). Then: check Adzuna's real rate limits in the dashboard, correct allow-list search names after the first run (never checked against Adzuna), decide on CBRE and JLL, review the list yearly. Expect few forward deployed engineer listings: a role needs 30 in a week before it produces suggestions. Not built: a page for the summary in the admin app (the API has `GET /api/admin/market-research/latest`), trends across weeks, salaries. Databricks is deferred. |
 
 ## Decisions

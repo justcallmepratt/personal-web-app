@@ -1,0 +1,24 @@
+{
+  "note": "Job titles the importer considers. Edit freely. A title matches when it contains one of the 'include' phrases as whole words and none of the 'exclude' phrases. Case, punctuation and hyphens are ignored, so 'Forward-Deployed Engineer' matches 'forward deployed engineer' and 'Senior Software Engineer II' matches 'software engineer'.",
+  "include": [
+    "software developer",
+    "software engineer",
+    "software development engineer",
+    "application developer",
+    "applications developer",
+    "backend developer",
+    "backend engineer",
+    "back end developer",
+    "back end engineer",
+    "java developer",
+    "java engineer",
+    "forward deployed engineer",
+    "forward deployed software engineer"
+  ],
+  "exclude": [
+    "manager",
+    "director",
+    "intern",
+    "internship"
+  ]
+}

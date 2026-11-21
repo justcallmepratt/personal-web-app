@@ -289,9 +289,10 @@ All endpoints are under `/api/admin/**` and need the admin JWT (403 without it):
 - **After an accept** the public site shows the change at its next hourly re-render.
   `frontend/src/content/index.ts`, the site's fallback when the API is down, is **not**
   updated by this flow: bring it in step by hand after accepting a change.
-- Two things create suggestions: the form in the admin app (source `manual`) and the
-  weekly market research (source `market-research`, next section), which is off until the
-  owner turns it on. JobSync is later work ([ROADMAP.md](ROADMAP.md)).
+- Sources: the form in the admin app (`manual`); the
+  [JobSync importer](#tools--toolsjobsync-importer) (`jobsync`), which the owner runs on
+  their own machine; and the weekly market research (`market-research`, next section),
+  which runs inside the API and is off until the owner turns it on.
 
 ### Market research (weekly, suggestions only)
 
@@ -394,11 +395,54 @@ fields (`tech_stack`, `skills`, `tags`, `stack`, `highlights`, `technologies`,
 The `DEFAULT '[]'` on those columns does not apply to rows written through JPA
 (Hibernate inserts an explicit `NULL`, which `NOT NULL` rejects), so code must set them.
 
+## Tools — `tools/jobsync-importer`
+
+A command-line tool the owner runs locally, not deployed anywhere: it reads a backup file
+from [JobSync](https://github.com/Gsync/jobsync) (the owner's separately run job tracker)
+and proposes additions to the profile tech stack through `POST /api/admin/suggestions`
+with source `jobsync`. Guide, limits and the JobSync research:
+[JOBSYNC_IMPORTER.md](JOBSYNC_IMPORTER.md).
+
+```
+tools/jobsync-importer/
+├── bin/jobsync-importer.mjs      → Entry point (dry run unless --file)
+├── src/
+│   ├── cli.mjs                   → Options, the run, output, exit codes (0 done, 1 failed, 2 could not start)
+│   ├── backup.mjs, zip.mjs       → Read-only reader for JobSync's backup zip (format version 1)
+│   ├── analyse.mjs               → Title and company matching, skill extraction, proposals,
+│   │                               assertSafeSuggestion (the "never assert a claim" guard), de-duplication
+│   └── api.mjs                   → GET /api/profile, one sign-in, list and create suggestions
+├── data/                         → target-titles.json, skills-dictionary.json (edit freely),
+│                                   companies-allowlist.json (fallback; ships empty)
+├── launchd/                      → Example LaunchAgent: a weekly dry run on a Mac
+└── test/                         → node --test: synthetic backups, a mock API on localhost
+```
+
+### Rules
+
+1. **Plain JavaScript on Node 22+, no dependencies.** There is no lockfile and no install
+   step; keep it that way, or add the directory to Dependabot.
+2. **It only proposes one thing:** a single item added to `profile.techStack`, with a
+   reason that gives the evidence ("asked for in N of your M tracked jobs") and asks the
+   owner whether it applies. `assertSafeSuggestion` refuses anything else, including every
+   experience and project field; a new kind of proposal starts by changing that guard and
+   its tests.
+3. **A company's status is never guessed.** A job counts only when its company is on the
+   allow-list with both `fortune500` and `finraRegulated` set to `true`. The tool reads
+   `backend/src/main/resources/target-companies.json` when it exists (the list the
+   job-market research work is compiling; path and format not yet agreed with it) and the
+   local, empty file otherwise.
+4. **No stored secrets or state.** Credentials come from the environment or a prompt at
+   run time; one sign-in request per run, never retried.
+5. It uses the API's request and response shapes as they are. If `SuggestionRequest`,
+   `SuggestionResponse` or the login answer changes, update `src/api.mjs` and its tests.
+6. Check before pushing: `npm test` in `tools/jobsync-importer`.
+
 ## Workflows — `.github/workflows/`
 
 | File | Trigger | Does |
 |---|---|---|
-| `ci.yml` | push / PR to `main` | Backend compile, then `mvn verify` (tests including PostgreSQL via Testcontainers, JAR, JaCoCo gate); frontend, admin and kafka type check, lint, test, build. No deploy. The backend, frontend and admin jobs are required to merge. |
+| `ci.yml` | push / PR to `main` | Backend compile, then `mvn verify` (tests including PostgreSQL via Testcontainers, JAR, JaCoCo gate); frontend, admin and kafka type check, lint, test, build; the JobSync importer's tests. No deploy. The backend, frontend and admin jobs are required to merge. |
 | `docker-build.yml` | push to `main`, manual | Builds and pushes backend and frontend images to GHCR |
 | `release.yml` | `v*.*.*` tag | JAR + versioned images + GitHub release |
 | `codeql.yml` | schedule / push | Code scanning |
