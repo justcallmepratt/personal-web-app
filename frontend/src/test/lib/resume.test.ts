@@ -74,10 +74,10 @@ describe('resume from the repo content', () => {
     expect(education[0].year).toBeUndefined()
     expect(section(data, 'education')?.entries).toEqual([
       expect.objectContaining({
-        title: 'B.S. in Computer Science',
-        subtitle: 'University of Massachusetts Amherst · College of Information and Computer Sciences',
+        title: "Bachelor's in Computer Science",
+        subtitle: 'University of Massachusetts Amherst',
         date: undefined,
-        details: [{ label: 'Minor', value: 'Business Management' }],
+        details: [],
       }),
     ])
   })
