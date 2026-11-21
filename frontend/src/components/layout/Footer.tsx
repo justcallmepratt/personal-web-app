@@ -4,7 +4,7 @@ import { DISCLAIMER_SHORT } from '@/lib/credits'
 export default function Footer({ year = new Date().getFullYear() }: { year?: number }) {
   return (
     <footer className="border-t border-cp-border py-6 px-4 text-center text-xs uppercase tracking-widest text-cp-muted print:hidden">
-      <p>© {year} · Compiled in Night City</p>
+      <p>© {year} · Compiled in Tampa, FL</p>
       <p className="mt-2 normal-case tracking-normal text-sm">
         {DISCLAIMER_SHORT}{' '}
         <Link
