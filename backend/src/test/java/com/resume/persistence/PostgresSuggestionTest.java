@@ -236,14 +236,14 @@ class PostgresSuggestionTest {
                         + "from information_schema.columns where table_schema = ? and table_name = 'content_suggestions' "
                         + "order by ordinal_position", String.class, schema));
         lines.addAll(db.queryForList(
-                "select 'constraint ' || contype || ' ' || pg_get_constraintdef(c.oid) from pg_constraint c "
+                "select 'constraint ' || contype::text || ' ' || pg_get_constraintdef(c.oid) from pg_constraint c "
                         + "join pg_class t on t.oid = c.conrelid join pg_namespace n on n.oid = t.relnamespace "
                         + "where n.nspname = ? and t.relname = 'content_suggestions' order by 1", String.class, schema));
         lines.addAll(db.queryForList(
                 "select 'index ' || replace(indexdef, schemaname || '.', '') from pg_indexes "
                         + "where schemaname = ? and tablename = 'content_suggestions' order by 1", String.class, schema));
         lines.addAll(db.queryForList(
-                "select 'rls ' || t.relrowsecurity from pg_class t join pg_namespace n on n.oid = t.relnamespace "
+                "select 'rls ' || t.relrowsecurity::text from pg_class t join pg_namespace n on n.oid = t.relnamespace "
                         + "where n.nspname = ? and t.relname = 'content_suggestions'", String.class, schema));
         return lines;
     }
