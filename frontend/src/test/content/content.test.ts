@@ -48,11 +48,12 @@ describe('site content', () => {
     expect(existsSync(join(process.cwd(), 'public', 'resume.pdf'))).toBe(false)
   })
 
-  it('lists the degree as the owner worded it, with no minor, school, graduation date, honours, link or image', () => {
+  it('lists the degree as the owner worded it, with its minor and no school, graduation date, honours, link or image', () => {
     expect(education).toEqual([
       {
         id: 1,
         degree: "Bachelor's in Computer Science",
+        minor: 'Business Management',
         institution: 'University of Massachusetts Amherst',
         sortOrder: 1,
       },

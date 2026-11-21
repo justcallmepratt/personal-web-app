@@ -77,7 +77,7 @@ describe('resume from the repo content', () => {
         title: "Bachelor's in Computer Science",
         subtitle: 'University of Massachusetts Amherst',
         date: undefined,
-        details: [],
+        details: [{ label: 'Minor', value: 'Business Management' }],
       }),
     ])
   })

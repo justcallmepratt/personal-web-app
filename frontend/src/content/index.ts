@@ -19,7 +19,7 @@ export const profile: Profile = {
   tagline: 'Backend Software Developer at Raymond James',
   bio:
     'Backend developer in Tampa, FL, working with Java, Spring Boot and Kafka at Raymond James since July 2024. ' +
-    'I have a bachelor\'s in Computer Science from the University of Massachusetts Amherst, ' +
+    'I have a bachelor\'s in Computer Science with a minor in Business Management from the University of Massachusetts Amherst, ' +
     'where I co-founded the UMass F1 club and was its vice president.',
   email: '',
   location: 'Tampa, FL',
@@ -217,6 +217,7 @@ export const education: Education[] = [
   {
     id: 1,
     degree: "Bachelor's in Computer Science",
+    minor: 'Business Management',
     institution: 'University of Massachusetts Amherst',
     sortOrder: 1,
   },
