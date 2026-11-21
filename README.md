@@ -18,7 +18,7 @@ The repository holds three Next.js apps and a Spring Boot API:
 |---|---|---|
 | Public site | `frontend/` | Live on Vercel at https://justcallmepratt.dev. Home, projects (with an "In the works" list), experience, skills, certifications, contact and credits pages, and a GitHub activity section. Content from the API, with `frontend/src/content/index.ts` as fallback. |
 | REST API | `backend/` | Deployed on Railway and used by the production site for profile, projects and experience (the database holds the real content). Contact messages relayed to it are stored; email needs mail variables on Railway. See [Outstanding work](docs/DEPLOYMENT.md#outstanding-work). |
-| Kafka demo page | `apps/kafka/` | Built as a micro-frontend for `/kafka`; not routable yet. The demo runs from `frontend/` at `/projects/kafka`. |
+| Kafka demo page | `apps/kafka/` | A copy of the demo built as a micro-frontend; not deployed. The demo runs from `frontend/` at `/projects/kafka`, and `/kafka` redirects there. |
 | Admin app | `apps/admin/` | Sign-in and contact-message inbox; not deployed. |
 
 In production `frontend` reads the API on the server (`BACKEND_URL`) and falls back to
@@ -171,12 +171,12 @@ personal-web-app/
 │   ├── src/content/        Profile, projects, experience, certifications (edit to update the site)
 │   ├── src/lib/            api.ts (content source), contact.ts, github.ts, kafka.ts, site.ts, types.ts
 │   ├── src/test/           Vitest + RTL tests
-│   ├── microfrontends.json Routes /kafka to apps/kafka (once the Vercel group exists)
+│   ├── microfrontends.json Vercel microfrontends config; lists only this app for now
 │   ├── vercel.json         Security headers
 │   └── Dockerfile          Multi-stage: pnpm build → standalone output
 ├── apps/
 │   ├── admin/              Admin sign-in and message inbox (/admin/*), not deployed
-│   └── kafka/              Kafka demo page (/kafka), not routable yet
+│   └── kafka/              Kafka demo as a micro-frontend, not deployed
 ├── docs/
 │   ├── DEPLOYMENT.md       How the site is deployed, configured, and what is outstanding
 │   ├── ROADMAP.md, RESEARCH.md

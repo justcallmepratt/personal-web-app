@@ -11,8 +11,8 @@ How the site is built, deployed and configured, and what is still outstanding. S
 | Public site (`frontend/`) | Vercel project `frontend`, root directory `frontend`, <https://justcallmepratt.dev> (`www` redirects to it) | Live. Profile, projects and experience come from the API (database); certifications and "In the works" come from `frontend/src/content/index.ts`, which is also the fallback. |
 | API (`backend/`) | Railway project `kafka-demo`, service `personal-web-app-api` | Deployed and healthy at `https://personal-web-app-api-production.up.railway.app`. **Used by the production site** (`BACKEND_URL`); previews have no `BACKEND_URL` and use the repo content. |
 | API custom domain `api.justcallmepratt.dev` | Railway + Vercel DNS | Not attached. |
-| Kafka demo | Site page `/projects/kafka`, relaying to Railway service `kafka-demo-api` | Live. |
-| `apps/kafka` (`/kafka`) | Vercel project `kafka` + microfrontends group | Built, but `https://justcallmepratt.dev/kafka` is a 404: the project and group are not visible in the team that owns `frontend`. |
+| Kafka demo | Site page `/projects/kafka`, relaying to Railway service `kafka-demo-api` | Live. This is the demo's only home; `/kafka` and everything under it redirect here (308, from `frontend`). |
+| `apps/kafka` | Nothing | Built and tested in CI, **not deployed**. Checked on 2026-11-21: the team that owns `frontend` has no `kafka` project and `frontend` is in no microfrontends group. Optional; see [the checklist](#if-you-want-the-separate-kafka-project-later). |
 | `apps/admin` (`/admin`) | Vercel project `admin` + microfrontends group | Not deployed. |
 | Database | Supabase Postgres | Used by the API (session pooler) and by the Kafka demo (`kafka_demo` schema). |
 
@@ -20,7 +20,7 @@ How the site is built, deployed and configured, and what is still outstanding. S
                        justcallmepratt.dev (Vercel)
   browser ───────────▶ ┌──────────────────────────────────────────┐
                        │ frontend  (frontend/)   public pages      │
-                       │ kafka     (apps/kafka)  /kafka    (planned)│
+                       │   /kafka/* redirects to /projects/kafka   │
                        │ admin     (apps/admin)  /admin/*  (planned)│
                        └───────────────┬──────────────────────────┘
                                        │ server-side only
@@ -59,10 +59,11 @@ How the site is built, deployed and configured, and what is still outstanding. S
    message but sends no email until `MAIL_USER` and `MAIL_PASS` are set on the Railway
    service. Also set the Vercel variables ([steps](#turn-on-contact-email)) for the SMTP
    fallback and the `mailto:` link.
-4. **Create or locate the Vercel `kafka` and `admin` projects and the microfrontends
-   group** ([steps](#microfrontends-kafka-and-admin)), add the `admin` route to
-   `frontend/microfrontends.json`, then make `Admin — Node 22 / pnpm` (and optionally the
-   Kafka job) a required check if wanted. `/kafka` returns 404 until then.
+4. **Create the Vercel `admin` project and the microfrontends group**
+   ([steps](#microfrontends-kafka-and-admin)) and add the `admin` route to
+   `frontend/microfrontends.json`. Nothing is needed for the Kafka demo: `/kafka`
+   redirects to `/projects/kafka`. A separate `kafka` project is optional and likely a
+   paid extra ([checklist](#if-you-want-the-separate-kafka-project-later)).
 5. **Delete the two unused Vercel projects** `personal-web-app` and `backend` if they
    still exist (they never had a working deployment), then the GitHub environments they
    created (`… – backend`, `… – personal-web-app`).
@@ -87,7 +88,8 @@ Every push to `main` deploys production and every PR gets a preview; CI does not
 - **Settings worth turning on** (dashboard, not in the repo): skip builds when nothing
   under the project's root directory changed, and a spend limit under Billing → Spend
   Management.
-- **Footprint:** at most three projects (`frontend`, `kafka`, `admin`), none for services.
+- **Footprint:** two projects (`frontend`, and `admin` once created), none for services.
+  A third, `kafka`, is optional and not planned.
   Pages are static and re-rendered at most hourly (`REVALIDATE_SECONDS` in
   `frontend/src/lib/api.ts`), so the API sees about one request per page per hour. The
   functions are `POST /api/contact` (25 s max; bodies over 16 KB rejected before reading;
@@ -112,50 +114,83 @@ Variable changes apply only to new deployments: redeploy after editing.
 
 ### Microfrontends: `kafka` and `admin`
 
-`apps/kafka` and `apps/admin` are separate Next.js apps meant to be served on the main
-domain through Vercel Microfrontends, with `frontend` as the default application. In the
-repository:
+`apps/kafka` and `apps/admin` are separate Next.js apps built to be served on the main
+domain through Vercel Microfrontends, with `frontend` as the default application. Only
+`admin` is planned; `kafka` is optional (see the end of this section). State on
+2026-11-21: neither project exists in the team that owns `frontend`, and `frontend` is in
+no microfrontends group. In the repository:
 
-- `frontend/next.config.ts` already wraps its config in `withMicrofrontends`, and
-  `frontend/microfrontends.json` routes `/kafka` and `/kafka/:path*` to `kafka`. It has no
-  `admin` entry yet. The keys under `applications` must be Vercel project names.
+- `frontend/next.config.ts` wraps its config in `withMicrofrontends`, and
+  `frontend/microfrontends.json` lists only `frontend`, so every path is served by the
+  public site. The keys under `applications` must be Vercel project names; an entry for a
+  project that does not exist routes nowhere, so add one only after its project is in the
+  group.
+- `/kafka`, `/kafka/` and `/kafka/<anything>` are redirected by `frontend` to
+  `/projects/kafka` (308; `frontend/src/lib/redirects.ts`, tested in
+  `src/test/lib/redirects.test.ts`). The two addresses the micro-frontend would have
+  served, `/kafka/api/produce` and `/kafka/api/messages`, redirect to the live relay
+  routes `/api/kafka/produce` and `/api/kafka/messages`, method and query string kept.
 - Both apps build standalone when no group exists (the build logs "no microfrontends.json
   found; building as a standalone app"; that is expected).
 - Both apps put every route under `src/app/kafka/` or `src/app/admin/` and set no
   `basePath`, which Vercel Microfrontends does not support. Neither has a `public/`
   directory: files there are not covered by the asset prefix.
 
-To finish (by hand, in this order; re-check
+To deploy `admin` (by hand, in this order; re-check
 <https://vercel.com/docs/microfrontends/quickstart> first in case it changed):
 
-1. **Create or locate the projects.** New Vercel projects from this repository named
-   `kafka` (root `apps/kafka`; variables `KAFKA_DEMO_URL`, `KAFKA_DEMO_TOKEN`, optional
-   `NEXT_PUBLIC_SITE_NAME`) and `admin` (root `apps/admin`; variable `BACKEND_URL`), both
-   for Production and Preview. If they already exist in another team or account, find
-   them first; they must be in the team that owns `frontend`. Check
-   `https://<project>.vercel.app/kafka` and `/admin/login` load. Do not attach domains.
+1. **Create the project.** A new Vercel project from this repository named `admin` (root
+   `apps/admin`; variable `BACKEND_URL`), for Production and Preview, **in the team that
+   owns `frontend`** (`prathamsachan-8729's projects`). A project in another team or a
+   personal account cannot join the group. Check `https://<project>.vercel.app/admin/login`
+   loads. Do not attach domains.
 2. **Create the group** (Team Settings → Microfrontends → Create Group) with `frontend`
-   as the default application, and add both projects.
+   as the default application, and add `admin`.
 3. **Add the `admin` route** to `frontend/microfrontends.json` and deploy `frontend`:
 
    ```json
    "admin": { "routing": [{ "paths": ["/admin/:path*"] }] }
    ```
 
-4. **Redeploy `kafka` and `admin`** once the group is live, so their assets get their own
-   prefix (`/vc-ap-…`) and cannot collide with the public site's `/_next/` files.
-5. **Check** `https://justcallmepratt.dev/kafka` sends a record, `/admin/login` signs in
-   (needs the API and `ADMIN_PASSWORD_HASH`), and the public pages are unchanged.
-6. **Cut over the Kafka demo, in a separate change to `frontend`:** replace
-   `src/app/projects/kafka` with a redirect to `/kafka`, point the projects page link at
-   it, delete `src/app/api/kafka`, `KafkaDemo.tsx`, `lib/kafka.ts` and their tests, and
-   remove `KAFKA_DEMO_URL` and `KAFKA_DEMO_TOKEN` from the `frontend` project. Until then
-   the copy in `frontend` is the live one and a demo change must be made there.
+4. **Redeploy `admin`** once the group is live, so its assets get their own prefix
+   (`/vc-ap-…`) and cannot collide with the public site's `/_next/` files.
+5. **Check** `/admin/login` signs in (needs the API and `ADMIN_PASSWORD_HASH`) and the
+   public pages are unchanged.
 
-Notes: Hobby and Pro include two microfrontends projects; a third costs extra (on Pro,
-routing is $2 per million routed requests). Moving between the public site and an app is
-a full page load. **Rollback:** remove the app's entry from `microfrontends.json` and
-redeploy `frontend`; if step 6 shipped, revert it too.
+Notes: moving between the public site and an app is a full page load. **Rollback:**
+remove the app's entry from `microfrontends.json` and redeploy `frontend`.
+
+#### If you want the separate `kafka` project later
+
+Not needed: the demo works from `frontend` at `/projects/kafka`. **Cost:** Hobby and Pro
+include two microfrontends projects (`frontend` and `admin`); `kafka` would be the third,
+which is a paid extra (on Pro, routing is also $2 per million routed requests). Confirm
+the current price in the Vercel dashboard before starting. Then, in this order:
+
+1. Create a Vercel project from this repository **in the same team as `frontend`**,
+   named exactly `kafka`, root directory `apps/kafka`.
+2. Set `KAFKA_DEMO_URL` and `KAFKA_DEMO_TOKEN` on it (Production and Preview), with the
+   same values as on `frontend`. Check `https://<project>.vercel.app/kafka` sends a
+   record. Do not attach domains.
+3. Add `kafka` to the microfrontends group that has `frontend` as its default application
+   (create the group if `admin` has not been done yet).
+4. In `frontend`: restore the routing entry in `microfrontends.json`,
+
+   ```json
+   "kafka": { "routing": [{ "paths": ["/kafka", "/kafka/:path*"] }] }
+   ```
+
+   remove `kafkaRedirects` from `src/lib/redirects.ts` and update
+   `src/test/lib/redirects.test.ts`, then deploy `frontend`.
+5. Redeploy `kafka` so its assets get their own prefix.
+6. Check `https://justcallmepratt.dev/kafka` sends a record.
+
+Two cautions. The `/kafka` redirect is permanent (308), and browsers remember those:
+someone who visited `/kafka` before the switch may keep landing on `/projects/kafka`
+until their cache clears. So keep `/projects/kafka` working after the switch and **never
+redirect `/projects/kafka` to `/kafka`** (a cached browser would loop). And once both
+copies are live there are two demos to maintain; until one is deleted, a demo change
+must be made in both `frontend` and `apps/kafka`.
 
 ## Railway: the API
 
@@ -267,9 +302,11 @@ The demo produces and consumes real records through the Spring Boot service in
 [Kafka-Producer-Consumer-Demo](https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo).
 It runs from the main site at `/projects/kafka`; `POST /api/kafka/produce` and
 `GET /api/kafka/messages` relay to that service's endpoints of the same name.
-`apps/kafka` is a copy of the page meant to replace it (see
-[Microfrontends](#microfrontends-kafka-and-admin)); until then `/projects/kafka` is the
-live one.
+`/projects/kafka` is the demo's only address: `/kafka` and everything under it redirect
+there. `apps/kafka` is an undeployed copy of the page, kept in case it is ever served as
+its own micro-frontend (see
+[the checklist](#if-you-want-the-separate-kafka-project-later)); a demo change is made in
+`frontend`.
 
 - **Where it runs.** Railway project `kafka-demo`: service `kafka-demo-api` (that repo's
   Dockerfile) and a single-node `kafka` broker on the private network. Consumed records
