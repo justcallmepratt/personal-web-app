@@ -44,6 +44,14 @@ class MarketResearchServiceTest {
             new SkillDictionary.Entry("Kafka", null, null),
             new SkillDictionary.Entry("Kubernetes", List.of("K8s"), null)));
 
+    private final TargetRoles targetRoles = TargetRoles.of(List.of(
+            new TargetRoles.Entry("software-developer", "software developer",
+                    List.of("software engineer", "java developer", "application developer", "backend engineer", "programmer"),
+                    new TargetRoles.Search("software", null, "it-jobs")),
+            new TargetRoles.Entry("forward-deployed-engineer", "forward deployed engineer",
+                    List.of("forward deployed engineer", "forward deployed software engineer"),
+                    new TargetRoles.Search(null, "forward deployed", null))));
+
     private final ListingsClient client = mock(ListingsClient.class);
     private final MarketSummaryStore store = mock(MarketSummaryStore.class);
     private final MarketSuggester suggester = mock(MarketSuggester.class);
@@ -51,16 +59,25 @@ class MarketResearchServiceTest {
 
     private Company alpha;
     private Company beta;
+    private TargetRoles.Role dev;
+    private TargetRoles.Role fde;
 
     @BeforeEach
     void setUp() {
         alpha = allowList.companies().get(0);
         beta = allowList.companies().get(1);
+        dev = targetRoles.roles().get(0);
+        fde = targetRoles.roles().get(1);
+        when(client.fetch(any(), any())).thenReturn(page(1));
         when(store.completed(any())).thenReturn(Optional.empty());
         when(store.latest()).thenReturn(Optional.empty());
         when(store.saveFailed(any(), any(), anyInt(), any())).thenReturn(true);
-        when(store.saveCompleted(any(), any(), anyInt(), anyInt(), anyInt(), anyMap()))
-                .thenAnswer(call -> summary(call.getArgument(0), call.getArgument(2)));
+        when(store.saveCompleted(any(), any(), anyInt(), anyInt(), anyMap()))
+                .thenAnswer(call -> {
+                    Map<String, MarketSummaryStore.RoleCounts> byRole = call.getArgument(4);
+                    return summary(call.getArgument(0), byRole.values().stream()
+                            .mapToInt(MarketSummaryStore.RoleCounts::listingsExamined).sum());
+                });
     }
 
     @AfterEach
@@ -73,7 +90,19 @@ class MarketResearchServiceTest {
     }
 
     private MarketResearchService service(MarketResearchSettings settings, AllowList companies, SkillDictionary skills) {
-        return new MarketResearchService(settings, companies, skills, client, store, suggester, pauses::add);
+        return service(settings, companies, skills, targetRoles);
+    }
+
+    private MarketResearchService service(MarketResearchSettings settings, AllowList companies, SkillDictionary skills,
+                                          TargetRoles roles) {
+        return new MarketResearchService(settings, companies, skills, roles, client, store, suggester, pauses::add);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, MarketSummaryStore.RoleCounts> saved(int companies, int calls) {
+        ArgumentCaptor<Map<String, MarketSummaryStore.RoleCounts>> byRole = ArgumentCaptor.forClass(Map.class);
+        verify(store).saveCompleted(eq(WEEK), any(), eq(companies), eq(calls), byRole.capture());
+        return byRole.getValue();
     }
 
     private static MarketSummaryStore.Summary summary(LocalDate week, int examined) {
@@ -92,52 +121,68 @@ class MarketResearchServiceTest {
     // ── a normal run ─────────────────────────────────────────────────────────
 
     @Test
-    void countsEachSkillOncePerListing_forAllowListedDeveloperListingsOnly_andStoresTheSummary() {
-        when(client.fetch(alpha)).thenReturn(page(1,
+    void countsEachSkillOncePerListing_byRole_forAllowListedListingsWithATargetTitleOnly() {
+        when(client.fetch(alpha, dev)).thenReturn(page(1,
                 new Listing("1", "Software Engineer", "Alpha Bank N.A.", "Java, Kafka and more Java"),
                 new Listing("2", "Java Developer", "ALPHA", "K8s"),
                 // Not this company: the source's company filter is not trusted.
                 new Listing("3", "Software Engineer", "Alphabet Inc", "Java Kafka Kubernetes"),
-                // Not a developer role.
+                // Not a target role.
                 new Listing("4", "Business Analyst", "Alpha Bank", "Java Kafka Kubernetes"),
                 // The same listing again.
                 new Listing("1", "Software Engineer", "Alpha Bank N.A.", "Java, Kafka and more Java"),
                 // No skill at all still counts as examined.
-                new Listing("5", "Application Developer", "Alpha Bank", "Great team")));
-        when(client.fetch(beta)).thenReturn(page(2,
+                new Listing("5", "Application Developer", "Alpha Bank", "Great team"),
+                // Returned by the developer search, but its title makes it a forward deployed role.
+                new Listing("7", "Forward Deployed Software Engineer", "Alpha Bank", "Kafka")));
+        when(client.fetch(alpha, fde)).thenReturn(page(1,
+                // Already seen through the other search: counted once.
+                new Listing("7", "Forward Deployed Software Engineer", "Alpha Bank", "Kafka"),
+                new Listing("8", "Forward Deployed Engineer", "Alpha", "Java and Kubernetes")));
+        when(client.fetch(beta, dev)).thenReturn(page(2,
                 new Listing("", "Backend Engineer", "Beta Financial", "Kafka"),
                 new Listing(null, "Backend Engineer", "Beta Financial", "Kafka"),
                 new Listing("6", "Senior Programmer", "Beta Financial Group", "kubernetes; JAVA")));
+        when(client.fetch(beta, fde)).thenReturn(page(1));
         when(suggester.suggest(any())).thenReturn(2);
 
         Outcome outcome = service().run(WEEK, false);
 
         assertThat(outcome.status()).isEqualTo(Status.COMPLETED);
         assertThat(outcome.weekStart()).isEqualTo(WEEK);
-        assertThat(outcome.listingsExamined()).isEqualTo(5);
+        assertThat(outcome.listingsExamined()).isEqualTo(7);
         assertThat(outcome.suggestionsCreated()).isEqualTo(2);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<Map<String, Integer>> counts = ArgumentCaptor.forClass(Map.class);
-        verify(store).saveCompleted(eq(WEEK), any(), eq(5), eq(2), eq(3), counts.capture());
-        assertThat(counts.getValue()).containsExactlyInAnyOrderEntriesOf(Map.of("Java", 3, "Kafka", 2, "Kubernetes", 2));
+        // Two companies, two roles each: four requests plus one retry.
+        Map<String, MarketSummaryStore.RoleCounts> byRole = saved(2, 5);
+        assertThat(byRole.keySet()).containsExactly("software-developer", "forward-deployed-engineer");
+        assertThat(byRole.get("software-developer").listingsExamined()).isEqualTo(5);
+        assertThat(byRole.get("software-developer").skills())
+                .containsExactlyInAnyOrderEntriesOf(Map.of("Java", 3, "Kafka", 2, "Kubernetes", 2));
+        assertThat(byRole.get("forward-deployed-engineer").listingsExamined()).isEqualTo(2);
+        assertThat(byRole.get("forward-deployed-engineer").skills())
+                .containsExactlyInAnyOrderEntriesOf(Map.of("Java", 1, "Kafka", 1, "Kubernetes", 1));
 
         verify(suggester).suggest(any());
         verify(store).addSuggestionsCreated(5L, 2);
         verify(store, never()).saveFailed(any(), any(), anyInt(), any());
-        // One pause, between the two companies.
-        assertThat(pauses).containsExactly(3000L);
+        // A pause before every request but the first.
+        assertThat(pauses).containsExactly(3000L, 3000L, 3000L);
     }
 
     @Test
     void aWeekWithNoMatchingListingsStillCompletes_withAnEmptySummary() {
-        when(client.fetch(any())).thenReturn(page(1));
-
         Outcome outcome = service().run(WEEK, false);
 
         assertThat(outcome.status()).isEqualTo(Status.COMPLETED);
         assertThat(outcome.listingsExamined()).isZero();
-        verify(store).saveCompleted(eq(WEEK), any(), eq(0), eq(2), eq(2), eq(Map.of()));
+        // Every role is still recorded, with nothing examined.
+        Map<String, MarketSummaryStore.RoleCounts> byRole = saved(2, 4);
+        assertThat(byRole).containsOnlyKeys("software-developer", "forward-deployed-engineer");
+        assertThat(byRole.values()).allSatisfy(role -> {
+            assertThat(role.listingsExamined()).isZero();
+            assertThat(role.skills()).isEmpty();
+        });
     }
 
     // ── idempotent per week ──────────────────────────────────────────────────
@@ -154,7 +199,7 @@ class MarketResearchServiceTest {
         assertThat(outcome.suggestionsCreated()).isEqualTo(1);
         assertThat(outcome.message()).contains("already summarised");
         verifyNoInteractions(client);
-        verify(store, never()).saveCompleted(any(), any(), anyInt(), anyInt(), anyInt(), anyMap());
+        verify(store, never()).saveCompleted(any(), any(), anyInt(), anyInt(), anyMap());
         verify(store).addSuggestionsCreated(5L, 1);
         assertThat(pauses).isEmpty();
     }
@@ -162,21 +207,22 @@ class MarketResearchServiceTest {
     @Test
     void forceFetchesAgain_andReplacesTheWeek() {
         when(store.completed(WEEK)).thenReturn(Optional.of(summary(WEEK, 42)));
-        when(client.fetch(any())).thenReturn(page(1, new Listing("1", "Java Developer", "Alpha Bank", "Java")));
+        when(client.fetch(alpha, dev)).thenReturn(page(1, new Listing("1", "Java Developer", "Alpha Bank", "Java")));
 
         Outcome outcome = service().run(WEEK, true);
 
         assertThat(outcome.status()).isEqualTo(Status.COMPLETED);
-        verify(client, times(2)).fetch(any());
-        verify(store).saveCompleted(eq(WEEK), any(), eq(1), eq(2), eq(2), eq(Map.of("Java", 1)));
+        verify(client, times(4)).fetch(any(), any());
+        assertThat(saved(2, 4).get("software-developer"))
+                .isEqualTo(new MarketSummaryStore.RoleCounts(1, Map.of("Java", 1)));
     }
 
     // ── failures ─────────────────────────────────────────────────────────────
 
     @Test
     void aFailedRequestFailsTheRun_storesNoCounts_andLeavesEarlierSummariesAlone() {
-        when(client.fetch(alpha)).thenReturn(page(1, new Listing("1", "Java Developer", "Alpha Bank", "Java")));
-        when(client.fetch(beta)).thenThrow(new ListingsException("Adzuna request for Beta Financial failed: HTTP 503", 3));
+        when(client.fetch(alpha, dev)).thenReturn(page(1, new Listing("1", "Java Developer", "Alpha Bank", "Java")));
+        when(client.fetch(beta, dev)).thenThrow(new ListingsException("Adzuna request for Beta Financial failed: HTTP 503", 3));
         when(store.latest()).thenReturn(Optional.of(summary(WEEK.minusWeeks(1), 40)));
 
         Outcome outcome = service().run(WEEK, false);
@@ -184,29 +230,29 @@ class MarketResearchServiceTest {
         assertThat(outcome.status()).isEqualTo(Status.FAILED);
         assertThat(outcome.message()).isEqualTo("Adzuna request for Beta Financial failed: HTTP 503");
         assertThat(outcome.suggestionsCreated()).isZero();
-        verify(store).saveFailed(eq(WEEK), any(), eq(4), eq("Adzuna request for Beta Financial failed: HTTP 503"));
-        verify(store, never()).saveCompleted(any(), any(), anyInt(), anyInt(), anyInt(), anyMap());
+        // Two requests for the first company, then three attempts at the failing one.
+        verify(store).saveFailed(eq(WEEK), any(), eq(5), eq("Adzuna request for Beta Financial failed: HTTP 503"));
+        verify(store, never()).saveCompleted(any(), any(), anyInt(), anyInt(), anyMap());
         verifyNoInteractions(suggester);
     }
 
     @Test
     void aFailedForcedRerunKeepsTheWeeksExistingSummary() {
         when(store.completed(WEEK)).thenReturn(Optional.of(summary(WEEK, 42)));
-        when(client.fetch(any())).thenThrow(new ListingsException("rate limited", 3));
+        when(client.fetch(any(), any())).thenThrow(new ListingsException("rate limited", 3));
         when(store.saveFailed(any(), any(), anyInt(), any())).thenReturn(false);
 
         Outcome outcome = service().run(WEEK, true);
 
         assertThat(outcome.status()).isEqualTo(Status.FAILED);
-        verify(client, times(1)).fetch(any());
-        verify(store, never()).saveCompleted(any(), any(), anyInt(), anyInt(), anyInt(), anyMap());
+        verify(client, times(1)).fetch(any(), any());
+        verify(store, never()).saveCompleted(any(), any(), anyInt(), anyInt(), anyMap());
         verifyNoInteractions(suggester);
     }
 
     @Test
     void aDatabaseErrorWhileSaving_failsTheRunWithoutThrowing() {
-        when(client.fetch(any())).thenReturn(page(1));
-        when(store.saveCompleted(any(), any(), anyInt(), anyInt(), anyInt(), anyMap()))
+        when(store.saveCompleted(any(), any(), anyInt(), anyInt(), anyMap()))
                 .thenThrow(new IllegalStateException("jdbc:postgresql://secret-host"));
 
         Outcome outcome = service().run(WEEK, false);
@@ -231,22 +277,20 @@ class MarketResearchServiceTest {
 
     @Test
     void anInterruptBetweenCompaniesFailsTheRun_andKeepsTheInterruptFlag() {
-        when(client.fetch(any())).thenReturn(page(1));
         MarketResearchService interrupted = new MarketResearchService(TestSettings.defaults(), allowList, dictionary,
-                client, store, suggester, millis -> { throw new InterruptedException(); });
+                targetRoles, client, store, suggester, millis -> { throw new InterruptedException(); });
 
         Outcome outcome = interrupted.run(WEEK, false);
 
         assertThat(outcome.status()).isEqualTo(Status.FAILED);
         assertThat(outcome.message()).isEqualTo("The run was interrupted");
         assertThat(Thread.currentThread().isInterrupted()).isTrue();
-        verify(client, times(1)).fetch(any());
+        verify(client, times(1)).fetch(any(), any());
         verify(store).saveFailed(eq(WEEK), any(), eq(1), any());
     }
 
     @Test
     void aFailureInTheSuggestionStepDoesNotFailTheRun() {
-        when(client.fetch(any())).thenReturn(page(1));
         when(suggester.suggest(any())).thenThrow(new IllegalStateException("boom"));
 
         Outcome outcome = service().run(WEEK, false);
@@ -271,7 +315,7 @@ class MarketResearchServiceTest {
     }
 
     @Test
-    void disabledReason_coversTheFlagTheCredentialsAndBothDataFiles() {
+    void disabledReason_coversTheFlagTheCredentialsAndTheThreeDataFiles() {
         assertThat(service().disabledReason()).isEmpty();
 
         TestSettings noKey = TestSettings.on();
@@ -298,28 +342,20 @@ class MarketResearchServiceTest {
         when(broken.loadError()).thenReturn("market/skills.json could not be read (X)");
         assertThat(service(TestSettings.defaults(), allowList, broken).disabledReason())
                 .contains("market/skills.json could not be read (X)");
+
+        assertThat(service(TestSettings.defaults(), allowList, dictionary, TargetRoles.of(List.of())).disabledReason())
+                .contains("the target roles list has no usable role");
+        TargetRoles unreadableRoles = mock(TargetRoles.class);
+        when(unreadableRoles.roles()).thenReturn(List.of());
+        when(unreadableRoles.loadError()).thenReturn("market/roles.json could not be read (X)");
+        assertThat(service(TestSettings.defaults(), allowList, dictionary, unreadableRoles).disabledReason())
+                .contains("market/roles.json could not be read (X)");
     }
 
     @Test
     void theProductionConstructorWiresTheSameService() {
         MarketResearchService wired = new MarketResearchService(TestSettings.defaults(), allowList, dictionary,
-                client, store, suggester);
+                targetRoles, client, store, suggester);
         assertThat(wired.disabledReason()).isEmpty();
-    }
-
-    // ── which titles count ───────────────────────────────────────────────────
-
-    @Test
-    void onlyDeveloperTitlesCount() {
-        for (String title : List.of("Software Engineer II", "Senior Java Developer", "Lead Programmer Analyst",
-                "Backend Engineer", "Back-End Engineer", "Back End Engineer", "Full Stack Engineer",
-                "Full-Stack Engineer", "Fullstack Engineer", "Applications Engineer", "JAVA ENGINEER")) {
-            assertThat(MarketResearchService.isDeveloperRole(title)).as(title).isTrue();
-        }
-        for (String title : List.of("Business Analyst", "Sales Engineer", "Network Engineer", "Project Manager",
-                "Data Scientist", "", "Engineer")) {
-            assertThat(MarketResearchService.isDeveloperRole(title)).as(title).isFalse();
-        }
-        assertThat(MarketResearchService.isDeveloperRole(null)).isFalse();
     }
 }

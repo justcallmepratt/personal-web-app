@@ -6,6 +6,7 @@ import com.resume.market.MarketResearchJob;
 import com.resume.market.MarketResearchService;
 import com.resume.market.MarketResearchSettings;
 import com.resume.market.MarketSummaryStore;
+import com.resume.market.TargetRoles;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,30 +28,35 @@ public class MarketResearchController {
     private final MarketSummaryStore store;
     private final MarketResearchSettings settings;
     private final AllowList allowList;
+    private final TargetRoles targetRoles;
 
     public MarketResearchController(MarketResearchJob job, MarketResearchService service, MarketSummaryStore store,
-                                    MarketResearchSettings settings, AllowList allowList) {
+                                    MarketResearchSettings settings, AllowList allowList, TargetRoles targetRoles) {
         this.job = job;
         this.service = service;
         this.store = store;
         this.settings = settings;
         this.allowList = allowList;
+        this.targetRoles = targetRoles;
     }
 
-    /** The newest completed summary and the state of the job. */
+    /** The newest completed summary, broken down by target role, and the state of the job. */
     @GetMapping("/latest")
     public MarketSummaryResponse latest() {
         Optional<String> off = service.disabledReason();
         MarketSummaryResponse.Summary summary = store.latest().map(s -> new MarketSummaryResponse.Summary(
                 s.run().getWeekStart(), s.run().getListingsExamined(), s.run().getCompaniesQueried(),
                 s.run().getApiCalls(), s.run().getSuggestionsCreated(), s.run().getFinishedAt(),
-                s.skills().stream()
-                        .map(c -> new MarketSummaryResponse.SkillCount(c.getSkill(), c.getListingsMentioned()))
-                        .toList())).orElse(null);
+                s.roles().stream().map(role -> new MarketSummaryResponse.Role(
+                        role.role(), targetRoles.nameOf(role.role()), role.listingsExamined(),
+                        role.skills().stream()
+                                .map(c -> new MarketSummaryResponse.SkillCount(c.getSkill(), c.getListingsMentioned()))
+                                .toList())).toList())).orElse(null);
         MarketSummaryResponse.Run lastRun = store.newestWeek().map(r -> new MarketSummaryResponse.Run(
                 r.getWeekStart(), r.getStatus(), r.getError(), r.getFinishedAt())).orElse(null);
         return new MarketSummaryResponse(off.isEmpty(), off.orElse(null), job.running(),
                 allowList.compiledOn(), allowList.companies().size(),
+                targetRoles.roles().stream().map(TargetRoles.Role::name).toList(),
                 new MarketSummaryResponse.Thresholds(settings.minListings(), settings.minMentions(),
                         settings.minSharePercent(), settings.maxSuggestionsPerRun(), settings.maxPendingSuggestions()),
                 summary, lastRun);

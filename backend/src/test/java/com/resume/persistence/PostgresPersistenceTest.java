@@ -116,7 +116,8 @@ class PostgresPersistenceTest {
         List<String> tables = jdbc.queryForList(
                 "select table_name from information_schema.tables where table_schema = 'public' order by 1",
                 String.class);
-        assertThat(tables).containsExactly("content_suggestions", "experience", "messages", "profile", "projects");
+        assertThat(tables).containsExactly("content_suggestions", "experience", "market_research_runs",
+                "market_role_totals", "market_skill_counts", "messages", "profile", "projects");
     }
 
     @Test

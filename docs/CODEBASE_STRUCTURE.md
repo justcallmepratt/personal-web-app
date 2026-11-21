@@ -229,15 +229,15 @@ backend/src/main/java/com/resume/
 │                                   GET /api/admin/messages, PATCH /api/admin/messages/{id}/read
 │   └── SuggestionController      → /api/admin/suggestions (see Content suggestions below)
 │   └── MarketResearchController  → /api/admin/market-research (see Market research below)
-├── market/                       → The weekly market research: settings, allow-list, skill
-│                                   dictionary, Adzuna client, run, store, suggester, schedule
+├── market/                       → The weekly market research: settings, target roles, allow-list,
+│                                   skill dictionary, Adzuna client, run, store, suggester, schedule
 ├── service/                      → Profile, Project, Experience, Contact,
 │                                   EmailValidation, RateLimit,
 │                                   Suggestion (the flow), SuggestionFields (the whitelist)
 ├── repository/                   → Profile, Project, Experience, Message, ContentSuggestion,
-│                                   MarketResearchRun, MarketSkillCount (Spring Data JPA)
+│                                   MarketResearchRun, MarketRoleTotal, MarketSkillCount (Spring Data JPA)
 ├── model/                        → Profile, Project, Experience, Message, Skill, ContentSuggestion,
-│                                   MarketResearchRun, MarketSkillCount
+│                                   MarketResearchRun, MarketRoleTotal, MarketSkillCount
 ├── dto/                          → ApiResponse, ContactRequest, LoginRequest,
 │                                   SuggestionRequest, SuggestionResponse, SuggestionTarget,
 │                                   MarketSummaryResponse
@@ -295,18 +295,19 @@ All endpoints are under `/api/admin/**` and need the admin JWT (403 without it):
 
 ### Market research (weekly, suggestions only)
 
-The owner's rules (2026-11-21): the target role is software developer in financial
-services; only companies that are both on the Fortune 500 and FINRA-regulated count; and
+The owner's rules (2026-11-21): the target roles are software developer and forward
+deployed engineer, in financial services; only companies that are both on the Fortune 500 and FINRA-regulated count; and
 results arrive as suggestions, never as edits. Everything is in `com.resume.market`:
 
 | Class | Does |
 |---|---|
 | `MarketResearchSettings` | `market-research.*` settings. Reads every value as text, so a bad variable falls back to its default instead of stopping startup |
 | `AllowList` | Loads `resources/market/allow-list.json`. An entry counts only if `included` is true and it has a Fortune 500 rank, a FINRA firm with a CRD number and an alias; matches a listing's employer against the aliases as whole words |
+| `TargetRoles` | Loads `resources/market/roles.json`: for each role its id, name, the title variants that count and the search sent to Adzuna. A title belongs to the role with the longest matching variant, so a listing counts for one role only |
 | `SkillDictionary` | Loads `resources/market/skills.json`; whole-word matching of names and aliases ("Java" is not "JavaScript") |
-| `AdzunaClient` (`ListingsClient`) | One request per company to Adzuna's search API. 5 s connect and 10 s read timeouts; 429, 5xx and network errors retried up to 3 times with a doubling wait; a refused key is not retried. Error messages never contain the request address, which carries the key |
-| `MarketResearchService` | One run: fetch, keep listings whose employer matches the company and whose title is a developer role, count each skill once per listing, store the week, then call the suggester. Never throws |
-| `MarketSummaryStore` | The two tables. One row per week; a week's counts are replaced in one transaction; a failure never overwrites a completed week |
+| `AdzunaClient` (`ListingsClient`) | One request per company and role to Adzuna's search API. 5 s connect and 10 s read timeouts; 429, 5xx and network errors retried up to 3 times with a doubling wait; a refused key is not retried. Error messages never contain the request address, which carries the key |
+| `MarketResearchService` | One run: fetch, keep listings whose employer matches the company and whose title is one of a role's variants, count each skill once per listing under that role, store the week, then call the suggester. Never throws |
+| `MarketSummaryStore` | The three tables. One row per week; a week's counts are replaced in one transaction; a failure never overwrites a completed week |
 | `MarketSuggester` | Turns a completed week into suggestions (rules below) |
 | `MarketResearchJob` | The schedule (set up after startup, inside a catch) and the manual trigger; one flag keeps two runs from overlapping |
 
@@ -314,7 +315,7 @@ Endpoints, under `/api/admin/**` like the others (admin JWT, 403 without it):
 
 | Endpoint | Does |
 |---|---|
-| `GET /api/admin/market-research/latest` | Whether the job is on (and why not), the thresholds, the newest completed week with its skill counts, and the newest week of any status |
+| `GET /api/admin/market-research/latest` | Whether the job is on (and why not), the target roles, the thresholds, the newest completed week **by role** (`summary.roles[]`: role, name, listings examined, skill counts), and the newest week of any status |
 | `POST /api/admin/market-research/run` | Starts a run for the current week in the background (202). `?force=true` fetches again even if the week is done. 409 `disabled` or `already_running` |
 
 - **Off by default.** It runs only with `MARKET_RESEARCH_ENABLED=true` and both
@@ -322,24 +323,29 @@ Endpoints, under `/api/admin/**` like the others (admin JWT, 403 without it):
   `Market research is disabled: <reason>`. Default schedule: Mondays 06:00 UTC.
 - **Idempotent per week** (weeks start on Monday, UTC). A week that is already summarised
   is not fetched again; the suggestion step still runs and repeats nothing.
-- **Only counts are stored**: `market_research_runs` (week, status, listings examined,
-  companies queried, API calls, suggestions created, error) and `market_skill_counts`
-  (skill, listings that mentioned it). No listing text, id or link is stored or logged.
+- **Only counts are stored, per role**: `market_research_runs` (week, status, total
+  listings examined, companies queried, API calls, suggestions created, error),
+  `market_role_totals` (role, listings of that role examined) and `market_skill_counts`
+  (role, skill, listings that mentioned it). No listing text, id or link is stored or logged.
 - **What a suggestion can be.** Exactly one thing: add one dictionary skill name to the
   profile's `techStack`, as a pending row made through `SuggestionService.create`, with a
   reason of the form "Market research, week of 2026-11-16: "Kubernetes" was mentioned in
-  14 of 60 software-developer listings examined at allow-listed firms (source: Adzuna).
+  14 of 60 software developer listings examined at allow-listed firms (source: Adzuna).
   This is what those listings ask for, not a statement about you. Accept only if you have
-  real experience with Kubernetes; otherwise reject." It never targets an experience
+  real experience with Kubernetes; otherwise reject." The reason always names the role
+  whose listings the numbers come from; a skill common in both roles gets one suggestion
+  that names the role where it is most common and adds "Also in N of M … listings." It
+  never targets an experience
   entry, a project or any free text, and never writes content.
-- **When it suggests.** At least 30 listings examined that week; the skill in at least 5
-  of them and at least 20%; at most 3 new suggestions per run and never more than 5 from
+- **When it suggests.** Each role on its own: at least 30 listings of that role examined
+  that week (roles are never added together); the skill in at least 5 of them and at
+  least 20%; at most 3 new suggestions per run and never more than 5 from
   market research pending. Not for a skill already in the profile's tech stack or skills,
   any experience's technologies or any project's stack or tags (other spellings in the
   dictionary count as the same skill); not for one already pending; never again for one
   the owner rejected.
-- **To change the companies or skills**, edit the two JSON files
-  ([DEPLOYMENT.md](DEPLOYMENT.md#the-allow-list-and-the-skills-dictionary)); the limits of
+- **To change the roles, companies or skills**, edit the three JSON files
+  ([DEPLOYMENT.md](DEPLOYMENT.md#the-target-roles-the-allow-list-and-the-skills-dictionary)); the limits of
   the data are listed there too.
 
 Profiles: `dev` (Supabase Postgres via `SUPABASE_DB_PASSWORD`), `docker`
@@ -359,7 +365,7 @@ repository query method. `persistence/PostgresSuggestionTest` does the same for
 requests without a token refused) and checks that the migration file builds the same
 table as `init.sql`. `persistence/PostgresMarketResearchTest` covers the market-research
 tables the same way and runs the whole weekly flow with only the listings API replaced
-(counts stored, suggestions proposed, no content changed, nothing repeated after a
+(counts stored per role, suggestions proposed naming the role, no content changed, nothing repeated after a
 rejection, a failed run leaves the previous summary). The market-research unit tests
 (`market/`) use a mocked HTTP layer for Adzuna, so no test makes a network request. All
 three PostgreSQL classes need Docker and are skipped with a message without it; CI
@@ -376,8 +382,8 @@ The `dev` profile's default datasource host is Supabase's direct host
 Schema: [`supabase/init.sql`](../supabase/init.sql), applied automatically by
 `docker compose` and already applied to the Supabase project the API uses. Tables: `profile`, `projects`, `experience`, `messages`,
 `content_suggestions` (proposed content changes; values stored as JSON text), and
-`market_research_runs` with `market_skill_counts` (the weekly market summary: counts
-only). The last three have row level security on with no policies, so Supabase's public
+`market_research_runs` with `market_role_totals` and `market_skill_counts` (the weekly
+market summary by role: counts only). The last four have row level security on with no policies, so Supabase's public
 Data API cannot reach them. A change to
 the schema of a live database goes in `supabase/migrations/` as an idempotent file the
 owner runs once, **before** the code that needs it is merged (see

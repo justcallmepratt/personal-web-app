@@ -9,17 +9,17 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * One run of the weekly market research: fetch listings for each allow-listed company,
- * count which dictionary skills they mention, store the counts for the week, then hand the
- * summary to {@link MarketSuggester}.
+ * One run of the weekly market research: fetch listings for each allow-listed company and
+ * each target role, count which dictionary skills they mention, store the counts for the
+ * week by role, then hand the summary to {@link MarketSuggester}.
  *
  * <p>Idempotent per week: a week that already has a completed summary is not fetched
  * again (no API calls) unless {@code force} is set; the suggestion step still runs, and
@@ -39,6 +39,7 @@ public class MarketResearchService {
     private final MarketResearchSettings settings;
     private final AllowList allowList;
     private final SkillDictionary dictionary;
+    private final TargetRoles targetRoles;
     private final ListingsClient client;
     private final MarketSummaryStore store;
     private final MarketSuggester suggester;
@@ -46,23 +47,25 @@ public class MarketResearchService {
 
     @Autowired
     public MarketResearchService(MarketResearchSettings settings, AllowList allowList, SkillDictionary dictionary,
-                                 ListingsClient client, MarketSummaryStore store, MarketSuggester suggester) {
-        this(settings, allowList, dictionary, client, store, suggester, Thread::sleep);
+                                 TargetRoles targetRoles, ListingsClient client, MarketSummaryStore store,
+                                 MarketSuggester suggester) {
+        this(settings, allowList, dictionary, targetRoles, client, store, suggester, Thread::sleep);
     }
 
     MarketResearchService(MarketResearchSettings settings, AllowList allowList, SkillDictionary dictionary,
-                          ListingsClient client, MarketSummaryStore store, MarketSuggester suggester,
-                          AdzunaClient.Sleeper sleeper) {
+                          TargetRoles targetRoles, ListingsClient client, MarketSummaryStore store,
+                          MarketSuggester suggester, AdzunaClient.Sleeper sleeper) {
         this.settings = settings;
         this.allowList = allowList;
         this.dictionary = dictionary;
+        this.targetRoles = targetRoles;
         this.client = client;
         this.store = store;
         this.suggester = suggester;
         this.sleeper = sleeper;
     }
 
-    /** Why the job is off, or empty when it may run: the flag, the credentials and both data files. */
+    /** Why the job is off, or empty when it may run: the flag, the credentials and the three data files. */
     public Optional<String> disabledReason() {
         Optional<String> fromSettings = settings.disabledReason();
         if (fromSettings.isPresent()) return fromSettings;
@@ -73,6 +76,10 @@ public class MarketResearchService {
         if (dictionary.size() == 0) {
             return Optional.of(dictionary.loadError() != null ? dictionary.loadError()
                     : "the skills dictionary is empty");
+        }
+        if (targetRoles.roles().isEmpty()) {
+            return Optional.of(targetRoles.loadError() != null ? targetRoles.loadError()
+                    : "the target roles list has no usable role");
         }
         return Optional.empty();
     }
@@ -101,45 +108,62 @@ public class MarketResearchService {
         int apiCalls = 0;
         MarketSummaryStore.Summary summary;
         try {
-            Map<String, Integer> counts = new TreeMap<>();
+            // Every role gets an entry, so a role with no listings shows as "0 examined".
+            Map<String, Integer> examinedByRole = new LinkedHashMap<>();
+            Map<String, Map<String, Integer>> countsByRole = new LinkedHashMap<>();
+            for (TargetRoles.Role role : targetRoles.roles()) {
+                examinedByRole.put(role.id(), 0);
+                countsByRole.put(role.id(), new TreeMap<>());
+            }
             Set<String> seen = new HashSet<>();
             List<String> unmatched = new ArrayList<>();
             int examined = 0;
             int queried = 0;
+            boolean first = true;
             for (AllowList.Company company : allowList.companies()) {
-                if (queried > 0) sleeper.sleep(settings.pauseMillis());
-                ListingsClient.Page page;
-                try {
-                    page = client.fetch(company);
-                } catch (ListingsException e) {
-                    apiCalls += e.apiCalls();
-                    throw e;
-                }
-                apiCalls += page.apiCalls();
-                queried++;
                 int before = examined;
-                for (Listing listing : page.listings()) {
-                    if (!company.matches(listing.company()) || !isDeveloperRole(listing.title())) continue;
-                    if (!seen.add(identity(listing))) continue;
-                    examined++;
-                    for (String skill : dictionary.extract(listing.title() + "\n" + listing.description())) {
-                        counts.merge(skill, 1, Integer::sum);
+                for (TargetRoles.Role searched : targetRoles.roles()) {
+                    if (!first) sleeper.sleep(settings.pauseMillis());
+                    first = false;
+                    ListingsClient.Page page;
+                    try {
+                        page = client.fetch(company, searched);
+                    } catch (ListingsException e) {
+                        apiCalls += e.apiCalls();
+                        throw e;
+                    }
+                    apiCalls += page.apiCalls();
+                    for (Listing listing : page.listings()) {
+                        if (!company.matches(listing.company())) continue;
+                        // The title decides the role, whichever search returned the listing.
+                        Optional<TargetRoles.Role> role = targetRoles.classify(listing.title());
+                        if (role.isEmpty() || !seen.add(identity(listing))) continue;
+                        examined++;
+                        examinedByRole.merge(role.get().id(), 1, Integer::sum);
+                        Map<String, Integer> counts = countsByRole.get(role.get().id());
+                        for (String skill : dictionary.extract(listing.title() + "\n" + listing.description())) {
+                            counts.merge(skill, 1, Integer::sum);
+                        }
                     }
                 }
+                queried++;
                 if (examined == before) unmatched.add(company.name());
             }
+            Map<String, MarketSummaryStore.RoleCounts> byRole = new LinkedHashMap<>();
+            examinedByRole.forEach((role, listings) ->
+                    byRole.put(role, new MarketSummaryStore.RoleCounts(listings, countsByRole.get(role))));
             if (!unmatched.isEmpty()) {
                 // Usually a search name or alias in the allow-list that the source does not know.
                 log.info("Market research: no listing counted for {} of {} companies: {}",
                         unmatched.size(), queried, String.join(", ", unmatched));
             }
             if (examined == 0) {
-                log.warn("Market research: no listing matched an allow-listed company and a developer title in the "
-                        + "week of {}; check the search names and aliases in the allow-list", weekStart);
+                log.warn("Market research: no listing matched an allow-listed company and a target-role title in "
+                        + "the week of {}; check the search names and aliases in the allow-list", weekStart);
             }
-            summary = store.saveCompleted(weekStart, startedAt, examined, queried, apiCalls, counts);
-            log.info("Market research: week of {} summarised: {} listings examined, {} companies queried, "
-                    + "{} API calls, {} skills counted", weekStart, examined, queried, apiCalls, counts.size());
+            summary = store.saveCompleted(weekStart, startedAt, queried, apiCalls, byRole);
+            log.info("Market research: week of {} summarised: {} listings examined ({}), {} companies queried, "
+                    + "{} API calls", weekStart, examined, examinedByRole, queried, apiCalls);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return failed(weekStart, startedAt, apiCalls, "The run was interrupted");
@@ -185,16 +209,6 @@ public class MarketResearchService {
         log.error("Market research run FAILED for the week of {}: {}; {}. Latest summary in place: {}",
                 weekStart, message, kept, previous.map(LocalDate::toString).orElse("none"));
         return new Outcome(Status.FAILED, weekStart, 0, 0, message);
-    }
-
-    /** A software developer or engineer title; other roles in the IT category (analysts, managers, support) are left out. */
-    static boolean isDeveloperRole(String title) {
-        if (title == null) return false;
-        String t = title.toLowerCase(Locale.ROOT);
-        if (t.contains("developer") || t.contains("programmer")) return true;
-        return t.contains("engineer") && (t.contains("software") || t.contains("java") || t.contains("backend")
-                || t.contains("back-end") || t.contains("back end") || t.contains("full stack")
-                || t.contains("full-stack") || t.contains("fullstack") || t.contains("application"));
     }
 
     /** The source's id, or the listing's own text when it has none, so a listing is counted once per run. */

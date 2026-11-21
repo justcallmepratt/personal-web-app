@@ -54,8 +54,8 @@ admin:
 market-research:
   enabled: ${MARKET_RESEARCH_ENABLED:false}
   cron: ${MARKET_RESEARCH_CRON:0 0 6 * * MON}   # Spring cron, UTC: Mondays 06:00
-  min-listings: ${MARKET_RESEARCH_MIN_LISTINGS:30}            # fewer examined listings: no suggestions
-  min-share-percent: ${MARKET_RESEARCH_MIN_SHARE_PERCENT:20}  # a skill must appear in this share of them
+  min-listings: ${MARKET_RESEARCH_MIN_LISTINGS:30}            # a role with fewer examined listings: no suggestions
+  min-share-percent: ${MARKET_RESEARCH_MIN_SHARE_PERCENT:20}  # a skill must appear in this share of a role's listings
   max-suggestions-per-run: ${MARKET_RESEARCH_MAX_SUGGESTIONS:3}
   adzuna:
     app-id: ${ADZUNA_APP_ID:}

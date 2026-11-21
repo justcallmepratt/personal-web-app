@@ -155,11 +155,13 @@ was not called, so behaviour is as documented, not as observed.
   about holding Adzuna's content.
 - **Rate limits: unconfirmed.** No public page gives numbers; the terms say the limits
   "are shown in your account". The often-quoted 25 a minute / 250 a day / 1,000 a week /
-  2,500 a month come from third parties only. The job makes about 63 requests a week,
-  spaced 3 seconds apart, which is inside even those figures; read the real ones in the
+  2,500 a month come from third parties only. The job makes about 126 requests a week
+  (63 companies, two target roles), spaced 3 seconds apart, in one run. That is inside the
+  quoted daily and weekly figures and, at 20 a minute, under the quoted per-minute one; read the real ones in the
   dashboard after registering.
 - **Request.** `GET https://api.adzuna.com/v1/api/jobs/us/search/1` with `app_id`,
-  `app_key`, `content-type=application/json`, `what`, `category` (`it-jobs`), `company`
+  `app_key`, `content-type=application/json`, `what` or `what_phrase` (the forward
+  deployed search uses the exact phrase), `category` (`it-jobs`, developer search only), `company`
   ("The canonical company name"), `max_days_old`, `results_per_page`, `sort_by`. **Not
   documented:** whether `company` matches exactly or loosely, and the maximum
   `results_per_page` (50 is the commonly cited figure). The job therefore re-checks every

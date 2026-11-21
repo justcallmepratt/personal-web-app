@@ -5,6 +5,7 @@ import com.resume.market.MarketResearchJob;
 import com.resume.market.MarketResearchService;
 import com.resume.market.MarketResearchSettings;
 import com.resume.market.MarketSummaryStore;
+import com.resume.market.TargetRoles;
 import com.resume.model.MarketResearchRun;
 import com.resume.model.MarketSkillCount;
 import com.resume.security.JwtFilter;
@@ -43,6 +44,7 @@ class MarketResearchControllerTest {
     @MockitoBean MarketSummaryStore store;
     @MockitoBean MarketResearchSettings settings;
     @MockitoBean AllowList allowList;
+    @MockitoBean TargetRoles targetRoles;
     @MockitoBean JwtUtil jwtUtil;
     @MockitoBean JwtFilter jwtFilter;
 
@@ -60,6 +62,13 @@ class MarketResearchControllerTest {
         when(allowList.companies()).thenReturn(List.of(
                 new AllowList.Company("A", "A", Set.of("a")), new AllowList.Company("B", "B", Set.of("b"))));
         when(job.currentWeek()).thenReturn(LocalDate.of(2026, 11, 16));
+        when(targetRoles.roles()).thenReturn(List.of(
+                new TargetRoles.Role("software-developer", "software developer", Set.of("software engineer"),
+                        new TargetRoles.Search("software", null, null)),
+                new TargetRoles.Role("forward-deployed-engineer", "forward deployed engineer",
+                        Set.of("forward deployed engineer"), new TargetRoles.Search(null, "forward deployed", null))));
+        when(targetRoles.nameOf("software-developer")).thenReturn("software developer");
+        when(targetRoles.nameOf("forward-deployed-engineer")).thenReturn("forward deployed engineer");
     }
 
     private static MarketResearchRun run(LocalDate week, String status, String error) {
@@ -81,7 +90,11 @@ class MarketResearchControllerTest {
     void latest_returnsTheNewestSummary_theRulesAndTheStateOfTheJob() throws Exception {
         when(store.latest()).thenReturn(Optional.of(new MarketSummaryStore.Summary(
                 run(LocalDate.of(2026, 11, 9), "completed", null),
-                List.of(new MarketSkillCount(4L, "Java", 50), new MarketSkillCount(4L, "Kubernetes", 20)))));
+                List.of(new MarketSummaryStore.RoleSummary("software-developer", 52, List.of(
+                                new MarketSkillCount(4L, "software-developer", "Java", 50),
+                                new MarketSkillCount(4L, "software-developer", "Kubernetes", 20))),
+                        new MarketSummaryStore.RoleSummary("forward-deployed-engineer", 8, List.of(
+                                new MarketSkillCount(4L, "forward-deployed-engineer", "Python", 6)))))));
         when(store.newestWeek()).thenReturn(Optional.of(
                 run(LocalDate.of(2026, 11, 16), "failed", "Adzuna request for A failed: HTTP 503")));
         when(job.running()).thenReturn(true);
@@ -104,10 +117,22 @@ class MarketResearchControllerTest {
                 .andExpect(jsonPath("$.summary.apiCalls").value(3))
                 .andExpect(jsonPath("$.summary.suggestionsCreated").value(1))
                 .andExpect(jsonPath("$.summary.finishedAt").value("2026-11-16T06:04:30"))
-                .andExpect(jsonPath("$.summary.skills.length()").value(2))
-                .andExpect(jsonPath("$.summary.skills[0].skill").value("Java"))
-                .andExpect(jsonPath("$.summary.skills[0].listingsMentioned").value(50))
-                .andExpect(jsonPath("$.summary.skills[1].skill").value("Kubernetes"))
+                .andExpect(jsonPath("$.targetRoles.length()").value(2))
+                .andExpect(jsonPath("$.targetRoles[0]").value("software developer"))
+                .andExpect(jsonPath("$.targetRoles[1]").value("forward deployed engineer"))
+                .andExpect(jsonPath("$.summary.roles.length()").value(2))
+                .andExpect(jsonPath("$.summary.roles[0].role").value("software-developer"))
+                .andExpect(jsonPath("$.summary.roles[0].name").value("software developer"))
+                .andExpect(jsonPath("$.summary.roles[0].listingsExamined").value(52))
+                .andExpect(jsonPath("$.summary.roles[0].skills.length()").value(2))
+                .andExpect(jsonPath("$.summary.roles[0].skills[0].skill").value("Java"))
+                .andExpect(jsonPath("$.summary.roles[0].skills[0].listingsMentioned").value(50))
+                .andExpect(jsonPath("$.summary.roles[0].skills[1].skill").value("Kubernetes"))
+                .andExpect(jsonPath("$.summary.roles[1].role").value("forward-deployed-engineer"))
+                .andExpect(jsonPath("$.summary.roles[1].name").value("forward deployed engineer"))
+                .andExpect(jsonPath("$.summary.roles[1].listingsExamined").value(8))
+                .andExpect(jsonPath("$.summary.roles[1].skills[0].skill").value("Python"))
+                .andExpect(jsonPath("$.summary.roles[1].skills[0].listingsMentioned").value(6))
                 .andExpect(jsonPath("$.lastRun.weekStart").value("2026-11-16"))
                 .andExpect(jsonPath("$.lastRun.status").value("failed"))
                 .andExpect(jsonPath("$.lastRun.error").value("Adzuna request for A failed: HTTP 503"));

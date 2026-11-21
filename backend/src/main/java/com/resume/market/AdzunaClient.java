@@ -12,11 +12,13 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Reads listings from the Adzuna search API: one request per company, the first page
- * only (see docs/RESEARCH.md for the terms and what is and is not confirmed about limits).
+ * Reads listings from the Adzuna search API: one request per company and target role,
+ * the first page only (see docs/RESEARCH.md for the terms and what is and is not confirmed about limits).
  *
  * <p>Failure handling: a 5-second connect and 10-second read timeout; a rate-limit answer
  * (429), a server error (5xx) or a network error is tried again with a doubling wait, up
@@ -33,8 +35,8 @@ public class AdzunaClient implements ListingsClient {
     static final long RETRY_AFTER_MAX_MILLIS = 60_000;
 
     private static final String PATH = "/jobs/{country}/search/1?app_id={appId}&app_key={appKey}"
-            + "&content-type=application/json&results_per_page={perPage}&what=software&category=it-jobs"
-            + "&company={company}&max_days_old={maxDaysOld}&sort_by=date";
+            + "&content-type=application/json&results_per_page={perPage}";
+    private static final String FILTERS = "&company={company}&max_days_old={maxDaysOld}&sort_by=date";
 
     /** Waiting, replaceable in tests. */
     @FunctionalInterface
@@ -73,10 +75,10 @@ public class AdzunaClient implements ListingsClient {
     }
 
     @Override
-    public Page fetch(AllowList.Company company) {
+    public Page fetch(AllowList.Company company, TargetRoles.Role role) {
         String last = "no attempt was made";
         for (int attempt = 1; attempt <= settings.maxAttempts(); attempt++) {
-            Attempt result = attempt(company);
+            Attempt result = attempt(company, role);
             if (result.listings() != null) return new Page(result.listings(), attempt);
             last = result.error();
             if (!result.retry()) throw new ListingsException(last, attempt);
@@ -87,18 +89,41 @@ public class AdzunaClient implements ListingsClient {
                 sleeper.sleep(Math.max(backoff, result.waitMillis()));
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new ListingsException("Interrupted while waiting to retry " + company.name(), attempt);
+                throw new ListingsException("Interrupted while waiting to retry " + company.name()
+                        + " (" + role.name() + ")", attempt);
             }
         }
         throw new ListingsException(last + " (after " + settings.maxAttempts() + " attempts)", settings.maxAttempts());
     }
 
-    private Attempt attempt(AllowList.Company company) {
-        String who = "Adzuna request for " + company.name();
+    private Attempt attempt(AllowList.Company company, TargetRoles.Role role) {
+        String who = "Adzuna request for " + company.name() + " (" + role.name() + ")";
+        // The role's search decides the keywords: what, what_phrase and category are each optional.
+        TargetRoles.Search search = role.search();
+        Map<String, Object> values = new HashMap<>();
+        values.put("country", settings.country());
+        values.put("appId", settings.appId());
+        values.put("appKey", settings.appKey());
+        values.put("perPage", settings.resultsPerPage());
+        values.put("company", company.searchName());
+        values.put("maxDaysOld", settings.maxDaysOld());
+        StringBuilder template = new StringBuilder(settings.baseUrl()).append(PATH);
+        if (search.what() != null) {
+            template.append("&what={what}");
+            values.put("what", search.what());
+        }
+        if (search.whatPhrase() != null) {
+            template.append("&what_phrase={whatPhrase}");
+            values.put("whatPhrase", search.whatPhrase());
+        }
+        if (search.category() != null) {
+            template.append("&category={category}");
+            values.put("category", search.category());
+        }
+        template.append(FILTERS);
         try {
             return http.get()
-                    .uri(settings.baseUrl() + PATH, settings.country(), settings.appId(), settings.appKey(),
-                            settings.resultsPerPage(), company.searchName(), settings.maxDaysOld())
+                    .uri(template.toString(), values)
                     .header(HttpHeaders.ACCEPT, "application/json")
                     .exchange((request, response) -> {
                         int status = response.getStatusCode().value();

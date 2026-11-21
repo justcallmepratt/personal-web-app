@@ -18,6 +18,9 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -33,6 +36,11 @@ class AdzunaClientTest {
     private static final String SECRET = "s3cr3t-key-value";
     private static final AllowList.Company COMPANY =
             new AllowList.Company("Example Bank", "Example Bank & Co", Set.of("example bank"));
+    private static final TargetRoles.Role ROLE = new TargetRoles.Role("software-developer", "software developer",
+            Set.of("software engineer"), new TargetRoles.Search("software", null, "it-jobs"));
+    private static final TargetRoles.Role PHRASE_ROLE = new TargetRoles.Role("forward-deployed-engineer",
+            "forward deployed engineer", Set.of("forward deployed engineer"),
+            new TargetRoles.Search(null, "forward deployed", null));
 
     private static final String TWO_RESULTS = """
             {"count": 2, "results": [
@@ -79,7 +87,7 @@ class AdzunaClientTest {
                 .andExpect(queryParam("sort_by", "date"))
                 .andRespond(withSuccess(TWO_RESULTS, MediaType.APPLICATION_JSON));
 
-        ListingsClient.Page page = client.fetch(COMPANY);
+        ListingsClient.Page page = client.fetch(COMPANY, ROLE);
 
         assertThat(page.apiCalls()).isEqualTo(1);
         assertThat(page.listings()).containsExactly(
@@ -91,11 +99,39 @@ class AdzunaClientTest {
     }
 
     @Test
+    void theRolesSearchDecidesTheKeywords_aPhraseSearchSendsNoKeywordsOrCategory() {
+        server.expect(ExpectedCount.once(), requestTo(allOf(
+                        startsWith("https://adzuna.test/v1/api/jobs/us/search/1?"),
+                        not(containsString("&what=")), not(containsString("category=")))))
+                .andExpect(queryParam("what_phrase", "forward%20deployed"))
+                .andExpect(queryParam("company", "Example%20Bank%20%26%20Co"))
+                .andExpect(queryParam("max_days_old", "30"))
+                .andRespond(withSuccess("{\"results\":[{\"id\":\"9\",\"title\":\"Forward Deployed Engineer\","
+                        + "\"company\":{\"display_name\":\"Example Bank\"},\"description\":\"Python\"}]}",
+                        MediaType.APPLICATION_JSON));
+
+        ListingsClient.Page page = client.fetch(COMPANY, PHRASE_ROLE);
+
+        assertThat(page.listings()).containsExactly(
+                new Listing("9", "Forward Deployed Engineer", "Example Bank", "Python"));
+        server.verify();
+    }
+
+    @Test
+    void aFailureNamesTheCompanyAndTheRole() {
+        server.expect(requestTo(startsWith("https://adzuna.test/"))).andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, PHRASE_ROLE));
+
+        assertThat(e).hasMessage("Adzuna request for Example Bank (forward deployed engineer) failed: HTTP 404");
+    }
+
+    @Test
     void anEmptyResultListIsNotAnError() {
         server.expect(requestTo(startsWith("https://adzuna.test/"))).andRespond(
                 withSuccess("{\"count\":0,\"results\":[]}", MediaType.APPLICATION_JSON));
 
-        assertThat(client.fetch(COMPANY).listings()).isEmpty();
+        assertThat(client.fetch(COMPANY, ROLE).listings()).isEmpty();
     }
 
     @Test
@@ -107,7 +143,7 @@ class AdzunaClientTest {
         server.expect(ExpectedCount.once(), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withSuccess(TWO_RESULTS, MediaType.APPLICATION_JSON));
 
-        ListingsClient.Page page = client.fetch(COMPANY);
+        ListingsClient.Page page = client.fetch(COMPANY, ROLE);
 
         assertThat(page.apiCalls()).isEqualTo(3);
         assertThat(page.listings()).hasSize(3);
@@ -121,7 +157,7 @@ class AdzunaClientTest {
         server.expect(ExpectedCount.times(3), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
-        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
 
         assertThat(e).hasMessageContaining("rate limited (HTTP 429)").hasMessageContaining("after 3 attempts");
         assertThat(e.apiCalls()).isEqualTo(3);
@@ -134,9 +170,9 @@ class AdzunaClientTest {
         server.expect(ExpectedCount.times(3), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
 
-        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
 
-        assertThat(e).hasMessage("Adzuna request for Example Bank failed: HTTP 502 (after 3 attempts)");
+        assertThat(e).hasMessage("Adzuna request for Example Bank (software developer) failed: HTTP 502 (after 3 attempts)");
         assertThat(e.apiCalls()).isEqualTo(3);
         assertThat(sleeps).containsExactly(2000L, 4000L);
         server.verify();
@@ -149,7 +185,7 @@ class AdzunaClientTest {
         server.expect(ExpectedCount.once(), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withSuccess(TWO_RESULTS, MediaType.APPLICATION_JSON));
 
-        assertThat(client.fetch(COMPANY).apiCalls()).isEqualTo(2);
+        assertThat(client.fetch(COMPANY, ROLE).apiCalls()).isEqualTo(2);
         assertThat(sleeps).containsExactly(2000L);
     }
 
@@ -160,7 +196,7 @@ class AdzunaClientTest {
             server.expect(ExpectedCount.once(), requestTo(startsWith("https://adzuna.test/")))
                     .andRespond(withStatus(status).body("{\"exception\":\"AUTH_FAIL\",\"display\":\"Authorisation failed\"}"));
 
-            ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+            ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
 
             assertThat(e).hasMessageContaining("was refused (HTTP " + status.value() + ")")
                     .hasMessageContaining("ADZUNA_APP_ID and ADZUNA_APP_KEY");
@@ -175,9 +211,9 @@ class AdzunaClientTest {
         server.expect(ExpectedCount.once(), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST));
 
-        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
 
-        assertThat(e).hasMessage("Adzuna request for Example Bank failed: HTTP 400");
+        assertThat(e).hasMessage("Adzuna request for Example Bank (software developer) failed: HTTP 400");
         assertThat(sleeps).isEmpty();
         server.verify();
     }
@@ -187,7 +223,7 @@ class AdzunaClientTest {
         server.expect(ExpectedCount.times(3), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withException(new IOException("timeout calling https://adzuna.test/?app_key=" + SECRET)));
 
-        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+        ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
 
         assertThat(e).hasMessageContaining("network error").hasMessageContaining("after 3 attempts");
         assertThat(e.getMessage()).doesNotContain(SECRET).doesNotContain("app_key").doesNotContain("https://");
@@ -201,7 +237,7 @@ class AdzunaClientTest {
         for (HttpStatus status : List.of(HttpStatus.BAD_REQUEST, HttpStatus.GONE, HttpStatus.NOT_FOUND)) {
             server.reset();
             server.expect(requestTo(startsWith("https://adzuna.test/"))).andRespond(withStatus(status));
-            ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+            ListingsException e = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
             assertThat(e.getMessage()).doesNotContain(SECRET).doesNotContain("test-id");
         }
     }
@@ -210,14 +246,14 @@ class AdzunaClientTest {
     void aBodyThatIsNotTheExpectedJsonFailsWithoutARetry() {
         server.expect(ExpectedCount.once(), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withSuccess("<html>maintenance</html>", MediaType.TEXT_HTML));
-        ListingsException notJson = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+        ListingsException notJson = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
         assertThat(notJson).hasMessageContaining("not JSON");
         assertThat(notJson.apiCalls()).isEqualTo(1);
 
         server.reset();
         server.expect(ExpectedCount.once(), requestTo(startsWith("https://adzuna.test/")))
                 .andRespond(withSuccess("{\"exception\":\"X\"}", MediaType.APPLICATION_JSON));
-        ListingsException noList = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY));
+        ListingsException noList = catchThrowableOfType(ListingsException.class, () -> client.fetch(COMPANY, ROLE));
         assertThat(noList).hasMessageContaining("without a results list");
         assertThat(sleeps).isEmpty();
     }
@@ -231,7 +267,7 @@ class AdzunaClientTest {
         AdzunaClient impatient = new AdzunaClient(TestSettings.defaults(), JsonMapper.builder().build(), builder,
                 millis -> { throw new InterruptedException(); });
 
-        ListingsException e = catchThrowableOfType(ListingsException.class, () -> impatient.fetch(COMPANY));
+        ListingsException e = catchThrowableOfType(ListingsException.class, () -> impatient.fetch(COMPANY, ROLE));
 
         assertThat(e).hasMessageContaining("Interrupted");
         assertThat(e.apiCalls()).isEqualTo(1);

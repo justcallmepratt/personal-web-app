@@ -44,10 +44,12 @@ person can ship, and I can reach them". Work is judged against that.
   run before the merge. Accepted changes show within the hour;
   `frontend/src/content/index.ts` (the fallback) is not updated by it.
 - **Weekly market research (WP-L, replaces phase 12 as written):** a weekly job in the API
-  reads software-developer listings (Adzuna) at an allow-list of companies that are on the
-  Fortune 500 and own a FINRA member broker-dealer, counts the skills they mention
-  against a dictionary in the repository, stores the weekly counts, and proposes common
-  skills that are missing from the profile as suggestions (source `market-research`). It
+  reads listings (Adzuna) for two target roles, software developer and forward deployed
+  engineer, at an allow-list of companies that are on the Fortune 500 and own a FINRA
+  member broker-dealer, counts the skills they mention against a dictionary in the
+  repository, stores the weekly counts per role, and proposes common skills that are
+  missing from the profile as suggestions (source `market-research`) whose reason names
+  the role the evidence came from. It
   never edits content and never words a claim: each suggestion asks the owner to accept
   only if they have that experience. Built and **off**: needs the one-time migration in
   [DEPLOYMENT.md](DEPLOYMENT.md#market-research-run-the-migration-before-merging) before
@@ -142,7 +144,7 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | WP-J Monorepo move | Later | `frontend/` to `apps/web`, shared UI package and API types, one TypeScript version (6 in `apps/admin`, 5 in `frontend`), update workflows, Dockerfile, Vercel root directory. Collides with any concurrent change under `frontend/`. |
 | WP-K Job tracker | Dropped | Replaced by JobSync. |
 | WP-M Suggestion sources | Later, not started | Sources that create suggestions through `POST /api/admin/suggestions` with their own `source` value; none may write content directly. **JobSync** (`jobsync`): the owner's separately run job tracker; not installed and no integration exists. **Market research** (`market-research`): done as WP-L; it runs inside the API, so it needs no credential. An outside source still needs a way to call the API without the owner's browser session (a scoped credential, not built), and rules against overstating: suggestions must be grounded in facts the owner has confirmed. |
-| WP-L Market research | Built, off, waiting on the owner | Owner: run the migration before merging, register for Adzuna keys, set `MARKET_RESEARCH_ENABLED`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` on Railway ([DEPLOYMENT.md](DEPLOYMENT.md#turn-on-market-research)). Then: check Adzuna's real rate limits in the dashboard, correct allow-list search names after the first run (never checked against Adzuna), decide on CBRE and JLL, review the list yearly. Not built: a page for the summary in the admin app (the API has `GET /api/admin/market-research/latest`), trends across weeks, salaries. Databricks is deferred. |
+| WP-L Market research | Built, off, waiting on the owner | Owner: run the migration before merging, register for Adzuna keys, set `MARKET_RESEARCH_ENABLED`, `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` on Railway ([DEPLOYMENT.md](DEPLOYMENT.md#turn-on-market-research)). Then: check Adzuna's real rate limits in the dashboard, correct allow-list search names after the first run (never checked against Adzuna), decide on CBRE and JLL, review the list yearly. Expect few forward deployed engineer listings: a role needs 30 in a week before it produces suggestions. Not built: a page for the summary in the admin app (the API has `GET /api/admin/market-research/latest`), trends across weeks, salaries. Databricks is deferred. |
 
 ## Decisions
 
@@ -162,5 +164,5 @@ Checked against the repository, the live API and code scanning on 2026-11-21. No
 | 12 | `Admin — Node 22 / pnpm` as a required check | **Answered** | Already required. |
 | 13 | Make `Kafka — Node 22 / pnpm` a required check | **Open** | Runs on every PR but is not required. |
 | 14 | How tools may change resume and profile content | **Answered** (2026-11-21) | Suggest-and-approve only: tools propose, nothing is public until the owner accepts it in the admin app. |
-| 15 | Which companies market research looks at | **Answered** (2026-11-21) | Software-developer roles in financial services, only at companies that are both on the Fortune 500 and FINRA-regulated (they are, or own, a FINRA member broker-dealer). The list and its evidence: `backend/src/main/resources/market/allow-list.json`. |
+| 15 | Which roles and companies market research looks at | **Answered** (2026-11-21) | Two roles, software developer and forward deployed engineer (title variants in `backend/src/main/resources/market/roles.json`), in financial services, only at companies that are both on the Fortune 500 and FINRA-regulated (they are, or own, a FINRA member broker-dealer). The list and its evidence: `backend/src/main/resources/market/allow-list.json`. |
 | 16 | Do CBRE Group and Jones Lang LaSalle count? | **Open** | Both meet the two tests in decision 15 but are real-estate companies. Switched off in the allow-list until decided. |

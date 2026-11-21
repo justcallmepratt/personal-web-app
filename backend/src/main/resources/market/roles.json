@@ -1,0 +1,43 @@
+{
+  "reviewedOn": "2026-11-21",
+  "_how": "The roles the weekly market research looks at (owner's rule, 2026-11-21: software developer and forward deployed engineer, in financial services, at the allow-listed companies). 'id' is stored with the weekly counts, so do not change it once runs exist (lower case letters, digits and hyphens, up to 50). 'name' is how the role is written in a suggestion's reason and in the summary (up to 40 characters). 'titles' are the job-title variants that count: a listing belongs to a role when its title contains one of them as whole words, ignoring case and punctuation ('Senior Software Engineer II' contains 'software engineer'; 'Software Engineering Manager' does not). When a title matches more than one role, the longest matching variant wins, so 'Forward Deployed Software Engineer' is a forward deployed engineer. 'search' is the query sent to the listings API for the role: 'what' (keywords) or 'whatPhrase' (an exact phrase), and optionally a 'category'. Each role costs one request per allow-listed company per week.",
+  "roles": [
+    {
+      "id": "software-developer",
+      "name": "software developer",
+      "titles": [
+        "software engineer",
+        "software developer",
+        "software development engineer",
+        "software programmer",
+        "backend engineer",
+        "backend developer",
+        "back end engineer",
+        "back end developer",
+        "java engineer",
+        "java developer",
+        "full stack engineer",
+        "full stack developer",
+        "fullstack engineer",
+        "fullstack developer",
+        "application developer",
+        "applications developer",
+        "programmer analyst"
+      ],
+      "search": { "what": "software", "category": "it-jobs" }
+    },
+    {
+      "id": "forward-deployed-engineer",
+      "name": "forward deployed engineer",
+      "titles": [
+        "forward deployed engineer",
+        "forward deployed software engineer",
+        "forward deployed developer",
+        "forward deployed ai engineer",
+        "forward deployed solutions engineer",
+        "forward deployment engineer"
+      ],
+      "search": { "whatPhrase": "forward deployed" }
+    }
+  ]
+}

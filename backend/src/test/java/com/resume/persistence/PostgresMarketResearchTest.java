@@ -8,13 +8,16 @@ import com.resume.market.MarketResearchService;
 import com.resume.market.MarketResearchService.Outcome;
 import com.resume.market.MarketResearchService.Status;
 import com.resume.market.MarketSummaryStore;
+import com.resume.market.TargetRoles;
 import com.resume.model.ContentSuggestion;
 import com.resume.model.MarketResearchRun;
+import com.resume.model.MarketRoleTotal;
 import com.resume.model.MarketSkillCount;
 import com.resume.model.Profile;
 import com.resume.repository.ContentSuggestionRepository;
 import com.resume.repository.ExperienceRepository;
 import com.resume.repository.MarketResearchRunRepository;
+import com.resume.repository.MarketRoleTotalRepository;
 import com.resume.repository.MarketSkillCountRepository;
 import com.resume.repository.ProfileRepository;
 import com.resume.repository.ProjectRepository;
@@ -54,6 +57,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -100,7 +104,7 @@ class PostgresMarketResearchTest {
             "2026-11-21_market_research.sql").toAbsolutePath().normalize();
     private static final LocalDate WEEK = LocalDate.of(2026, 11, 16);
     private static final LocalDateTime STARTED = LocalDateTime.of(2026, 11, 16, 6, 0);
-    private static final List<String> TABLES = List.of("market_research_runs", "market_skill_counts");
+    private static final List<String> TABLES = List.of("market_research_runs", "market_role_totals", "market_skill_counts");
 
     @Container
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
@@ -124,8 +128,10 @@ class PostgresMarketResearchTest {
     @Autowired MarketResearchService service;
     @Autowired MarketSummaryStore store;
     @Autowired AllowList allowList;
+    @Autowired TargetRoles targetRoles;
     @Autowired MarketResearchRunRepository runs;
     @Autowired MarketSkillCountRepository counts;
+    @Autowired MarketRoleTotalRepository totals;
     @Autowired ContentSuggestionRepository suggestions;
     @Autowired SuggestionService suggestionService;
     @Autowired ProfileRepository profiles;
@@ -144,6 +150,7 @@ class PostgresMarketResearchTest {
         jdbc = new JdbcTemplate(dataSource);
         reset(client);
         counts.deleteAll();
+        totals.deleteAll();
         runs.deleteAll();
         suggestions.deleteAll();
         experiences.deleteAll();
@@ -159,18 +166,32 @@ class PostgresMarketResearchTest {
         profileId = profiles.save(profile).getId();
 
         firstCompany = allowList.companies().get(0);
-        when(client.fetch(any())).thenReturn(new ListingsClient.Page(List.of(), 1));
+        when(client.fetch(any(), any())).thenReturn(new ListingsClient.Page(List.of(), 1));
+    }
+
+    /** One role's worth of counts, for the software developer role. */
+    private static Map<String, MarketSummaryStore.RoleCounts> dev(int examined, Map<String, Integer> skills) {
+        return Map.of("software-developer", new MarketSummaryStore.RoleCounts(examined, skills));
+    }
+
+    private static List<MarketSkillCount> skillsOf(MarketSummaryStore.Summary summary, String role) {
+        return summary.roles().stream().filter(r -> r.role().equals(role)).findFirst().orElseThrow().skills();
     }
 
     /** Twenty developer listings at the first allow-listed company: Java in all, Kubernetes in 12, Docker in 8, Python in 2. */
-    private void marketAsksForKubernetesAndDocker() {
+    private List<Listing> developerListings() {
         String employer = firstCompany.aliases().iterator().next();
         List<Listing> listings = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
             String text = "Java" + (i < 12 ? ", Kubernetes" : "") + (i < 8 ? ", Docker" : "") + (i < 2 ? ", Python" : "");
             listings.add(new Listing("id-" + i, "Software Engineer", employer, text));
         }
-        when(client.fetch(firstCompany)).thenReturn(new ListingsClient.Page(listings, 1));
+        return listings;
+    }
+
+    /** Both of the company's searches (one per role) return the developer listings; each is counted once. */
+    private void marketAsksForKubernetesAndDocker() {
+        when(client.fetch(eq(firstCompany), any())).thenReturn(new ListingsClient.Page(developerListings(), 1));
     }
 
     // ── schema ───────────────────────────────────────────────────────────────
@@ -188,11 +209,17 @@ class PostgresMarketResearchTest {
                 "error character varying YES",
                 "started_at timestamp without time zone NO",
                 "finished_at timestamp without time zone NO");
+        assertThat(columns("market_role_totals")).containsExactly(
+                "id bigint NO",
+                "run_id bigint NO",
+                "role character varying NO",
+                "listings_examined integer NO");
         assertThat(columns("market_skill_counts")).containsExactly(
                 "id bigint NO",
                 "run_id bigint NO",
                 "skill character varying NO",
-                "listings_mentioned integer NO");
+                "listings_mentioned integer NO",
+                "role character varying NO");
         for (String table : TABLES) {
             assertThat(jdbc.queryForObject("select relrowsecurity from pg_class where oid = ?::regclass",
                     Boolean.class, "public." + table)).as("row level security on %s", table).isTrue();
@@ -226,18 +253,32 @@ class PostgresMarketResearchTest {
         assertThat(row.get("started_at")).isNotNull();
         Long runId = ((Number) row.get("id")).longValue();
 
-        String insertCount = "insert into market_skill_counts (run_id, skill, listings_mentioned) values (?, ?, ?)";
-        jdbc.update(insertCount, runId, "Java", 3);
-        assertThatThrownBy(() -> jdbc.update(insertCount, runId, "Java", 4))
-                .as("one row per skill per run").isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> jdbc.update(insertCount, runId, "Kafka", 0))
+        String insertCount = "insert into market_skill_counts (run_id, role, skill, listings_mentioned) values (?, ?, ?, ?)";
+        jdbc.update(insertCount, runId, "software-developer", "Java", 3);
+        // The same skill is counted separately for another role.
+        jdbc.update(insertCount, runId, "forward-deployed-engineer", "Java", 2);
+        assertThatThrownBy(() -> jdbc.update(insertCount, runId, "software-developer", "Java", 4))
+                .as("one row per skill per role per run").isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(insertCount, runId, "software-developer", "Kafka", 0))
                 .isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> jdbc.update(insertCount, runId + 1000, "Kafka", 1))
+        assertThatThrownBy(() -> jdbc.update(insertCount, runId, null, "Kafka", 1))
+                .as("a count names its role").isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(insertCount, runId + 1000, "software-developer", "Kafka", 1))
                 .as("a count needs its run").isInstanceOf(DataIntegrityViolationException.class);
 
-        // Deleting a run takes its counts with it.
+        String insertTotal = "insert into market_role_totals (run_id, role, listings_examined) values (?, ?, ?)";
+        jdbc.update(insertTotal, runId, "software-developer", 0);
+        assertThatThrownBy(() -> jdbc.update(insertTotal, runId, "software-developer", 5))
+                .as("one total per role per run").isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(insertTotal, runId, "forward-deployed-engineer", -1))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(insertTotal, runId + 1000, "forward-deployed-engineer", 1))
+                .as("a total needs its run").isInstanceOf(DataIntegrityViolationException.class);
+
+        // Deleting a run takes its counts and totals with it.
         jdbc.update("delete from market_research_runs where id = ?", runId);
         assertThat(counts.count()).isZero();
+        assertThat(totals.count()).isZero();
     }
 
     @Test
@@ -264,7 +305,8 @@ class PostgresMarketResearchTest {
         }
 
         // On a database that already has the tables (this one), it changes nothing.
-        store.saveCompleted(WEEK, STARTED, 40, 2, 2, Map.of("Java", 30));
+        store.saveCompleted(WEEK, STARTED, 2, 2,
+                dev(40, Map.of("Java", 30)));
         List<String> before = describe(jdbc, "public");
         try (Connection connection = dataSource.getConnection()) {
             ScriptUtils.executeSqlScript(connection, new FileSystemResource(MIGRATION));
@@ -273,9 +315,59 @@ class PostgresMarketResearchTest {
         assertThat(describe(jdbc, "public")).isEqualTo(before);
         assertThat(runs.count()).isEqualTo(1);
         assertThat(counts.count()).isEqualTo(1);
+        assertThat(totals.count()).isEqualTo(1);
     }
 
-    /** Columns, constraints, indexes and row level security of both tables in {@code schema}. */
+    @Test
+    void migrationUpgradesADatabaseWhereItsFirstVersionWasAlreadyRun() throws Exception {
+        // The first version of the migration: no role on the counts, unique per run and skill,
+        // and no market_role_totals table.
+        String firstVersion = """
+                CREATE TABLE market_research_runs (
+                    id                  BIGSERIAL PRIMARY KEY,
+                    week_start          DATE         NOT NULL UNIQUE,
+                    status              VARCHAR(20)  NOT NULL CHECK (status IN ('completed', 'failed')),
+                    listings_examined   INTEGER      NOT NULL DEFAULT 0 CHECK (listings_examined >= 0),
+                    companies_queried   INTEGER      NOT NULL DEFAULT 0 CHECK (companies_queried >= 0),
+                    api_calls           INTEGER      NOT NULL DEFAULT 0 CHECK (api_calls >= 0),
+                    suggestions_created INTEGER      NOT NULL DEFAULT 0 CHECK (suggestions_created >= 0),
+                    error               VARCHAR(500),
+                    started_at          TIMESTAMP    NOT NULL DEFAULT NOW(),
+                    finished_at         TIMESTAMP    NOT NULL DEFAULT NOW()
+                )""";
+        String firstVersionCounts = """
+                CREATE TABLE market_skill_counts (
+                    id                 BIGSERIAL PRIMARY KEY,
+                    run_id             BIGINT       NOT NULL REFERENCES market_research_runs (id) ON DELETE CASCADE,
+                    skill              VARCHAR(100) NOT NULL,
+                    listings_mentioned INTEGER      NOT NULL CHECK (listings_mentioned > 0),
+                    UNIQUE (run_id, skill)
+                )""";
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                JdbcTemplate scratch = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
+                scratch.execute("create schema migration_check");
+                scratch.execute("set local search_path to migration_check");
+                scratch.execute(firstVersion);
+                scratch.execute(firstVersionCounts);
+                scratch.execute("alter table market_research_runs enable row level security");
+                scratch.execute("alter table market_skill_counts enable row level security");
+
+                ScriptUtils.executeSqlScript(connection, new FileSystemResource(MIGRATION));
+                ScriptUtils.executeSqlScript(connection, new FileSystemResource(MIGRATION));
+                scratch.execute("set local search_path to public");
+
+                assertThat(describe(scratch, "migration_check"))
+                        .as("an upgraded database matches supabase/init.sql")
+                        .isEqualTo(describe(scratch, "public"));
+            } finally {
+                connection.rollback();
+            }
+        }
+    }
+
+    /** Columns, constraints, indexes and row level security of the three tables in {@code schema}. */
     private static List<String> describe(JdbcTemplate db, String schema) {
         List<String> lines = new ArrayList<>();
         for (String table : TABLES) {
@@ -305,8 +397,8 @@ class PostgresMarketResearchTest {
 
     @Test
     void entitiesRoundTrip_andEveryRepositoryQueryWorks() {
-        MarketSummaryStore.Summary older = store.saveCompleted(WEEK.minusWeeks(1), STARTED.minusWeeks(1), 30, 2, 3,
-                Map.of("Java", 20, "Kafka", 20, "Docker", 5));
+        MarketSummaryStore.Summary older = store.saveCompleted(WEEK.minusWeeks(1), STARTED.minusWeeks(1), 2, 3,
+                dev(30, Map.of("Java", 20, "Kafka", 20, "Docker", 5)));
         store.saveFailed(WEEK, STARTED, 4, "Adzuna request for X failed: HTTP 503");
 
         MarketResearchRun loaded = runs.findByWeekStart(WEEK.minusWeeks(1)).orElseThrow();
@@ -330,19 +422,37 @@ class PostgresMarketResearchTest {
         // Most mentioned first, ties by name.
         assertThat(counts.findByRunIdOrderByListingsMentionedDescSkillAsc(older.run().getId()))
                 .extracting(MarketSkillCount::getSkill).containsExactly("Java", "Kafka", "Docker");
+        MarketSkillCount count = counts.findByRunIdOrderByListingsMentionedDescSkillAsc(older.run().getId()).get(0);
+        assertThat(count.getRole()).isEqualTo("software-developer");
+        assertThat(count.getRunId()).isEqualTo(older.run().getId());
+        assertThat(count.getListingsMentioned()).isEqualTo(20);
+
+        List<MarketRoleTotal> roleTotals = totals.findByRunIdOrderByIdAsc(older.run().getId());
+        assertThat(roleTotals).hasSize(1);
+        assertThat(roleTotals.get(0).getRole()).isEqualTo("software-developer");
+        assertThat(roleTotals.get(0).getListingsExamined()).isEqualTo(30);
+        assertThat(roleTotals.get(0).getRunId()).isEqualTo(older.run().getId());
+
         assertThat(counts.deleteByRunId(older.run().getId())).isEqualTo(3);
         assertThat(counts.count()).isZero();
+        assertThat(totals.deleteByRunId(older.run().getId())).isEqualTo(1);
+        assertThat(totals.count()).isZero();
     }
 
     @Test
     void savingAWeekTwiceReplacesItsCountsInPlace_andAFailureNeverReplacesASummary() {
-        Long id = store.saveCompleted(WEEK, STARTED, 40, 2, 2, Map.of("Java", 30, "Kafka", 12)).run().getId();
-        MarketSummaryStore.Summary again = store.saveCompleted(WEEK, STARTED, 50, 3, 3, Map.of("Java", 35, "Docker", 9));
+        Long id = store.saveCompleted(WEEK, STARTED, 2, 2,
+                dev(40, Map.of("Java", 30, "Kafka", 12))).run().getId();
+        MarketSummaryStore.Summary again = store.saveCompleted(WEEK, STARTED, 3, 3,
+                dev(50, Map.of("Java", 35, "Docker", 9)));
 
         assertThat(again.run().getId()).isEqualTo(id);
         assertThat(runs.count()).isEqualTo(1);
-        assertThat(jdbc.queryForList("select skill || '=' || listings_mentioned from market_skill_counts order by 1",
-                String.class)).containsExactly("Docker=9", "Java=35");
+        assertThat(jdbc.queryForList("select role || ':' || skill || '=' || listings_mentioned "
+                + "from market_skill_counts order by 1", String.class))
+                .containsExactly("software-developer:Docker=9", "software-developer:Java=35");
+        assertThat(jdbc.queryForList("select role || '=' || listings_examined from market_role_totals", String.class))
+                .containsExactly("software-developer=50");
 
         assertThat(store.saveFailed(WEEK, STARTED, 1, "HTTP 500")).isFalse();
         assertThat(store.latest().orElseThrow().run().getListingsExamined()).isEqualTo(50);
@@ -361,7 +471,8 @@ class PostgresMarketResearchTest {
         assertThat(outcome.status()).isEqualTo(Status.COMPLETED);
         assertThat(outcome.listingsExamined()).isEqualTo(20);
         assertThat(outcome.suggestionsCreated()).isEqualTo(2);
-        verify(client, times(allowList.companies().size())).fetch(any());
+        // One request per company and target role.
+        verify(client, times(allowList.companies().size() * 2)).fetch(any(), any());
 
         // One row for the week, and counts only: nothing of the listings themselves.
         Map<String, Object> run = jdbc.queryForMap("select * from market_research_runs");
@@ -370,9 +481,13 @@ class PostgresMarketResearchTest {
         assertThat(run.get("listings_examined")).isEqualTo(20);
         assertThat(run.get("companies_queried")).isEqualTo(allowList.companies().size());
         assertThat(run.get("suggestions_created")).isEqualTo(2);
-        assertThat(jdbc.queryForList("select skill || '=' || listings_mentioned from market_skill_counts "
-                + "order by listings_mentioned desc", String.class))
-                .containsExactly("Java=20", "Kubernetes=12", "Docker=8", "Python=2");
+        assertThat(jdbc.queryForList("select role || ':' || skill || '=' || listings_mentioned "
+                + "from market_skill_counts order by listings_mentioned desc", String.class))
+                .containsExactly("software-developer:Java=20", "software-developer:Kubernetes=12",
+                        "software-developer:Docker=8", "software-developer:Python=2");
+        // Both target roles are recorded, the one with no listings as zero.
+        assertThat(jdbc.queryForList("select role || '=' || listings_examined from market_role_totals order by id",
+                String.class)).containsExactly("software-developer=20", "forward-deployed-engineer=0");
 
         // Kubernetes (60%) and Docker (40%) are common and not on the profile. Java is on
         // it already; Python (2 listings) is below the thresholds.
@@ -383,7 +498,7 @@ class PostgresMarketResearchTest {
             assertThat(s.getTargetId()).isEqualTo(profileId);
             assertThat(s.getField()).isEqualTo("techStack");
             assertThat(s.getCurrentValue()).isEqualTo("[\"Java\",\"Kafka\"]");
-            assertThat(s.getReason()).contains("week of 2026-11-16").contains("of 20 software-developer listings")
+            assertThat(s.getReason()).contains("week of 2026-11-16").contains("of 20 software developer listings examined")
                     .contains("not a statement about you").contains("Accept only if you have real experience with");
         });
         assertThat(pending).extracting(ContentSuggestion::getProposedValue).containsExactlyInAnyOrder(
@@ -392,6 +507,48 @@ class PostgresMarketResearchTest {
         // Nothing public changed: the profile is exactly as it was.
         assertThat(contentSnapshot()).isEqualTo(before);
         assertThat(profiles.findById(profileId).orElseThrow().getTechStack()).containsExactly("Java", "Kafka");
+    }
+
+    @Test
+    void theSummaryIsKeptPerRole_andASuggestionSaysWhichRolesListingsItCameFrom() {
+        TargetRoles.Role developer = targetRoles.byId("software-developer").orElseThrow();
+        TargetRoles.Role forwardDeployed = targetRoles.byId("forward-deployed-engineer").orElseThrow();
+        String employer = firstCompany.aliases().iterator().next();
+        // Twelve forward deployed listings: Python in ten of them, Kubernetes in one.
+        List<Listing> deployed = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            deployed.add(new Listing("fde-" + i, i % 2 == 0 ? "Forward Deployed Engineer" : "Forward Deployed Software Engineer",
+                    employer, (i < 10 ? "Python" : "SQL") + (i == 0 ? ", Kubernetes" : "")));
+        }
+        when(client.fetch(firstCompany, developer)).thenReturn(new ListingsClient.Page(developerListings(), 1));
+        when(client.fetch(firstCompany, forwardDeployed)).thenReturn(new ListingsClient.Page(deployed, 1));
+
+        Outcome outcome = service.run(WEEK, false);
+
+        assertThat(outcome.listingsExamined()).isEqualTo(32);
+        assertThat(jdbc.queryForList("select role || '=' || listings_examined from market_role_totals order by id",
+                String.class)).containsExactly("software-developer=20", "forward-deployed-engineer=12");
+        assertThat(jdbc.queryForList("select skill || '=' || listings_mentioned from market_skill_counts "
+                + "where role = 'forward-deployed-engineer' order by listings_mentioned desc, skill", String.class))
+                .containsExactly("Python=10", "SQL=2", "Kubernetes=1");
+        assertThat(jdbc.queryForObject("select listings_mentioned from market_skill_counts "
+                + "where role = 'software-developer' and skill = 'Python'", Integer.class)).isEqualTo(2);
+
+        // Kubernetes and Docker come from developer listings; Python only clears the bar
+        // among forward deployed listings (10 of 12), not among developers (2 of 20).
+        List<ContentSuggestion> pending = suggestions.findTop200ByStatusOrderByCreatedAtDescIdDesc("pending");
+        assertThat(pending).hasSize(3);
+        assertThat(reasonFor(pending, "Kubernetes")).contains("12 of 20 software developer listings examined")
+                .doesNotContain("forward deployed");
+        assertThat(reasonFor(pending, "Docker")).contains("8 of 20 software developer listings examined");
+        assertThat(reasonFor(pending, "Python")).contains("10 of 12 forward deployed engineer listings examined")
+                .doesNotContain("software developer").contains("Accept only if you have real experience with Python");
+        assertThat(profiles.findById(profileId).orElseThrow().getTechStack()).containsExactly("Java", "Kafka");
+    }
+
+    private static String reasonFor(List<ContentSuggestion> pending, String skill) {
+        return pending.stream().filter(s -> s.getProposedValue().contains("\"" + skill + "\""))
+                .findFirst().orElseThrow().getReason();
     }
 
     @Test
@@ -404,7 +561,7 @@ class PostgresMarketResearchTest {
 
         assertThat(second.status()).isEqualTo(Status.ALREADY_DONE);
         assertThat(second.suggestionsCreated()).isZero();
-        verify(client, never()).fetch(any());
+        verify(client, never()).fetch(any(), any());
         assertThat(runs.count()).isEqualTo(1);
         assertThat(counts.count()).isEqualTo(4);
         assertThat(suggestions.count()).isEqualTo(2);
@@ -439,7 +596,7 @@ class PostgresMarketResearchTest {
         clearInvocations(client);
         Outcome again = service.run(WEEK, false);
 
-        verify(client, never()).fetch(any());
+        verify(client, never()).fetch(any(), any());
         assertThat(again.suggestionsCreated()).isEqualTo(1);
         List<ContentSuggestion> pending = suggestions.findTop200ByStatusOrderByCreatedAtDescIdDesc("pending");
         assertThat(pending).hasSize(1);
@@ -454,7 +611,7 @@ class PostgresMarketResearchTest {
         String employer = firstCompany.aliases().iterator().next();
         List<Listing> few = new ArrayList<>();
         for (int i = 0; i < 9; i++) few.add(new Listing("id-" + i, "Java Developer", employer, "Kubernetes"));
-        when(client.fetch(firstCompany)).thenReturn(new ListingsClient.Page(few, 1));
+        when(client.fetch(eq(firstCompany), any())).thenReturn(new ListingsClient.Page(few, 1));
 
         Outcome outcome = service.run(WEEK, false);
 
@@ -470,7 +627,8 @@ class PostgresMarketResearchTest {
         marketAsksForKubernetesAndDocker();
         service.run(WEEK, false);
         long suggestionsBefore = suggestions.count();
-        when(client.fetch(any())).thenThrow(new ListingsException("Adzuna request for X was rate limited (HTTP 429)", 3));
+        when(client.fetch(any(), any()))
+                .thenThrow(new ListingsException("Adzuna request for X was rate limited (HTTP 429)", 3));
 
         Outcome nextWeek = service.run(WEEK.plusWeeks(1), false);
         Outcome forced = service.run(WEEK, true);
@@ -486,7 +644,7 @@ class PostgresMarketResearchTest {
         assertThat(latest.run().getWeekStart()).isEqualTo(WEEK);
         assertThat(latest.run().getStatus()).isEqualTo("completed");
         assertThat(latest.run().getListingsExamined()).isEqualTo(20);
-        assertThat(latest.skills()).hasSize(4);
+        assertThat(skillsOf(latest, "software-developer")).hasSize(4);
         assertThat(suggestions.count()).isEqualTo(suggestionsBefore);
     }
 
@@ -528,9 +686,15 @@ class PostgresMarketResearchTest {
                 .andExpect(jsonPath("$.summary.weekStart").value("2026-11-16"))
                 .andExpect(jsonPath("$.summary.listingsExamined").value(20))
                 .andExpect(jsonPath("$.summary.suggestionsCreated").value(2))
-                .andExpect(jsonPath("$.summary.skills[0].skill").value("Java"))
-                .andExpect(jsonPath("$.summary.skills[1].skill").value("Kubernetes"))
-                .andExpect(jsonPath("$.summary.skills[1].listingsMentioned").value(12))
+                .andExpect(jsonPath("$.targetRoles[1]").value("forward deployed engineer"))
+                .andExpect(jsonPath("$.summary.roles[0].role").value("software-developer"))
+                .andExpect(jsonPath("$.summary.roles[0].name").value("software developer"))
+                .andExpect(jsonPath("$.summary.roles[0].listingsExamined").value(20))
+                .andExpect(jsonPath("$.summary.roles[0].skills[0].skill").value("Java"))
+                .andExpect(jsonPath("$.summary.roles[0].skills[1].skill").value("Kubernetes"))
+                .andExpect(jsonPath("$.summary.roles[0].skills[1].listingsMentioned").value(12))
+                .andExpect(jsonPath("$.summary.roles[1].role").value("forward-deployed-engineer"))
+                .andExpect(jsonPath("$.summary.roles[1].listingsExamined").value(0))
                 .andExpect(jsonPath("$.lastRun.status").value("completed"));
     }
 }

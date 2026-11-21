@@ -322,17 +322,19 @@ What to know when using it:
 
 ## Market research: run the migration before merging
 
-The weekly market research adds two tables, `market_research_runs` and
-`market_skill_counts`. As with content suggestions, the API runs Hibernate with
+The weekly market research adds three tables, `market_research_runs`,
+`market_role_totals` and `market_skill_counts`. As with content suggestions, the API runs Hibernate with
 `ddl-auto: validate`, so **the API will not start if they are missing**, and Railway
 deploys `main` on every push. The order that is safe:
 
 1. **Run the migration first.** Supabase dashboard → SQL editor → paste
    [`supabase/migrations/2026-11-21_market_research.sql`](../supabase/migrations/2026-11-21_market_research.sql)
-   → Run. It only creates the two new tables and turns row level security on for them;
-   it changes no existing table or row and can be run again without effect. The API that
+   → Run. It only creates the three new tables and turns row level security on for them;
+   it changes no table or row that existed before and can be run again without effect.
+   **If you ran an earlier version of this file, run it again:** the per-role breakdown
+   added a column and a table, and the file brings an earlier run up to date. The API that
    is running now ignores the extra tables, so doing this early is harmless.
-2. **Check it:** `select count(*) from market_research_runs;` answers `0`.
+2. **Check it:** `select count(*) from market_role_totals;` answers `0`.
 3. **Then merge the pull request.** Railway redeploys the API. Nothing else changes: the
    job is **off** until you turn it on (below), and the log says so once at startup:
    `Market research is disabled: MARKET_RESEARCH_ENABLED is not true`.
@@ -352,8 +354,8 @@ repository, and none should ever be.
 1. **Get the API keys.** Register at <https://developer.adzuna.com/signup> (free, no
    payment details) and create an application; the dashboard shows an *application id*
    and an *application key*. While there, **read the rate limits shown in your account**:
-   Adzuna publishes no numbers, and this job makes about 63 requests in one weekly run
-   (one per company),
+   Adzuna publishes no numbers, and this job makes about 126 requests in one weekly run
+   (one per company and target role),
    at most one every 3 seconds (see [limits](#what-it-does-and-the-limits-of-the-data)).
 2. **Set three variables:** `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` and
    `MARKET_RESEARCH_ENABLED=true`. Railway redeploys. The startup log now says
@@ -364,8 +366,8 @@ repository, and none should ever be.
    ([RESEARCH.md 2.4](RESEARCH.md#24-scheduled-and-background-jobs-on-railway-and-the-supabase-free-tier)).
 4. **Run it once by hand** instead of waiting for Monday (needs [admin](#turn-on-admin)
    switched on, for the token): `POST /api/admin/market-research/run` with the admin
-   `Authorization: Bearer …` header answers 202 and runs in the background (three to
-   four minutes). `GET /api/admin/market-research/latest` then shows the week's counts. There
+   `Authorization: Bearer …` header answers 202 and runs in the background (six to
+   seven minutes). `GET /api/admin/market-research/latest` then shows the week's counts. There
    is no page for this in the admin app; Swagger UI on the API has both calls.
 5. **Read the first run's log.** It lists the companies for which no listing was counted
    (`no listing counted for N of M companies: …`). That usually means the `searchName`
@@ -381,8 +383,8 @@ repository, and none should ever be.
 | `MARKET_RESEARCH_ENABLED` | `true` to switch the job on (default off) |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | from the Adzuna developer dashboard; both required |
 | `MARKET_RESEARCH_CRON` | optional; Spring cron in UTC, default `0 0 6 * * MON` (Mondays 06:00). A value that is not a cron expression falls back to the default with a warning |
-| `MARKET_RESEARCH_MIN_LISTINGS` | optional; default `30`. With fewer listings examined in a week, no suggestion is made |
-| `MARKET_RESEARCH_MIN_SHARE_PERCENT` | optional; default `20`. A skill must be mentioned in at least this share of the listings (and in at least 5) |
+| `MARKET_RESEARCH_MIN_LISTINGS` | optional; default `30`, per role. A role with fewer listings examined in a week produces no suggestion |
+| `MARKET_RESEARCH_MIN_SHARE_PERCENT` | optional; default `20`. A skill must be mentioned in at least this share of a role's listings (and in at least 5) |
 | `MARKET_RESEARCH_MAX_SUGGESTIONS` | optional; default `3` per run, `0` for none. Never more than 5 from market research waiting at once |
 
 To switch it off again, remove `MARKET_RESEARCH_ENABLED` (or set it to `false`). Stored
@@ -390,15 +392,23 @@ summaries and suggestions stay.
 
 ### What it does, and the limits of the data
 
-- **Once a week** it asks Adzuna, company by company, for recent software listings at
-  the companies on the allow-list, keeps the ones whose employer name matches that
-  company and whose title is a developer or software-engineer role, and counts how many
-  mention each skill in the dictionary. It stores **counts only** (skill, listings that
-  mentioned it, listings examined, week): no listing text, id or link is stored or logged.
-- **Then it proposes.** For a skill that is common that week and is not on the profile, in
-  any experience entry or in any project, it creates one pending suggestion to add that
-  skill's name to the profile's tech stack. The reason states the evidence and asks you
-  to accept only if you have that experience. It never edits anything itself, never
+- **Two target roles** (yours, 2026-11-21): software developer and forward deployed
+  engineer, both in financial services at the allow-listed companies. The title variants
+  that count for each are a reviewed list in the repository (below).
+- **Once a week** it asks Adzuna, company by company and role by role, for recent
+  listings at the companies on the allow-list, keeps the ones whose employer name matches
+  that company and whose title is one of a role's variants, and counts how many mention
+  each skill in the dictionary. The title decides the role, and a listing counts for one
+  role only ("Forward Deployed Software Engineer" is a forward deployed engineer). It
+  stores **counts only, per role** (role, skill, listings that mentioned it, listings of
+  that role examined, week): no listing text, id or link is stored or logged.
+- **Then it proposes.** Each role is judged on its own listings. For a skill that is
+  common in a role's listings that week and is not on the profile, in any experience
+  entry or in any project, it creates one pending suggestion to add that skill's name to
+  the profile's tech stack. The reason states the evidence, **says which role's listings
+  it came from** ("mentioned in 10 of 12 forward deployed engineer listings"; a skill
+  common in both roles names both), and asks you to accept only if you have that
+  experience. It never edits anything itself, never
   touches experience or project text, and never words a claim about you.
 - **Safe to run twice.** One summary per week (weeks start on Monday, UTC). A second run
   in the same week fetches nothing and only re-checks suggestions; `?force=true` on the
@@ -417,8 +427,14 @@ Limits to keep in mind when reading the numbers:
 
 - Adzuna returns only the first **500 characters** of a description, so counts are
   undercounts and favour skills named in titles and opening lines.
-- At most **50 listings per company**, from the last 30 days, in Adzuna's IT category in
-  the US; consecutive weeks overlap, so week-to-week changes are small by construction.
+- **Forward deployed engineer listings will be few.** The role is rare at these firms,
+  and a role needs 30 listings in a week before it produces any suggestion (the two
+  roles are never added together). Expect its counts to be recorded and visible in the
+  summary while producing no suggestions; lower `MARKET_RESEARCH_MIN_LISTINGS` only if
+  you accept acting on a small sample (it applies to both roles).
+- At most **50 listings per company and role**, from the last 30 days, in the US (the
+  developer search is limited to Adzuna's IT category; the forward deployed search is the
+  exact phrase "forward deployed" in any category); consecutive weeks overlap, so week-to-week changes are small by construction.
 - The skill list is a fixed dictionary; a technology that is not in it is never counted.
 - Adzuna's **rate limits and its matching of the `company` filter are not documented**,
   and none of this has been run against the real API (no key was available). Expect to
@@ -427,9 +443,23 @@ Limits to keep in mind when reading the numbers:
   Adzuna. Nothing here is published, so keep it that way or add the credit
   ([RESEARCH.md](RESEARCH.md#adzuna-jobs-api-market-research)).
 
-### The allow-list and the skills dictionary
+### The target roles, the allow-list and the skills dictionary
 
-Both are data files in the repository, read at startup; change them with a pull request.
+All three are data files in the repository, read at startup; change them with a pull
+request.
+
+- **[`backend/src/main/resources/market/roles.json`](../backend/src/main/resources/market/roles.json)**:
+  the target roles. Each has an `id` (stored with the counts; do not change it once runs
+  exist), a `name` (how it is written in a suggestion's reason), the `titles` that count,
+  and the `search` sent to Adzuna. Today: **software developer** (software engineer,
+  software developer, software development engineer, backend / back end developer or
+  engineer, Java developer or engineer, full stack developer or engineer, application
+  developer, programmer analyst, software programmer) and **forward deployed engineer**
+  (forward deployed engineer, forward deployed software engineer, forward deployed
+  developer, forward deployed AI engineer, forward deployed solutions engineer, forward
+  deployment engineer). A title counts when it contains a variant as whole words, so
+  "Senior Software Engineer II" counts and "Software Engineering Manager" does not. To
+  add a variant, add a line to `titles`. Each role costs one request per company a week.
 
 - **[`backend/src/main/resources/market/allow-list.json`](../backend/src/main/resources/market/allow-list.json)**:
   the companies that count. The rule (yours, 2026-11-21): on the current Fortune 500
@@ -451,8 +481,8 @@ Both are data files in the repository, read at startup; change them with a pull 
   to your tech stack, so write it the way you want it shown. Ambiguous words (Go, R, C)
   are left out on purpose.
 
-If either file cannot be read, the job stays off and says so in the log; the API still
-starts.
+If any of the three files cannot be read, the job stays off and says so in the log; the
+API still starts.
 
 ## Turn on admin
 
@@ -592,7 +622,8 @@ its own micro-frontend (see
 | Adzuna refuses the key (401, 403 or its 410 "Authorisation failed") | No retry; the run fails and the log says to check `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`. The key never appears in a log line or in the stored error |
 | The weekly run and a manual trigger arrive together, or the trigger is sent twice | The second is refused (409 `already_running`) or skipped; one row per week in the database either way |
 | The same week is run again | Nothing is fetched; suggestions already pending or rejected are not repeated |
-| Too few listings in a week (fewer than 30 by default), or no profile row | The counts are stored; no suggestion is made |
+| Too few listings for a role in a week (fewer than 30 by default), or no profile row | The counts are stored and shown per role; that role produces no suggestion |
+| A title fits both roles ("Forward Deployed Software Engineer") | It counts once, for the role whose matching variant is longest (forward deployed engineer) |
 | The API restarts at the scheduled minute, or mid-run | That week's run is missed or lost (nothing half-written: counts are saved in one transaction at the end). Trigger it by hand, or wait a week |
 | API down or slow while using `/admin/suggestions` | The page stays signed in, says why, and offers Refresh; no decision is half-applied (accept is one transaction) |
 | Invalid or oversized contact payload | Rejected by the site (400 / 413) without calling the API |

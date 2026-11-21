@@ -21,8 +21,11 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -32,12 +35,13 @@ import java.util.Set;
  * <p>The rule this class exists to keep: <strong>it never states that the owner has a
  * skill.</strong> The only thing it can propose is adding one dictionary skill name to the
  * profile's {@code techStack} list, through the same queue as every other suggestion, with
- * a reason that gives the market evidence and asks the owner to accept only if they have
- * that experience. It never touches experience entries, projects, descriptions or any
+ * a reason that gives the market evidence, names the role whose listings it came from, and
+ * asks the owner to accept only if they have that experience. It never touches experience entries, projects, descriptions or any
  * free text, and it writes no content itself: {@link SuggestionService#create} only
  * records a pending row.
  *
- * <p>It proposes nothing when the sample is too small, for a skill the owner already
+ * <p>Each role is judged on its own listings: a skill qualifies when it is common in a
+ * role with enough listings that week. It proposes nothing when the sample is too small, for a skill the owner already
  * lists anywhere, for a skill that is already waiting in the queue, or for one the owner
  * has rejected before.
  */
@@ -51,6 +55,7 @@ public class MarketSuggester {
 
     private final MarketResearchSettings settings;
     private final SkillDictionary dictionary;
+    private final TargetRoles targetRoles;
     private final SuggestionService suggestions;
     private final ContentSuggestionRepository suggestionRows;
     private final ProfileRepository profiles;
@@ -58,12 +63,13 @@ public class MarketSuggester {
     private final ProjectRepository projects;
     private final ObjectMapper mapper;
 
-    public MarketSuggester(MarketResearchSettings settings, SkillDictionary dictionary,
+    public MarketSuggester(MarketResearchSettings settings, SkillDictionary dictionary, TargetRoles targetRoles,
                            SuggestionService suggestions, ContentSuggestionRepository suggestionRows,
                            ProfileRepository profiles, ExperienceRepository experiences,
                            ProjectRepository projects, ObjectMapper mapper) {
         this.settings = settings;
         this.dictionary = dictionary;
+        this.targetRoles = targetRoles;
         this.suggestions = suggestions;
         this.suggestionRows = suggestionRows;
         this.profiles = profiles;
@@ -79,13 +85,32 @@ public class MarketSuggester {
      * @return how many suggestions were created
      */
     public int suggest(MarketSummaryStore.Summary summary) {
-        int examined = summary.run().getListingsExamined();
         String week = String.valueOf(summary.run().getWeekStart());
-        if (examined < settings.minListings()) {
-            log.info("Market research: no suggestions for the week of {}: {} listings examined, fewer than the {} needed",
-                    week, examined, settings.minListings());
-            return 0;
+
+        // Which roles' listings each skill is common in. A role with too few listings says nothing.
+        Map<String, List<Evidence>> evidenceBySkill = new HashMap<>();
+        boolean anyRoleLargeEnough = false;
+        for (MarketSummaryStore.RoleSummary role : summary.roles()) {
+            int examined = role.listingsExamined();
+            if (examined < settings.minListings()) {
+                log.info("Market research: week of {}: {} {} listings examined, fewer than the {} needed, "
+                        + "so they produce no suggestions", week, examined, targetRoles.nameOf(role.role()),
+                        settings.minListings());
+                continue;
+            }
+            anyRoleLargeEnough = true;
+            for (MarketSkillCount count : role.skills()) {
+                if (!common(count.getListingsMentioned(), examined)) continue;
+                evidenceBySkill.computeIfAbsent(count.getSkill(), skill -> new ArrayList<>())
+                        .add(new Evidence(targetRoles.nameOf(role.role()), count.getListingsMentioned(), examined));
+            }
         }
+        if (!anyRoleLargeEnough) return 0;
+        // Most mentioned first; the name breaks ties so the order is stable.
+        List<String> candidates = new ArrayList<>(evidenceBySkill.keySet());
+        candidates.sort(Comparator
+                .comparingInt((String skill) -> evidenceBySkill.get(skill).stream().mapToInt(Evidence::mentioned).max().orElse(0))
+                .reversed().thenComparing(Comparator.naturalOrder()));
         Optional<Profile> found = profiles.findAll().stream().findFirst();
         if (found.isEmpty()) {
             log.info("Market research: no suggestions, there is no profile to suggest against");
@@ -109,11 +134,8 @@ public class MarketSuggester {
 
         int room = Math.min(settings.maxSuggestionsPerRun(), settings.maxPendingSuggestions() - pendingFromHere);
         int created = 0;
-        for (MarketSkillCount count : summary.skills()) {
+        for (String skill : candidates) {
             if (created >= room) break;
-            String skill = count.getSkill();
-            int mentioned = count.getListingsMentioned();
-            if (!common(mentioned, examined)) continue;
             // Only names from the dictionary are ever proposed, whatever the table holds.
             Optional<String> name = dictionary.canonical(skill).filter(skill::equals);
             if (name.isEmpty()) continue;
@@ -128,7 +150,7 @@ public class MarketSuggester {
             proposed.add(skill);
             try {
                 suggestions.create(new SuggestionRequest(TARGET_TYPE, profile.getId(), FIELD, proposed,
-                        reason(skill, mentioned, examined, week), SOURCE));
+                        reason(skill, week, evidenceBySkill.get(skill)), SOURCE));
                 created++;
             } catch (SuggestionException e) {
                 log.info("Market research: the suggestion for '{}' was not created: {}", skill, e.getMessage());
@@ -144,15 +166,34 @@ public class MarketSuggester {
                 && (long) mentioned * 100 >= (long) settings.minSharePercent() * examined;
     }
 
+    /** One role's numbers for a skill: mentioned in so many of that role's examined listings. */
+    record Evidence(String roleName, int mentioned, int examined) {
+        /** Share of the role's listings, for comparing roles. */
+        double share() { return examined == 0 ? 0 : (double) mentioned / examined; }
+    }
+
     /**
-     * The evidence, and the question. Deliberately says nothing about the owner except
-     * that the decision is theirs.
+     * The evidence, the role it was drawn from, and the question. Deliberately says nothing
+     * about the owner except that the decision is theirs. With more than one role, the one
+     * where the skill is most common is named first and the next is added if it fits.
      */
-    static String reason(String skill, int mentioned, int examined, String week) {
-        return "Market research, week of " + week + ": \"" + skill + "\" was mentioned in " + mentioned + " of "
-                + examined + " software-developer listings examined at allow-listed firms (source: Adzuna). "
-                + "This is what those listings ask for, not a statement about you. "
+    static String reason(String skill, String week, List<Evidence> evidence) {
+        List<Evidence> ranked = new ArrayList<>(evidence);
+        ranked.sort(Comparator.comparingDouble(Evidence::share).reversed()
+                .thenComparing(Comparator.comparingInt(Evidence::mentioned).reversed())
+                .thenComparing(Evidence::roleName));
+        Evidence main = ranked.get(0);
+        String start = "Market research, week of " + week + ": \"" + skill + "\" was mentioned in " + main.mentioned()
+                + " of " + main.examined() + " " + main.roleName()
+                + " listings examined at allow-listed firms (source: Adzuna). ";
+        String end = "This is what those listings ask for, not a statement about you. "
                 + "Accept only if you have real experience with " + skill + "; otherwise reject.";
+        if (ranked.size() > 1) {
+            Evidence next = ranked.get(1);
+            String also = "Also in " + next.mentioned() + " of " + next.examined() + " " + next.roleName() + " listings. ";
+            if (start.length() + also.length() + end.length() <= SuggestionService.REASON_MAX) return start + also + end;
+        }
+        return start + end;
     }
 
     /** Everything the owner already lists, anywhere in the content, as comparison keys. */

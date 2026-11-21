@@ -91,7 +91,8 @@ CREATE INDEX IF NOT EXISTS idx_content_suggestions_target
 -- table owner, which row level security does not restrict.
 ALTER TABLE content_suggestions ENABLE ROW LEVEL SECURITY;
 
--- market_research_runs / market_skill_counts: the weekly job-market summary.
+-- market_research_runs / market_role_totals / market_skill_counts: the weekly job-market
+-- summary, broken down by target role.
 -- One run row per week (week_start is the Monday, UTC). Only counts are kept: no listing
 -- text, listing ids or links are stored. An existing database gets these tables from
 -- supabase/migrations/2026-11-21_market_research.sql; keep the two definitions in step.
@@ -108,16 +109,30 @@ CREATE TABLE IF NOT EXISTS market_research_runs (
     finished_at         TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 
--- How many of that week's examined listings mentioned each skill.
+-- How many listings of each target role were examined that week. role is the id from
+-- backend/src/main/resources/market/roles.json (for example 'software-developer').
+CREATE TABLE IF NOT EXISTS market_role_totals (
+    id                BIGSERIAL PRIMARY KEY,
+    run_id            BIGINT      NOT NULL REFERENCES market_research_runs (id) ON DELETE CASCADE,
+    role              VARCHAR(50) NOT NULL,
+    listings_examined INTEGER     NOT NULL CHECK (listings_examined >= 0)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_market_role_totals_run_role
+    ON market_role_totals (run_id, role);
+
+-- How many of that week's examined listings of a role mentioned each skill.
 CREATE TABLE IF NOT EXISTS market_skill_counts (
     id                 BIGSERIAL PRIMARY KEY,
     run_id             BIGINT       NOT NULL REFERENCES market_research_runs (id) ON DELETE CASCADE,
     skill              VARCHAR(100) NOT NULL,
     listings_mentioned INTEGER      NOT NULL CHECK (listings_mentioned > 0),
-    UNIQUE (run_id, skill)
+    role               VARCHAR(50)  NOT NULL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_market_skill_counts_run_role_skill
+    ON market_skill_counts (run_id, role, skill);
 
 ALTER TABLE market_research_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE market_role_totals   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE market_skill_counts  ENABLE ROW LEVEL SECURITY;
 
 -- indexes

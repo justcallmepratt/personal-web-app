@@ -54,6 +54,12 @@ class MarketSuggesterTest {
             new Entry("Terraform", null, null),
             new Entry("x".repeat(SkillDictionary.NAME_MAX), null, null)));
 
+    private final TargetRoles targetRoles = TargetRoles.of(List.of(
+            new TargetRoles.Entry("software-developer", "software developer", List.of("software engineer"),
+                    new TargetRoles.Search("software", null, null)),
+            new TargetRoles.Entry("forward-deployed-engineer", "forward deployed engineer",
+                    List.of("forward deployed engineer"), new TargetRoles.Search(null, "forward deployed", null))));
+
     private final SuggestionService suggestions = mock(SuggestionService.class);
     private final ContentSuggestionRepository rows = mock(ContentSuggestionRepository.class);
     private final ProfileRepository profiles = mock(ProfileRepository.class);
@@ -79,21 +85,30 @@ class MarketSuggesterTest {
     }
 
     private MarketSuggester suggester(TestSettings settings) {
-        return new MarketSuggester(settings.build(), dictionary, suggestions, rows, profiles, experiences, projects,
-                JsonMapper.builder().build());
+        return new MarketSuggester(settings.build(), dictionary, targetRoles, suggestions, rows, profiles,
+                experiences, projects, JsonMapper.builder().build());
     }
 
+    /** A week with software developer listings only. */
     private static MarketSummaryStore.Summary summary(int examined, Object... skillThenCount) {
+        return summary(role("software-developer", examined, skillThenCount));
+    }
+
+    private static MarketSummaryStore.Summary summary(MarketSummaryStore.RoleSummary... roles) {
         MarketResearchRun run = new MarketResearchRun();
         run.setId(1L);
         run.setWeekStart(WEEK);
         run.setStatus(MarketResearchRun.COMPLETED);
-        run.setListingsExamined(examined);
+        run.setListingsExamined(Arrays.stream(roles).mapToInt(MarketSummaryStore.RoleSummary::listingsExamined).sum());
+        return new MarketSummaryStore.Summary(run, List.of(roles));
+    }
+
+    private static MarketSummaryStore.RoleSummary role(String id, int examined, Object... skillThenCount) {
         List<MarketSkillCount> counts = new ArrayList<>();
         for (int i = 0; i < skillThenCount.length; i += 2) {
-            counts.add(new MarketSkillCount(1L, (String) skillThenCount[i], (Integer) skillThenCount[i + 1]));
+            counts.add(new MarketSkillCount(1L, id, (String) skillThenCount[i], (Integer) skillThenCount[i + 1]));
         }
-        return new MarketSummaryStore.Summary(run, counts);
+        return new MarketSummaryStore.RoleSummary(id, examined, counts);
     }
 
     private List<SuggestionRequest> created(int times) {
@@ -132,7 +147,7 @@ class MarketSuggesterTest {
         assertThat(request.source()).isEqualTo("market-research");
         assertThat(request.proposedValue()).isEqualTo(List.of("Java", "Kafka", "Kubernetes"));
         assertThat(request.reason()).isEqualTo("Market research, week of 2026-11-16: \"Kubernetes\" was mentioned in "
-                + "20 of 60 software-developer listings examined at allow-listed firms (source: Adzuna). "
+                + "20 of 60 software developer listings examined at allow-listed firms (source: Adzuna). "
                 + "This is what those listings ask for, not a statement about you. "
                 + "Accept only if you have real experience with Kubernetes; otherwise reject.");
     }
@@ -167,7 +182,7 @@ class MarketSuggesterTest {
             // The reason reports the market and asks; it does not say the owner has the skill.
             assertThat(request.reason())
                     .contains("was mentioned in")
-                    .contains("of 100000 software-developer listings")
+                    .contains("of 100000 software developer listings examined")
                     .contains("not a statement about you")
                     .contains("Accept only if you have real experience with " + addedSkill)
                     .endsWith("otherwise reject.");
@@ -186,7 +201,9 @@ class MarketSuggesterTest {
 
     @Test
     void theReasonNeverStatesExperience_whateverTheNumbers() {
-        String reason = MarketSuggester.reason("Kafka", 1, 1, "2026-11-16");
+        String reason = MarketSuggester.reason("Kafka", "2026-11-16", List.of(
+                new MarketSuggester.Evidence("software developer", 1, 1),
+                new MarketSuggester.Evidence("forward deployed engineer", 1, 2)));
 
         assertThat(reason).doesNotContainIgnoringCase("you know")
                 .doesNotContainIgnoringCase("your experience")
@@ -205,6 +222,88 @@ class MarketSuggesterTest {
 
         assertThat(made).isZero();
         verifyNoInteractions(suggestions);
+    }
+
+    // ── roles ────────────────────────────────────────────────────────────────
+
+    @Test
+    void eachRoleIsJudgedOnItsOwnListings_andTheReasonSaysWhichRoleItCameFrom() {
+        // Kubernetes is common among developers (20 of 60) but not among forward deployed
+        // engineers (3 of 40); Python is the other way round.
+        suggester().suggest(summary(
+                role("software-developer", 60, "Java", 55, "Kubernetes", 20, "Python", 4),
+                role("forward-deployed-engineer", 40, "Python", 30, "Kubernetes", 3)));
+
+        List<SuggestionRequest> requests = created(2);
+        assertThat(((List<?>) requests.get(0).proposedValue()).get(2)).isEqualTo("Python");
+        assertThat(requests.get(0).reason())
+                .contains("\"Python\" was mentioned in 30 of 40 forward deployed engineer listings examined")
+                .doesNotContain("software developer").doesNotContain("Also in");
+        assertThat(((List<?>) requests.get(1).proposedValue()).get(2)).isEqualTo("Kubernetes");
+        assertThat(requests.get(1).reason())
+                .contains("\"Kubernetes\" was mentioned in 20 of 60 software developer listings examined")
+                .doesNotContain("forward deployed").doesNotContain("Also in");
+    }
+
+    @Test
+    void aSkillCommonInBothRolesIsSuggestedOnce_namingTheRoleWhereItIsMostCommonFirst() {
+        int made = suggester().suggest(summary(
+                role("software-developer", 60, "Docker", 20),
+                role("forward-deployed-engineer", 40, "Docker", 30)));
+
+        assertThat(made).isEqualTo(1);
+        assertThat(created(1).get(0).reason()).isEqualTo("Market research, week of 2026-11-16: \"Docker\" was "
+                + "mentioned in 30 of 40 forward deployed engineer listings examined at allow-listed firms "
+                + "(source: Adzuna). Also in 20 of 60 software developer listings. "
+                + "This is what those listings ask for, not a statement about you. "
+                + "Accept only if you have real experience with Docker; otherwise reject.");
+    }
+
+    @Test
+    void aRoleWithTooFewListingsProducesNothing_evenWhenTheOtherRoleHasEnough() {
+        // Twelve forward deployed listings all mention Python: still too small a sample.
+        int made = suggester().suggest(summary(
+                role("software-developer", 60, "Java", 55),
+                role("forward-deployed-engineer", 12, "Python", 12, "Kubernetes", 12)));
+
+        assertThat(made).isZero();
+        verifyNoInteractions(suggestions);
+
+        // And the two roles are never added together to reach the minimum.
+        assertThat(suggester().suggest(summary(
+                role("software-developer", 20, "Kubernetes", 20),
+                role("forward-deployed-engineer", 20, "Kubernetes", 20)))).isZero();
+        verifyNoInteractions(suggestions);
+    }
+
+    @Test
+    void aRoleThatIsNoLongerInTheRolesFileIsNamedByItsId() {
+        suggester().suggest(summary(role("retired-role", 60, "Kubernetes", 20)));
+
+        assertThat(created(1).get(0).reason()).contains("20 of 60 retired-role listings examined");
+    }
+
+    @Test
+    void theReasonAlwaysFitsItsLimit_droppingTheSecondRoleRatherThanBeingCutShort() {
+        String skill = "x".repeat(SkillDictionary.NAME_MAX);
+        String roleA = "a".repeat(TargetRoles.NAME_MAX);
+        String roleB = "b".repeat(TargetRoles.NAME_MAX);
+
+        String both = MarketSuggester.reason(skill, "2026-11-16", List.of(
+                new MarketSuggester.Evidence(roleA, 99_999, 100_000), new MarketSuggester.Evidence(roleB, 50_000, 100_000)));
+        assertThat(both.length()).isLessThanOrEqualTo(SuggestionService.REASON_MAX);
+        assertThat(both).contains("Also in 50000 of 100000 " + roleB + " listings.").endsWith("otherwise reject.");
+
+        String huge = MarketSuggester.reason(skill, "2026-11-16", List.of(
+                new MarketSuggester.Evidence(roleA, 1_999_999_999, 2_000_000_000),
+                new MarketSuggester.Evidence(roleB, 1_000_000_000, 2_000_000_000)));
+        assertThat(huge.length()).isLessThanOrEqualTo(SuggestionService.REASON_MAX);
+        assertThat(huge).doesNotContain("Also in").contains(roleA).endsWith("otherwise reject.");
+
+        // A role with nothing examined sorts last instead of dividing by zero.
+        assertThat(MarketSuggester.reason("Kafka", "2026-11-16", List.of(
+                new MarketSuggester.Evidence("empty role", 0, 0), new MarketSuggester.Evidence("real role", 5, 10))))
+                .contains("5 of 10 real role listings examined");
     }
 
     // ── thresholds ───────────────────────────────────────────────────────────
