@@ -4,7 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-const links = [
+// `external` marks a path served by another app of the microfrontends group
+// (see microfrontends.json): it needs a full page load, so it renders as a
+// plain <a> rather than a client-side <Link>.
+const links: { href: string; label: string; external?: boolean }[] = [
   { href: '/',           label: 'HOME'       },
   { href: '/experience', label: 'EXPERIENCE' },
   { href: '/projects',   label: 'PROJECTS'   },
@@ -12,9 +15,18 @@ const links = [
   { href: '/certifications', label: 'CERTIFICATIONS' },
   { href: '/resume',     label: 'RESUME'     },
   { href: '/contact',    label: 'CONTACT'    },
+  // Owner-only: /admin sends anyone who is not signed in to its sign-in page.
+  { href: '/admin',      label: 'ADMIN', external: true },
 ]
 
 const MOBILE_MENU_ID = 'mobile-menu'
+
+type NavLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; external?: boolean }
+
+function NavLink({ external, href, children, ...rest }: NavLinkProps) {
+  if (external) return <a href={href} {...rest}>{children}</a>
+  return <Link href={href} {...rest}>{children}</Link>
+}
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -53,21 +65,22 @@ export default function Navbar() {
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
             aria-controls={MOBILE_MENU_ID}
-            className="md:hidden flex items-center justify-center min-w-[44px] min-h-[44px] text-cp-red text-xs uppercase tracking-widest"
+            className="lg:hidden flex items-center justify-center min-w-[44px] min-h-[44px] text-cp-red text-xs uppercase tracking-widest"
             onClick={() => setOpen((o) => !o)}
           >
             {open ? '✕' : '≡ MENU'}
           </button>
 
-          {/* Seven links: tighter spacing between md and lg so the row fits at 768 px
-              (it ends 16 px short of the edge there; an eighth would not fit) */}
-          <ul className="hidden md:flex items-center gap-3 lg:gap-6 text-xs uppercase tracking-[0.15em] lg:tracking-[0.25em] font-[var(--font-mono)]">
+          {/* Eight links do not fit at 768 px, so the row starts at lg (1024 px),
+              with tighter spacing until xl; below lg the menu button is used. */}
+          <ul className="hidden lg:flex items-center gap-3 xl:gap-6 text-xs uppercase tracking-[0.15em] xl:tracking-[0.25em] font-[var(--font-mono)]">
             {links.map((l) => {
               const active = pathname === l.href
               return (
                 <li key={l.href}>
-                  <Link
+                  <NavLink
                     href={l.href}
+                    external={l.external}
                     aria-current={active ? 'page' : undefined}
                     className={`relative px-1 py-1 transition-colors ${
                       active ? 'text-cp-red' : 'text-cp-text hover:text-cp-red'
@@ -75,7 +88,7 @@ export default function Navbar() {
                   >
                     {active && <span aria-hidden="true" className="mr-1 text-cp-red">▮</span>}
                     {l.label}
-                  </Link>
+                  </NavLink>
                 </li>
               )
             })}
@@ -84,13 +97,14 @@ export default function Navbar() {
 
         {/* Mobile drawer — 44 px min touch targets per link */}
         {open && (
-          <ul id={MOBILE_MENU_ID} className="md:hidden border-t border-cp-red-deep bg-cp-panel">
+          <ul id={MOBILE_MENU_ID} className="lg:hidden border-t border-cp-red-deep bg-cp-panel">
             {links.map((l) => {
               const active = pathname === l.href
               return (
                 <li key={l.href}>
-                  <Link
+                  <NavLink
                     href={l.href}
+                    external={l.external}
                     aria-current={active ? 'page' : undefined}
                     onClick={() => setOpen(false)}
                     className={`flex items-center min-h-[52px] px-4 focus-visible:-outline-offset-4 text-xs uppercase tracking-widest border-b border-cp-border transition-colors ${
@@ -99,7 +113,7 @@ export default function Navbar() {
                   >
                     {active && <span aria-hidden="true" className="mr-2 text-cp-red">▮</span>}
                     {l.label}
-                  </Link>
+                  </NavLink>
                 </li>
               )
             })}
