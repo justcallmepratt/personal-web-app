@@ -66,7 +66,7 @@ describe('resume PDF from the site content', () => {
   it('contains the content of each section', () => {
     for (const expected of [
       'Backend Software Developer at Raymond James', 'Tampa, FL', 'Jul 2024 – Present',
-      'B.S. in Computer Science', 'Business Management', 'Kafka Producer & Consumer Demo',
+      "Bachelor's in Computer Science", 'Kafka Producer & Consumer Demo',
       'Microsoft Technology Associate', 'Mentor for new post-college associates',
     ]) {
       expect(text).toContain(expected)

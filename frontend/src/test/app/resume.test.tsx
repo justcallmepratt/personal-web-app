@@ -61,9 +61,9 @@ describe('/resume page', () => {
       expect(screen.getByRole('region', { name: heading })).toBeInTheDocument()
     }
     const education = within(screen.getByRole('region', { name: 'Education' }))
-    expect(education.getByRole('heading', { level: 3, name: 'B.S. in Computer Science' })).toBeInTheDocument()
+    expect(education.getByRole('heading', { level: 3, name: "Bachelor's in Computer Science" })).toBeInTheDocument()
     expect(education.getByText(/University of Massachusetts Amherst/)).toBeInTheDocument()
-    expect(education.getByText('Business Management')).toBeInTheDocument()
+    expect(education.queryByText(/minor/i)).not.toBeInTheDocument()
     // The graduation date is unconfirmed, so no year is printed.
     expect(education.queryByText(/\b(19|20)\d{2}\b/)).not.toBeInTheDocument()
   })
