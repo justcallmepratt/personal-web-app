@@ -31,6 +31,15 @@ describe('Navbar', () => {
     expect(screen.getByRole('link', { name: 'RESUME' })).toHaveAttribute('href', '/resume')
   })
 
+  it('links to the admin app, in the row and in the mobile menu', async () => {
+    render(<Navbar />)
+    expect(screen.getByRole('link', { name: 'ADMIN' })).toHaveAttribute('href', '/admin')
+    await userEvent.click(screen.getByRole('button', { name: /open menu/i }))
+    const admin = screen.getAllByRole('link', { name: 'ADMIN' })
+    expect(admin).toHaveLength(2)
+    for (const a of admin) expect(a).toHaveAttribute('href', '/admin')
+  })
+
   it('opens mobile menu on hamburger click', async () => {
     render(<Navbar />)
     const hamburger = screen.getByRole('button', { name: /open menu/i })
