@@ -32,25 +32,37 @@ By default it prints these and stops (a dry run). With `--file` it signs in and 
 
 ### The company allow-list
 
-Your rule: only companies that are both Fortune 500 and FINRA-regulated. The tool does not
-know which companies those are and never guesses.
+Your rule: only companies that are on the Fortune 500 and are, or own, a FINRA member
+broker-dealer. The tool does not know which companies those are and never guesses.
 
-- `tools/jobsync-importer/data/companies-allowlist.json` ships **empty**. Until a list
-  exists, no job matches and the tool proposes nothing; a dry run tells you which
-  companies in your tracker had a matching title, so you can see what is being left out.
-- The authoritative list is being compiled by the job-market research work into the
-  backend. When a file exists at `backend/src/main/resources/target-companies.json` the
-  tool reads it instead of the local one. **That path and the format below are this
-  tool's assumption, not yet agreed with that work**; `--allowlist <path>` or
-  `JOBSYNC_ALLOWLIST` points it anywhere else.
-- Format, for either file: `{"companies": [{"name": "…", "aliases": ["…"],
-  "fortune500": true, "finraRegulated": true, "source": "…"}]}`. An entry counts only when
-  both flags are literally `true`; anything else is ignored and reported. A company
-  matches by its name or an alias, ignoring case, punctuation and a trailing legal form
-  (Inc., LLC, & Co., N.A.); there is no fuzzy matching, so list the spellings you use in
-  JobSync as aliases.
-- "In financial services" is not tested separately: every allow-listed company is
-  FINRA-regulated, which is the narrower condition.
+- **There is one list, and it lives in the backend:**
+  `backend/src/main/resources/market/allow-list.json`, the reviewed list the weekly market
+  research also uses. Run from this repository,
+  the tool reads that file by default; nothing is copied. To add, drop or correct a
+  company, edit that file, and both tools follow.
+- The tool applies the backend's rule (`AllowList.java`) to it. An entry is used only when
+  `"included"` is `true` and it has a `fortune500.rank` from 1 to 500, at least one `finra`
+  firm with a name and a `crd` number, and at least one alias. An entry marked
+  `"included": false` is left out and counted; an entry marked included but missing any of
+  that is ignored and reported, so an incomplete edit can only shrink the list.
+- A company matches when one of its **aliases** appears as whole words in the company name
+  on the JobSync job, ignoring case and punctuation: the alias `citi` matches "Citi" and
+  "Citi Group", and never "Citizens Bank". The company's own `name` is not an alias (a name
+  like "Block" is too generic), so if a spelling you use in JobSync is not matched, add it
+  to that entry's `aliases`. A dry run lists the companies in your tracker that had a
+  matching title and were left out, so you can see what is missing.
+- `--allowlist <path>` or `JOBSYNC_ALLOWLIST` points the tool at another file. If the
+  backend file is absent (the tool copied out of the repository), it falls back to
+  `tools/jobsync-importer/data/companies-allowlist.json`, which ships **empty**: no job
+  matches and the tool proposes nothing. A backend file that is present but unreadable
+  stops the run; it does not fall back.
+- Those other files may use the backend's format or the tool's own simpler one:
+  `{"companies": [{"name": "…", "aliases": ["…"], "fortune500": true,
+  "finraRegulated": true, "source": "…"}]}`. There an entry counts only when both flags
+  are literally `true`, and it matches a whole company name by its name or an alias,
+  ignoring case, punctuation and a trailing legal form (Inc., LLC, & Co., N.A.).
+- "In financial services" is not tested separately: every allow-listed company is, or
+  owns, a FINRA member, which is the narrower condition.
 
 ### One-time setup
 

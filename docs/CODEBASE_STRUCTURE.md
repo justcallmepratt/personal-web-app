@@ -427,11 +427,14 @@ tools/jobsync-importer/
    owner whether it applies. `assertSafeSuggestion` refuses anything else, including every
    experience and project field; a new kind of proposal starts by changing that guard and
    its tests.
-3. **A company's status is never guessed.** A job counts only when its company is on the
-   allow-list with both `fortune500` and `finraRegulated` set to `true`. The tool reads
-   `backend/src/main/resources/target-companies.json` when it exists (the list the
-   job-market research work is compiling; path and format not yet agreed with it) and the
-   local, empty file otherwise.
+3. **A company's status is never guessed, and there is one company list.** The tool
+   reads the backend's reviewed list, `backend/src/main/resources/market/allow-list.json`,
+   by the same rule as `AllowList.java` (`parseAllowlist` and `matchCompany` in
+   `src/analyse.mjs`): an entry counts only when it is `included` with a Fortune 500 rank,
+   a FINRA firm with a CRD number and an alias; aliases match as whole words and the
+   company name is not an alias. A change to the backend's rule must be made in both
+   places; a test loads the real file to catch drift. The local, empty file is used only
+   when the backend file is absent.
 4. **No stored secrets or state.** Credentials come from the environment or a prompt at
    run time; one sign-in request per run, never retried.
 5. It uses the API's request and response shapes as they are. If `SuggestionRequest`,
