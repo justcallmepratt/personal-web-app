@@ -4,6 +4,8 @@ import com.resume.dto.LoginRequest;
 import com.resume.model.Message;
 import com.resume.repository.MessageRepository;
 import com.resume.security.JwtUtil;
+import com.resume.security.LoginRateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -21,27 +23,47 @@ public class AdminController {
     private final MessageRepository messages;
     private final String adminUser;
     private final String adminPassHash;
+    private final LoginRateLimiter loginLimiter;
 
     public AdminController(JwtUtil jwt,
                            PasswordEncoder encoder,
                            MessageRepository messages,
+                           LoginRateLimiter loginLimiter,
                            @Value("${admin.username:admin}") String adminUser,
                            @Value("${admin.password-hash:}") String adminPassHash) {
         this.jwt = jwt;
         this.encoder = encoder;
         this.messages = messages;
+        this.loginLimiter = loginLimiter;
         this.adminUser = adminUser;
         this.adminPassHash = adminPassHash;
     }
 
+    /** Prefers the forwarded address set by the hosting proxy; falls back to the socket address. */
+    private static String clientAddress(HttpServletRequest req) {
+        String forwarded = req.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return req.getRemoteAddr();
+    }
+
     @PostMapping("/auth/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, HttpServletRequest httpReq) {
         if (adminPassHash == null || adminPassHash.isBlank()) {
             return ResponseEntity.status(503).body(Map.of("error", "Admin not configured"));
         }
+        String client = clientAddress(httpReq);
+        if (loginLimiter.isBlocked(client)) {
+            return ResponseEntity.status(429)
+                    .header("Retry-After", String.valueOf(loginLimiter.windowSeconds()))
+                    .body(Map.of("error", "Too many failed sign-in attempts. Try again later."));
+        }
         if (!adminUser.equals(req.username()) || !encoder.matches(req.password(), adminPassHash)) {
+            loginLimiter.recordFailure(client);
             return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
+        loginLimiter.recordSuccess(client);
         return ResponseEntity.ok(Map.of("token", jwt.generate(adminUser)));
     }
 

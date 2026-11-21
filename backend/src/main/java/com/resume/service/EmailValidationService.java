@@ -134,7 +134,7 @@ public class EmailValidationService {
 
     /** Strips line breaks so user-supplied text cannot forge extra log entries. */
     private static String safe(String s) {
-        return s == null ? null : s.replaceAll("[\\r\\n]", "_");
+        return s == null ? null : s.replaceAll("\\R", "_");
     }
 
     private ValidationResult checkMxRecord(String domain) {
