@@ -18,8 +18,8 @@ The repository holds three Next.js apps and a Spring Boot API:
 |---|---|---|
 | Public site | `frontend/` | Live on Vercel at https://justcallmepratt.dev. Home, projects (with an "In the works" list), experience, skills, certifications, contact and credits pages, and a GitHub activity section. Content from the API, with `frontend/src/content/index.ts` as fallback. |
 | REST API | `backend/` | Deployed on Railway and used by the production site for profile, projects and experience (the database holds the real content). Contact messages relayed to it are stored; email needs mail variables on Railway. See [Outstanding work](docs/DEPLOYMENT.md#outstanding-work). |
-| Kafka demo page | `apps/kafka/` | A copy of the demo built as a micro-frontend; not deployed. The demo runs from `frontend/` at `/projects/kafka`, and `/kafka` redirects there. |
-| Admin app | `apps/admin/` | Sign-in and contact-message inbox; not deployed. |
+| Kafka demo page | `apps/kafka/` | A copy of the demo built as a micro-frontend, kept for later; not deployed and not planned. The demo runs from `frontend/` at `/projects/kafka`, and `/kafka` redirects there. |
+| Admin app | `apps/admin/` | Sign-in and contact-message inbox. Ready but not deployed; sign-in stays off until `ADMIN_PASSWORD_HASH` is set on the API (username `psachan`; failed sign-ins limited to 5 per client and 30 overall per 15 minutes). See [Turn on admin](docs/DEPLOYMENT.md#turn-on-admin). |
 
 In production `frontend` reads the API on the server (`BACKEND_URL`) and falls back to
 `frontend/src/content/index.ts` if it is unavailable; certifications and the "In the
@@ -206,7 +206,7 @@ Interactive docs at `/swagger-ui/index.html` on a running instance; health at
 | `GET` | `/api/experience` | public | Work history |
 | `POST` | `/api/contact` | public | Send contact message |
 | `GET` | `/api/contact/validate-email` | public | Check an email address |
-| `POST` | `/api/admin/auth/login` | — | Returns JWT |
+| `POST` | `/api/admin/auth/login` | — | Returns JWT; 503 until `ADMIN_PASSWORD_HASH` is set; 429 after too many failures |
 | `GET` | `/api/admin/messages` | JWT | Contact message inbox |
 | `PATCH` | `/api/admin/messages/{id}/read` | JWT | Toggle read status |
 
