@@ -160,7 +160,10 @@ export const experience: Experience[] = [
     current: true,
     description:
       'Entry-level backend developer role, working with Spring Boot and Java (Amazon Corretto), Kafka and Confluent Kafka, SQL databases, and Splunk and Dynatrace.',
-    highlights: [],
+    highlights: [
+      'Worked on a publish-subscribe Kafka service supporting a legacy database',
+      'Worked with data-intensive applications',
+    ],
     technologies: [
       'Java (Amazon Corretto)', 'Spring', 'Spring Boot', 'Kafka', 'Confluent Kafka',
       'Oracle SQL Developer', 'Microsoft SQL Server', 'Splunk', 'Dynatrace',
