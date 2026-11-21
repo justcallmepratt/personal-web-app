@@ -106,6 +106,22 @@ describe('GET /admin/api/messages', () => {
     expect((await res.json()).kind).toBe('error')
   })
 
+  it.each([502, 503, 504])('reports the API as unavailable on %i, keeping the session', async (status) => {
+    mockFetch(() => new Response('<html>Application failed to respond</html>', { status }))
+    const res = await GET()
+    expect(res.status).toBe(503)
+    expect((await res.json()).kind).toBe('unavailable')
+    expect(res.headers.get('set-cookie')).toBeNull()
+  })
+
+  it.each([401, 403])('treats %i from the API as signed out and clears the cookie', async (status) => {
+    mockFetch(() => jsonResponse({ status, error: 'x' }, status))
+    const res = await GET()
+    expect(res.status).toBe(401)
+    expect((await res.json()).kind).toBe('unauthorized')
+    expectCookieCleared(res)
+  })
+
   it('coerces missing optional fields instead of passing them through', async () => {
     mockFetch(() => jsonResponse([{ id: 7, read: true }]))
     expect(await (await GET()).json()).toEqual([
@@ -176,6 +192,8 @@ describe('PATCH /admin/api/messages/[id]/read', () => {
     expect((await patch('5')).status).toBe(504)
     mockFetch(() => new Response('not json', { status: 200 }))
     expect((await (await patch('5')).json()).kind).toBe('bad_response')
+    mockFetch(() => new Response('Bad Gateway', { status: 502 }))
+    expect((await (await patch('5')).json()).kind).toBe('unavailable')
   })
 
   it('reports 503 when BACKEND_URL is unset', async () => {

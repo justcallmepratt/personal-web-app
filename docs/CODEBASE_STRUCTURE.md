@@ -115,7 +115,7 @@ the other apps.
 
 `apps/admin` is a self-contained app with its own `package.json` and lockfile: admin
 sign-in and the contact-message inbox, served under `/admin/*`. Not deployed yet; see
-[DEPLOYMENT.md](DEPLOYMENT.md#admin-app). `apps/admin/AGENTS.md` applies here too.
+[DEPLOYMENT.md](DEPLOYMENT.md#turn-on-admin). `apps/admin/AGENTS.md` applies here too.
 `apps/kafka/AGENTS.md` likewise.
 
 ```
@@ -143,6 +143,7 @@ apps/admin/src/
 │   ├── session.ts                    → Server-only: session cookie options
 │   ├── http.ts                       → Server-only: handler replies, origin check
 │   ├── messages.ts, types.ts         → Shared by server and client
+│   ├── client.ts                     → Browser side: request timeout, error and wait text
 │
 └── test/                             → Vitest + React Testing Library
 ```

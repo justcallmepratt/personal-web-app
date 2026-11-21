@@ -56,6 +56,7 @@ describe('inbox page (server-side protection)', () => {
     ['the API is slower than the timeout', timedOut, /took too long/i],
     ['the API sends non-JSON', () => new Response('<html>', { status: 200 }), /could not read/i],
     ['the API reports an error', () => jsonResponse({}, 500), /reported an error/i],
+    ['the API host answers 503', () => new Response('<html>', { status: 503 }), /temporarily unavailable/i],
   ])('stays signed in and explains when %s', async (_name, respond, text) => {
     if (respond) mockFetch(respond)
     else vi.stubEnv('BACKEND_URL', '')

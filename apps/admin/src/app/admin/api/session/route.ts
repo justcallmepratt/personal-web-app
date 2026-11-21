@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { login } from '@/lib/backend'
+import { clearLoginBlock, login } from '@/lib/backend'
 import { crossOrigin, errorResponse, failureResponse, json } from '@/lib/http'
 import { clearedSessionCookie, sessionCookie } from '@/lib/session'
 
@@ -41,6 +41,7 @@ export async function POST(request: Request) {
   const result = await login(username, password)
   if (!result.ok) return failureResponse(result)
 
+  clearLoginBlock()
   const res = json({ ok: true })
   res.cookies.set(sessionCookie(result.data))
   return res

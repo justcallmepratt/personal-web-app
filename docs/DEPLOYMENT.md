@@ -1,7 +1,7 @@
 # Deployment
 
 How the site is built, deployed and configured, and what is still outstanding. State as of
-2026-11-20. This replaces the earlier `REMAINING_WORK.md`, `DEPLOYMENT_OPTIONS.md` and
+2026-11-21. This replaces the earlier `REMAINING_WORK.md`, `DEPLOYMENT_OPTIONS.md` and
 `docs/MIGRATION_TO_GITHUB_PAGES.md` (see git history).
 
 ## Where things stand
@@ -13,7 +13,7 @@ How the site is built, deployed and configured, and what is still outstanding. S
 | API custom domain `api.justcallmepratt.dev` | Railway + Vercel DNS | Not attached. |
 | Kafka demo | Site page `/projects/kafka`, relaying to Railway service `kafka-demo-api` | Live. |
 | `apps/kafka` (`/kafka`) | Vercel project `kafka` + microfrontends group | Built, but `https://justcallmepratt.dev/kafka` is a 404: the project and group are not visible in the team that owns `frontend`. |
-| `apps/admin` (`/admin`) | Vercel project `admin` + microfrontends group | Not deployed. |
+| `apps/admin` (`/admin`) | Vercel project `admin` (own address; the microfrontends group is optional) | Not deployed: no Vercel project yet, and admin sign-in is off on the API. Owner steps: [Turn on admin](#turn-on-admin). |
 | Database | Supabase Postgres | Used by the API (session pooler) and by the Kafka demo (`kafka_demo` schema). |
 
 ```
@@ -51,18 +51,17 @@ How the site is built, deployed and configured, and what is still outstanding. S
    service, create the CNAME Railway shows in the Vercel DNS zone, then change
    `BACKEND_URL` on Vercel to `https://api.justcallmepratt.dev` and redeploy. Set
    `CORS_ORIGIN` on Railway to `https://justcallmepratt.dev`.
-2. **Set `ADMIN_PASSWORD_HASH`** on the Railway service (bcrypt of the admin password),
-   but only after a rate limiter is in front of admin login (first item of
-   [Security follow-ups](ROADMAP.md#security-follow-ups)). Until then admin sign-in answers
-   503 "Admin not configured", by design.
+2. **Turn on admin** ([checklist](#turn-on-admin)): create the Vercel `admin` project,
+   then set `ADMIN_PASSWORD_HASH` on the Railway service. The sign-in rate limiter this
+   was waiting for is live (PR #73). Until the hash is set, admin sign-in answers 503
+   "Admin not configured", by design.
 3. **Turn on contact email.** The contact form now relays to the API, which stores each
    message but sends no email until `MAIL_USER` and `MAIL_PASS` are set on the Railway
    service. Also set the Vercel variables ([steps](#turn-on-contact-email)) for the SMTP
    fallback and the `mailto:` link.
-4. **Create or locate the Vercel `kafka` and `admin` projects and the microfrontends
-   group** ([steps](#microfrontends-kafka-and-admin)), add the `admin` route to
-   `frontend/microfrontends.json`, then make `Admin — Node 22 / pnpm` (and optionally the
-   Kafka job) a required check if wanted. `/kafka` returns 404 until then.
+4. **Create or locate the Vercel `kafka` project and the microfrontends group**
+   ([steps](#microfrontends-kafka-and-admin)). `/kafka` returns 404 until then. Routing
+   `/admin` through the group is optional (step 5 of [Turn on admin](#turn-on-admin)).
 5. **Delete the two unused Vercel projects** `personal-web-app` and `backend` if they
    still exist (they never had a working deployment), then the GitHub environments they
    created (`… – backend`, `… – personal-web-app`).
@@ -136,11 +135,8 @@ To finish (by hand, in this order; re-check
    `https://<project>.vercel.app/kafka` and `/admin/login` load. Do not attach domains.
 2. **Create the group** (Team Settings → Microfrontends → Create Group) with `frontend`
    as the default application, and add both projects.
-3. **Add the `admin` route** to `frontend/microfrontends.json` and deploy `frontend`:
-
-   ```json
-   "admin": { "routing": [{ "paths": ["/admin/:path*"] }] }
-   ```
+3. **Optionally add the `admin` route** to `frontend/microfrontends.json` and deploy
+   `frontend`; the exact entry is in step 5 of [Turn on admin](#turn-on-admin).
 
 4. **Redeploy `kafka` and `admin`** once the group is live, so their assets get their own
    prefix (`/vc-ap-…`) and cannot collide with the public site's `/_next/` files.
@@ -179,7 +175,7 @@ holds the Kafka demo services), created from this GitHub repository with root di
   `SPRING_PROFILES_ACTIVE=docker`, `DB_POOL_SIZE` and `CORS_ORIGIN` are set is not
   confirmed; the service is healthy, so the profile and datasource are right.
 - **`ADMIN_USERNAME`** is set to `psachan` on the service (the code default is `admin`).
-- **Variables not set:** `ADMIN_PASSWORD_HASH` (admin sign-in answers 503 "Admin not configured" until a rate limiter is in place; see [Security follow-ups](ROADMAP.md#security-follow-ups)) and
+- **Variables not set:** `ADMIN_PASSWORD_HASH` (admin sign-in answers 503 "Admin not configured" until the owner sets it; see [Turn on admin](#turn-on-admin)) and
   `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`, `CONTACT_NOTIFY_TO`; contact
   contact messages are stored in the database but no notification email is sent).
 
@@ -191,7 +187,7 @@ holds the Kafka demo services), created from this GitHub repository with root di
 | `SPRING_DATASOURCE_PASSWORD` | the Supabase database password |
 | `DB_POOL_SIZE` | `5` (the pooler caps connections on the free plan) |
 | `JWT_SECRET` | `openssl rand -base64 32` |
-| `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password |
+| `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password ([how to make it](#turn-on-admin)) |
 | `MAIL_USER`, `MAIL_PASS` (and `MAIL_HOST`, `MAIL_PORT`) | SMTP credentials for notifications |
 | `CORS_ORIGIN` | `https://justcallmepratt.dev` (only matters for browser calls; the site calls the API server-side) |
 
@@ -238,28 +234,97 @@ previews should send):
 Also set `MAIL_*` on the Railway service so the API emails notifications for relayed
 messages; the Vercel variables then serve as the fallback.
 
-## Admin app
+## Turn on admin
 
-`apps/admin`: sign-in and the contact-message inbox under `/admin/*`. **Not deployed**,
-and only ever run against a local stand-in for the API.
+`apps/admin` is sign-in and the contact-message inbox: `/admin` (inbox), `/admin/login`,
+and handlers under `/admin/api/*`. As of 2026-11-21 it is **not deployed**: the team has
+no Vercel project for it, and the API answers every sign-in with 503 "Admin not
+configured" because `ADMIN_PASSWORD_HASH` is unset. Only the owner can do the steps
+below, in this order. Steps 1 to 4 are enough to use admin; step 5 is optional.
 
-- **Routes:** `/admin` (inbox), `/admin/login`, and handlers under `/admin/api/*`.
+1. **Create the Vercel project.** Vercel dashboard → Add New → Project → import
+   `justcallmepratt/personal-web-app`, in the **same team as `frontend`**.
+   - Project name: `admin` (step 5 needs exactly this name).
+   - Root directory: `apps/admin`. Leave framework, build and install settings alone;
+     `apps/admin/vercel.json` sets them.
+   - Environment variable, for Production: `BACKEND_URL` =
+     `https://personal-web-app-api-production.up.railway.app` (no trailing path). It is
+     the only variable the app reads. Do not attach a domain.
+2. **Deploy and open `https://<the project's production address>.vercel.app/admin/login`.**
+   The app works on its own address; it does not need the microfrontends group. Submit
+   anything once: the form must say "Admin sign-in is not switched on yet". That proves
+   the app reaches the API. ("This app has no API configured" means `BACKEND_URL` is
+   missing; set it and redeploy.)
+3. **Set `ADMIN_PASSWORD_HASH` on Railway.** Pick a long random password and keep it in
+   a password manager. In a terminal on your own machine run:
+
+   ```bash
+   htpasswd -nBC 12 psachan
+   ```
+
+   It asks for the password twice (nothing is echoed or saved in shell history) and
+   prints `psachan:$2y$12$…`. The hash is everything **after the colon**. Paste it as
+   `ADMIN_PASSWORD_HASH` on the Railway service `personal-web-app-api` (Variables) and
+   let the service redeploy. Put the hash nowhere else: not in the repository, a `.env`
+   file, Vercel, a chat or an issue. `ADMIN_USERNAME` is already `psachan`.
+4. **Sign in** at `/admin/login` as `psachan` with that password. The inbox should list
+   the stored contact messages; mark one read and back to check writes work.
+5. **Optional: serve it at `justcallmepratt.dev/admin`.** Needs the microfrontends group
+   ([Microfrontends](#microfrontends-kafka-and-admin)) with `frontend` as the default
+   application. Add the `admin` project to the group, then add this entry under
+   `applications` in `frontend/microfrontends.json`, after `kafka`, and deploy `frontend`:
+
+   ```json
+   "admin": {
+     "routing": [{ "paths": ["/admin", "/admin/:path*"] }]
+   }
+   ```
+
+   Then redeploy `admin` so its assets get their own prefix, and check
+   `https://justcallmepratt.dev/admin/login`. Sign in again there: the session cookie
+   belongs to one address. To undo, remove the entry and redeploy `frontend`.
+
+**Cost.** One more Vercel project on the `*.vercel.app` address costs nothing extra.
+Step 5 is different: per the note under [Microfrontends](#microfrontends-kafka-and-admin),
+the plan includes two microfrontends projects, and `admin` would be the third in the
+group after `frontend` and `kafka`, so it is billed extra. Check Vercel's current
+microfrontends pricing before doing step 5; skipping it keeps the footprint smallest.
+
+**Sign-in limits (API, since PR #73).** After 5 failed sign-ins from one address, or 30
+from everyone, within 15 minutes, the API answers 429 with `Retry-After` and the form
+says "Too many sign-in attempts … try again in about 15 minutes" and locks until then.
+The API sees the admin app's Vercel address, not yours, so failed attempts by anyone
+count against the same limit: a stranger guessing passwords can lock sign-in for up to
+15 minutes. Waiting is the only fix; a correct sign-in is refused too while it lasts.
+
+### How the app behaves
+
 - **The browser only talks to this app.** The handlers call the API server-side with
-  `BACKEND_URL` (required; without it every page reports no API is configured). The API's
-  JWT is kept in an `httpOnly`, `secure`, `sameSite=strict` cookie scoped to `/admin`; it
-  expires with the token (24 h, `jwt.expiry-ms` in the backend).
-- Every API call has an 8 s timeout; the login handler refuses bodies over 4 KB; nothing
-  is cached.
+  `BACKEND_URL`; the API address never reaches the browser. The API's JWT is kept in an
+  `httpOnly`, `secure`, `sameSite=strict` cookie scoped to `/admin`; it expires with the
+  token (24 h, `jwt.expiry-ms` in the backend).
+- Every API call has an 8 s timeout and every browser request to the app a 15 s one; the
+  login handler refuses bodies over 4 KB; nothing is cached.
+- The form asks for a username and a password; neither is built into the app.
 
-| Situation | Behaviour |
+| Situation | What the owner sees |
 |---|---|
 | `BACKEND_URL` not set | Login and inbox say no API is configured (503) |
-| API unreachable / slower than 8 s / not the expected JSON | "could not be reached" (502) / "took too long" (504) / "response this app could not read" (502); the session is kept, **Refresh** retries |
-| Wrong username or password | "Invalid credentials" (401) |
-| `ADMIN_PASSWORD_HASH` not set on the API | "Admin sign-in is not configured on the API" (503) |
-| Token expired or rejected (401/403) | Cookie cleared, back to login with "Your session has expired" |
+| `ADMIN_PASSWORD_HASH` not set on the API (503 "Admin not configured") | "Admin sign-in is not switched on yet … This is not a wrong password." |
+| Wrong username or password (401) | "Wrong username or password." |
+| Too many failed sign-ins (429) | "Too many sign-in attempts", the wait from `Retry-After` (15 minutes if absent, capped at an hour), button locked until then. The app also stops forwarding sign-ins to the API for that time (per server instance) |
+| Token expired or rejected on any call (401/403) | Cookie cleared, back to login with "Your session has expired" |
+| API host answers 502 / 503 / 504 (restarting, deploying) | "The API is temporarily unavailable"; the session is kept, **Refresh** retries |
+| API unreachable / slower than 8 s / not the expected JSON | "could not be reached" (502) / "took too long" (504) / "response this app could not read" (502); the session is kept |
+| The app itself does not answer within 15 s, or the network drops | "The admin app took too long to answer" / "Could not reach the admin app" |
 | Message deleted before it is toggled (404) | Removed from the list |
 | Oversized or malformed login request, request from another origin | Rejected by `admin` (413 / 400 / 403) without calling the API |
+
+**Checked on 2026-11-21.** Against the live API, through the app run locally: the login
+page loads and one dummy sign-in shows the "not switched on yet" message; the API
+answers 403 to the inbox endpoints without a token. Everything after a successful
+sign-in (inbox, mark read, expiry, 429, outages) has only been run against a local
+stand-in for the API and in the unit tests, because no admin password exists yet.
 
 ## Kafka live demo
 

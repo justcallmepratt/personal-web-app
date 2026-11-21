@@ -7,7 +7,9 @@ export const LOAD_ERRORS: Record<Exclude<FailureKind, 'unauthorized'>, string> =
   timeout: 'The API took too long to answer. It may be waking up; try again in a moment.',
   bad_response: 'The API sent a response this app could not read.',
   invalid_credentials: 'The API rejected the request.',
-  admin_not_configured: 'Admin sign-in is not configured on the API.',
+  admin_not_configured: 'Admin sign-in is not switched on yet on the API.',
+  rate_limited: 'The API is refusing requests for now. Try again later.',
+  unavailable: 'The API is temporarily unavailable. It may be restarting; try again in a moment.',
   not_found: 'The API has no inbox endpoint at the expected address.',
   error: 'The API reported an error.',
 }
