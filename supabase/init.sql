@@ -91,6 +91,35 @@ CREATE INDEX IF NOT EXISTS idx_content_suggestions_target
 -- table owner, which row level security does not restrict.
 ALTER TABLE content_suggestions ENABLE ROW LEVEL SECURITY;
 
+-- market_research_runs / market_skill_counts: the weekly job-market summary.
+-- One run row per week (week_start is the Monday, UTC). Only counts are kept: no listing
+-- text, listing ids or links are stored. An existing database gets these tables from
+-- supabase/migrations/2026-11-21_market_research.sql; keep the two definitions in step.
+CREATE TABLE IF NOT EXISTS market_research_runs (
+    id                  BIGSERIAL PRIMARY KEY,
+    week_start          DATE         NOT NULL UNIQUE,
+    status              VARCHAR(20)  NOT NULL CHECK (status IN ('completed', 'failed')),
+    listings_examined   INTEGER      NOT NULL DEFAULT 0 CHECK (listings_examined >= 0),
+    companies_queried   INTEGER      NOT NULL DEFAULT 0 CHECK (companies_queried >= 0),
+    api_calls           INTEGER      NOT NULL DEFAULT 0 CHECK (api_calls >= 0),
+    suggestions_created INTEGER      NOT NULL DEFAULT 0 CHECK (suggestions_created >= 0),
+    error               VARCHAR(500),
+    started_at          TIMESTAMP    NOT NULL DEFAULT NOW(),
+    finished_at         TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+-- How many of that week's examined listings mentioned each skill.
+CREATE TABLE IF NOT EXISTS market_skill_counts (
+    id                 BIGSERIAL PRIMARY KEY,
+    run_id             BIGINT       NOT NULL REFERENCES market_research_runs (id) ON DELETE CASCADE,
+    skill              VARCHAR(100) NOT NULL,
+    listings_mentioned INTEGER      NOT NULL CHECK (listings_mentioned > 0),
+    UNIQUE (run_id, skill)
+);
+
+ALTER TABLE market_research_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE market_skill_counts  ENABLE ROW LEVEL SECURITY;
+
 -- indexes
 CREATE INDEX IF NOT EXISTS idx_projects_featured  ON projects(featured);
 CREATE INDEX IF NOT EXISTS idx_projects_sort      ON projects(sort_order);

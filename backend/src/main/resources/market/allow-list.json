@@ -1,0 +1,2183 @@
+{
+  "compiledOn": "2026-11-21",
+  "rule": "A company counts only if it is on the current Fortune 500 AND is, or owns, a FINRA member broker-dealer (owner's rule, 2026-11-21).",
+  "sources": {
+    "fortune500": "https://fortune.com/ranking/fortune500/ (2026 list; ranks 1-500 of the page's 1,000 companies)",
+    "finra": "FINRA BrokerCheck, https://brokercheck.finra.org/ (firm record https://brokercheck.finra.org/firm/summary/<CRD>; Form BD owners in https://files.brokercheck.finra.org/firm/firm_<CRD>.pdf)"
+  },
+  "howToEdit": "An entry is used only when included is true AND it has a fortune500.rank from 1 to 500, at least one finra firm with a crd, and at least one alias. searchName is the company name sent to the listings API. aliases are employer names as they appear on listings: lower case, matched as whole words inside the listing's employer name, so keep them specific (aliasesLeftOut lists short or ambiguous names that were deliberately not used). To drop a company set included to false and say why in excludedReason. Review the whole list when a new Fortune 500 is published (yearly) and update compiledOn.",
+  "notConfirmed": "searchName and aliases are best guesses from the Fortune and BrokerCheck names; they were not checked against the listings API. Companies outside Fortune's Financials sector were not screened, apart from a few fintech names. For excluded companies, a broker-dealer under an unrelated name would not have been found.",
+  "companies": [
+    {
+      "name": "JPMorgan Chase",
+      "included": true,
+      "fortune500": {
+        "rank": 12,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "J.P. MORGAN SECURITIES LLC",
+          "crd": 79,
+          "source": "https://brokercheck.finra.org/firm/summary/79"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: JP MORGAN CHASE & CO. > JPMorgan Chase Holdings LLC > J.P. Morgan Broker-Dealer Holdings Inc. (https://files.brokercheck.finra.org/firm/firm_79.pdf)",
+      "searchName": "JPMorgan Chase",
+      "aliases": [
+        "jpmorgan",
+        "jp morgan",
+        "j.p. morgan",
+        "jpmorganchase"
+      ],
+      "aliasesLeftOut": [
+        "chase"
+      ]
+    },
+    {
+      "name": "Bank of America",
+      "included": true,
+      "fortune500": {
+        "rank": 20,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "BOFA SECURITIES, INC.",
+          "crd": 283942,
+          "source": "https://brokercheck.finra.org/firm/summary/283942"
+        },
+        {
+          "firm": "MERRILL LYNCH, PIERCE, FENNER & SMITH INCORPORATED",
+          "crd": 7691,
+          "source": "https://brokercheck.finra.org/firm/summary/7691"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: BANK OF AMERICA CORPORATION > NB Holdings Corporation (> BAC North America Holding Co. for MLPF&S) (https://files.brokercheck.finra.org/firm/firm_283942.pdf, https://files.brokercheck.finra.org/firm/firm_7691.pdf)",
+      "searchName": "Bank of America",
+      "aliases": [
+        "merrill lynch",
+        "bank of america",
+        "bofa securities"
+      ],
+      "aliasesLeftOut": [
+        "bofa",
+        "merrill"
+      ]
+    },
+    {
+      "name": "Citigroup",
+      "included": true,
+      "fortune500": {
+        "rank": 24,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "CITIGROUP GLOBAL MARKETS INC.",
+          "crd": 7059,
+          "source": "https://brokercheck.finra.org/firm/summary/7059"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: CITIGROUP INC. > Citigroup Global Markets Holdings Inc. > Citigroup Financial Products Inc. (https://files.brokercheck.finra.org/firm/firm_7059.pdf)",
+      "searchName": "Citi",
+      "aliases": [
+        "citi",
+        "citibank",
+        "citigroup"
+      ]
+    },
+    {
+      "name": "StoneX Group",
+      "included": true,
+      "fortune500": {
+        "rank": 31,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "STONEX FINANCIAL INC.",
+          "crd": 45993,
+          "source": "https://brokercheck.finra.org/firm/summary/45993"
+        },
+        {
+          "firm": "STONEX SECURITIES INC.",
+          "crd": 18456,
+          "source": "https://brokercheck.finra.org/firm/summary/18456"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: STONEX GROUP INC. [owner/100% owner] (https://api.brokercheck.finra.org/search/firm/45993, https://api.brokercheck.finra.org/search/firm/18456)",
+      "searchName": "StoneX Group",
+      "aliases": [
+        "stonex"
+      ]
+    },
+    {
+      "name": "State Farm Insurance",
+      "included": true,
+      "fortune500": {
+        "rank": 32,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "STATE FARM VP MANAGEMENT CORP.",
+          "crd": 43036,
+          "source": "https://brokercheck.finra.org/firm/summary/43036"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: STATE FARM MUTUAL AUTOMOBILE INSURANCE COMPANY > State Farm Life Insurance Company > State Farm Investment Management Corp. (https://files.brokercheck.finra.org/firm/firm_43036.pdf)",
+      "searchName": "State Farm",
+      "aliases": [
+        "state farm"
+      ],
+      "note": "Listings from independent \"State Farm Agent\" offices also carry the name; they are rarely developer roles, and the title filter drops them."
+    },
+    {
+      "name": "Goldman Sachs Group",
+      "included": true,
+      "fortune500": {
+        "rank": 36,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "GOLDMAN SACHS & CO. LLC",
+          "crd": 361,
+          "source": "https://brokercheck.finra.org/firm/summary/361"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: THE GOLDMAN SACHS GROUP, INC. [Class A member] (https://api.brokercheck.finra.org/search/firm/361)",
+      "searchName": "Goldman Sachs",
+      "aliases": [
+        "goldman sachs"
+      ],
+      "aliasesLeftOut": [
+        "goldman"
+      ]
+    },
+    {
+      "name": "Wells Fargo",
+      "included": true,
+      "fortune500": {
+        "rank": 38,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "WELLS FARGO SECURITIES, LLC",
+          "crd": 126292,
+          "source": "https://brokercheck.finra.org/firm/summary/126292"
+        },
+        {
+          "firm": "WELLS FARGO CLEARING SERVICES, LLC",
+          "crd": 19616,
+          "source": "https://brokercheck.finra.org/firm/summary/19616"
+        },
+        {
+          "firm": "WELLS FARGO ADVISORS FINANCIAL NETWORK, LLC",
+          "crd": 11025,
+          "source": "https://brokercheck.finra.org/firm/summary/11025"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: WELLS FARGO & COMPANY > WFC Holdings, LLC > EVEREN Capital Corporation (> Wachovia Securities Financial Holdings, LLC) (https://files.brokercheck.finra.org/firm/firm_126292.pdf, https://files.brokercheck.finra.org/firm/firm_19616.pdf); CRD 11025 has the same direct owner as 19616 (https://api.brokercheck.finra.org/search/firm/11025)",
+      "searchName": "Wells Fargo",
+      "aliases": [
+        "wells fargo"
+      ]
+    },
+    {
+      "name": "Morgan Stanley",
+      "included": true,
+      "fortune500": {
+        "rank": 39,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "MORGAN STANLEY & CO. LLC",
+          "crd": 8209,
+          "source": "https://brokercheck.finra.org/firm/summary/8209"
+        },
+        {
+          "firm": "MORGAN STANLEY",
+          "crd": 149777,
+          "source": "https://brokercheck.finra.org/firm/summary/149777"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: MORGAN STANLEY > Morgan Stanley Capital Management, LLC (https://files.brokercheck.finra.org/firm/firm_8209.pdf, https://files.brokercheck.finra.org/firm/firm_149777.pdf); CRD 149777's registered name is 'MORGAN STANLEY' with other names 'Morgan Stanley Smith Barney LLC' / 'Morgan Stanley Wealth Management'",
+      "searchName": "Morgan Stanley",
+      "aliases": [
+        "morgan stanley"
+      ],
+      "aliasesLeftOut": [
+        "e trade"
+      ]
+    },
+    {
+      "name": "MetLife",
+      "included": true,
+      "fortune500": {
+        "rank": 59,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "METLIFE INVESTORS DISTRIBUTION COMPANY",
+          "crd": 107622,
+          "source": "https://brokercheck.finra.org/firm/summary/107622"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: METLIFE, INC. > MetLife Investors Group, LLC (https://files.brokercheck.finra.org/firm/firm_107622.pdf)",
+      "searchName": "MetLife",
+      "aliases": [
+        "metlife"
+      ]
+    },
+    {
+      "name": "New York Life Insurance",
+      "included": true,
+      "fortune500": {
+        "rank": 62,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "NYLIFE SECURITIES LLC",
+          "crd": 5167,
+          "source": "https://brokercheck.finra.org/firm/summary/5167"
+        },
+        {
+          "firm": "NYLIFE DISTRIBUTORS LLC",
+          "crd": 35350,
+          "source": "https://brokercheck.finra.org/firm/summary/35350"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: NEW YORK LIFE INSURANCE COMPANY > NYLIFE LLC (5167); > New York Life Investment Management Holdings LLC (35350) (https://files.brokercheck.finra.org/firm/firm_5167.pdf, https://files.brokercheck.finra.org/firm/firm_35350.pdf)",
+      "searchName": "New York Life",
+      "aliases": [
+        "new york life",
+        "nylife securities"
+      ]
+    },
+    {
+      "name": "Capital One Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 63,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "CAPITAL ONE SECURITIES, INC.",
+          "crd": 44158,
+          "source": "https://brokercheck.finra.org/firm/summary/44158"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: CAPITAL ONE FINANCIAL CORPORATION [100% shareholder] (https://api.brokercheck.finra.org/search/firm/44158)",
+      "searchName": "Capital One",
+      "aliases": [
+        "capital one"
+      ]
+    },
+    {
+      "name": "Allstate",
+      "included": true,
+      "fortune500": {
+        "rank": 64,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "ALLSTATE FINANCIAL SERVICES, LLC",
+          "crd": 18272,
+          "source": "https://brokercheck.finra.org/firm/summary/18272"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: THE ALLSTATE CORPORATION > Allstate Insurance Company (https://files.brokercheck.finra.org/firm/firm_18272.pdf)",
+      "searchName": "Allstate",
+      "aliases": [
+        "allstate"
+      ]
+    },
+    {
+      "name": "Nationwide",
+      "included": true,
+      "fortune500": {
+        "rank": 69,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "NATIONWIDE INVESTMENT SERVICES CORPORATION",
+          "crd": 7110,
+          "source": "https://brokercheck.finra.org/firm/summary/7110"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: NATIONWIDE MUTUAL INSURANCE COMPANY > Nationwide Corporation > Nationwide Financial Services, Inc. > Nationwide Life Insurance Company (https://files.brokercheck.finra.org/firm/firm_7110.pdf)",
+      "searchName": "Nationwide",
+      "aliases": [
+        "nationwide mutual insurance",
+        "nationwide insurance",
+        "nationwide financial"
+      ],
+      "aliasesLeftOut": [
+        "nationwide"
+      ]
+    },
+    {
+      "name": "Galaxy Digital",
+      "included": true,
+      "fortune500": {
+        "rank": 76,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "GALAXY DIGITAL PARTNERS LLC",
+          "crd": 289605,
+          "source": "https://brokercheck.finra.org/firm/summary/289605"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: GALAXY DIGITAL INC. (public reporting, GP interest) > Galaxy Digital Holdings LP > Galaxy Digital LP (https://files.brokercheck.finra.org/firm/firm_289605.pdf)",
+      "searchName": "Galaxy Digital",
+      "aliases": [
+        "galaxy digital"
+      ],
+      "aliasesLeftOut": [
+        "galaxy"
+      ]
+    },
+    {
+      "name": "Prudential Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 78,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "PRUCO SECURITIES, LLC.",
+          "crd": 5685,
+          "source": "https://brokercheck.finra.org/firm/summary/5685"
+        },
+        {
+          "firm": "PRUDENTIAL INVESTMENT MANAGEMENT SERVICES LLC",
+          "crd": 18353,
+          "source": "https://brokercheck.finra.org/firm/summary/18353"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: PRUDENTIAL FINANCIAL, INC. > The Prudential Insurance Company of America (https://files.brokercheck.finra.org/firm/firm_5685.pdf); 18353 direct owner PIFM Holdco, LLC (chain not separately read)",
+      "searchName": "Prudential",
+      "aliases": [
+        "pruco securities",
+        "prudential financial"
+      ],
+      "aliasesLeftOut": [
+        "pgim",
+        "prudential"
+      ]
+    },
+    {
+      "name": "United Services Automobile Assn.",
+      "included": true,
+      "fortune500": {
+        "rank": 93,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "USAA INVESTMENT SERVICES COMPANY",
+          "crd": 5475,
+          "source": "https://brokercheck.finra.org/firm/summary/5475"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: UNITED SERVICES AUTOMOBILE ASSOCIATION > USAA Capital Corporation > USAA Investment Corporation (https://files.brokercheck.finra.org/firm/firm_5475.pdf)",
+      "searchName": "USAA",
+      "aliases": [
+        "usaa",
+        "united services automobile association"
+      ]
+    },
+    {
+      "name": "TIAA",
+      "included": true,
+      "fortune500": {
+        "rank": 94,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "TIAA-CREF INDIVIDUAL & INSTITUTIONAL SERVICES, LLC",
+          "crd": 20472,
+          "source": "https://brokercheck.finra.org/firm/summary/20472"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: TEACHERS INSURANCE AND ANNUITY ASSOCIATION OF AMERICA [sole owner] (https://api.brokercheck.finra.org/search/firm/20472)",
+      "searchName": "TIAA",
+      "aliases": [
+        "tiaa",
+        "teachers insurance and annuity association of america"
+      ],
+      "aliasesLeftOut": [
+        "nuveen"
+      ]
+    },
+    {
+      "name": "Massachusetts Mutual Life Insurance",
+      "included": true,
+      "fortune500": {
+        "rank": 100,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "MML INVESTORS SERVICES, LLC",
+          "crd": 10409,
+          "source": "https://brokercheck.finra.org/firm/summary/10409"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: MASSACHUSETTS MUTUAL LIFE INSURANCE COMPANY > MassMutual Holding LLC (https://files.brokercheck.finra.org/firm/firm_10409.pdf)",
+      "searchName": "MassMutual",
+      "aliases": [
+        "massmutual",
+        "mass mutual",
+        "mml investors services",
+        "massachusetts mutual life insurance company"
+      ]
+    },
+    {
+      "name": "Northwestern Mutual",
+      "included": true,
+      "fortune500": {
+        "rank": 109,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "NORTHWESTERN MUTUAL INVESTMENT SERVICES, LLC",
+          "crd": 2881,
+          "source": "https://brokercheck.finra.org/firm/summary/2881"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: THE NORTHWESTERN MUTUAL LIFE INSURANCE COMPANY [sole member] (https://api.brokercheck.finra.org/search/firm/2881)",
+      "searchName": "Northwestern Mutual",
+      "aliases": [
+        "northwestern mutual"
+      ]
+    },
+    {
+      "name": "U.S. Bancorp",
+      "included": true,
+      "fortune500": {
+        "rank": 110,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "U.S. BANCORP INVESTMENTS, INC.",
+          "crd": 17868,
+          "source": "https://brokercheck.finra.org/firm/summary/17868"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: U.S. BANCORP [sole shareholder] (https://api.brokercheck.finra.org/search/firm/17868)",
+      "searchName": "U.S. Bancorp",
+      "aliases": [
+        "us bank",
+        "u.s. bank",
+        "us bancorp",
+        "u.s. bancorp"
+      ]
+    },
+    {
+      "name": "Bank of New York (BNY)",
+      "included": true,
+      "fortune500": {
+        "rank": 115,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "PERSHING LLC",
+          "crd": 7560,
+          "source": "https://brokercheck.finra.org/firm/summary/7560"
+        },
+        {
+          "firm": "BNY MELLON CAPITAL MARKETS, LLC",
+          "crd": 17454,
+          "source": "https://brokercheck.finra.org/firm/summary/17454"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: THE BANK OF NEW YORK MELLON CORPORATION > Pershing Group LLC (7560); > BNY Capital Markets Holdings, Inc. (17454) (https://files.brokercheck.finra.org/firm/firm_7560.pdf, https://files.brokercheck.finra.org/firm/firm_17454.pdf)",
+      "searchName": "BNY",
+      "aliases": [
+        "bny",
+        "bank of new york mellon"
+      ],
+      "aliasesLeftOut": [
+        "pershing"
+      ]
+    },
+    {
+      "name": "CBRE Group",
+      "included": false,
+      "fortune500": {
+        "rank": 118,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "CBRE CAPITAL ADVISORS, INC.",
+          "crd": 140565,
+          "source": "https://brokercheck.finra.org/firm/summary/140565"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: CBRE GROUP, INC. > CBRE Services, Inc. > CBRE, Inc. (https://files.brokercheck.finra.org/firm/firm_140565.pdf)",
+      "searchName": "CBRE Group",
+      "aliases": [
+        "cbre"
+      ],
+      "excludedReason": "Meets both tests (Fortune 500, owns an active FINRA member) but is a commercial real-estate company, not a financial-services employer. Left out pending the owner's decision; set included to true to count it."
+    },
+    {
+      "name": "PNC Financial Services Group",
+      "included": true,
+      "fortune500": {
+        "rank": 136,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "PNC CAPITAL MARKETS LLC",
+          "crd": 15647,
+          "source": "https://brokercheck.finra.org/firm/summary/15647"
+        },
+        {
+          "firm": "PNC WEALTH MANAGEMENT LLC",
+          "crd": 129052,
+          "source": "https://brokercheck.finra.org/firm/summary/129052"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: THE PNC FINANCIAL SERVICES GROUP, INC. > PNC Holding, LLC (15647); > PNC Bancorp, Inc. > PNC Bank, N.A. (129052; registered name now PNC WEALTH MANAGEMENT LLC, formerly PNC Investments LLC) (https://files.brokercheck.finra.org/firm/firm_15647.pdf, https://files.brokercheck.finra.org/firm/firm_129052.pdf)",
+      "searchName": "PNC",
+      "aliases": [
+        "pnc"
+      ]
+    },
+    {
+      "name": "Apollo Global Management",
+      "included": true,
+      "fortune500": {
+        "rank": 143,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "APOLLO GLOBAL SECURITIES, LLC",
+          "crd": 153502,
+          "source": "https://brokercheck.finra.org/firm/summary/153502"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: lists APOLLO GLOBAL MANAGEMENT INC. and Apollo Asset Management, Inc. above Apollo Global Securities Intermediate, L.P. (https://files.brokercheck.finra.org/firm/firm_153502.pdf)",
+      "searchName": "Apollo Global Management",
+      "aliases": [
+        "apollo global management",
+        "apollo global securities"
+      ],
+      "aliasesLeftOut": [
+        "apollo"
+      ]
+    },
+    {
+      "name": "Truist Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 150,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "TRUIST SECURITIES, INC.",
+          "crd": 6271,
+          "source": "https://brokercheck.finra.org/firm/summary/6271"
+        },
+        {
+          "firm": "TRUIST INVESTMENT SERVICES, INC.",
+          "crd": 17499,
+          "source": "https://brokercheck.finra.org/firm/summary/17499"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: TRUIST FINANCIAL CORPORATION [parent/holding company] (https://api.brokercheck.finra.org/search/firm/6271, https://api.brokercheck.finra.org/search/firm/17499)",
+      "searchName": "Truist",
+      "aliases": [
+        "truist"
+      ]
+    },
+    {
+      "name": "KKR",
+      "included": true,
+      "fortune500": {
+        "rank": 156,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "KKR CAPITAL MARKETS LLC",
+          "crd": 143571,
+          "source": "https://brokercheck.finra.org/firm/summary/143571"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: KKR & CO. INC. > KKR Group Co. Inc. > ... > KKR Capital Markets Holdings L.P. (https://files.brokercheck.finra.org/firm/firm_143571.pdf)",
+      "searchName": "KKR",
+      "aliases": [
+        "kkr",
+        "kohlberg kravis roberts"
+      ]
+    },
+    {
+      "name": "Hartford Insurance Group",
+      "included": true,
+      "fortune500": {
+        "rank": 160,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "HARTFORD FUNDS DISTRIBUTORS, LLC",
+          "crd": 45995,
+          "source": "https://brokercheck.finra.org/firm/summary/45995"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: THE HARTFORD INSURANCE GROUP, INC. > Hartford Holdings, Inc. > Hartford Funds Management Group, Inc. (https://files.brokercheck.finra.org/firm/firm_45995.pdf)",
+      "searchName": "The Hartford",
+      "aliases": [
+        "the hartford",
+        "hartford funds",
+        "hartford financial services",
+        "hartford insurance group"
+      ],
+      "aliasesLeftOut": [
+        "hartford"
+      ]
+    },
+    {
+      "name": "Charles Schwab",
+      "included": true,
+      "fortune500": {
+        "rank": 165,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "CHARLES SCHWAB & CO., INC.",
+          "crd": 5393,
+          "source": "https://brokercheck.finra.org/firm/summary/5393"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: THE CHARLES SCHWAB CORPORATION > Schwab Holdings, Inc. (https://files.brokercheck.finra.org/firm/firm_5393.pdf)",
+      "searchName": "Charles Schwab",
+      "aliases": [
+        "schwab"
+      ]
+    },
+    {
+      "name": "Marsh & McLennan",
+      "included": true,
+      "fortune500": {
+        "rank": 168,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "MARSH SECURITIES LLC",
+          "crd": 103846,
+          "source": "https://brokercheck.finra.org/firm/summary/103846"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: MARSH & MCLENNAN COMPANIES, INC. > Marsh LLC > Marsh USA LLC > ... > Marsh Insurance & Investments LLC; registered name MARSH SECURITIES LLC (other name MMC Securities LLC) (https://files.brokercheck.finra.org/firm/firm_103846.pdf)",
+      "searchName": "Marsh McLennan",
+      "aliases": [
+        "marsh mclennan",
+        "mmc securities",
+        "marsh securities"
+      ],
+      "aliasesLeftOut": [
+        "marsh",
+        "mercer"
+      ]
+    },
+    {
+      "name": "Jones Lang LaSalle",
+      "included": false,
+      "fortune500": {
+        "rank": 175,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "JONES LANG LASALLE SECURITIES, LLC",
+          "crd": 120738,
+          "source": "https://brokercheck.finra.org/firm/summary/120738"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: JONES LANG LASALLE INCORPORATED > Jones Lang LaSalle Americas, Inc. (https://files.brokercheck.finra.org/firm/firm_120738.pdf)",
+      "searchName": "Jones Lang LaSalle",
+      "aliases": [
+        "jll securities",
+        "jones lang lasalle"
+      ],
+      "excludedReason": "Meets both tests (Fortune 500, owns an active FINRA member) but is a commercial real-estate company, not a financial-services employer. Left out pending the owner's decision; set included to true to count it.",
+      "aliasesLeftOut": [
+        "jll"
+      ]
+    },
+    {
+      "name": "BlackRock",
+      "included": true,
+      "fortune500": {
+        "rank": 190,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "BLACKROCK INVESTMENTS, LLC",
+          "crd": 38642,
+          "source": "https://brokercheck.finra.org/firm/summary/38642"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: BLACKROCK, INC. > ... > BlackRock Finance, Inc. > BlackRock Holdco 2, Inc. > BlackRock Financial Management, Inc. (https://files.brokercheck.finra.org/firm/firm_38642.pdf)",
+      "searchName": "BlackRock",
+      "aliases": [
+        "blackrock"
+      ]
+    },
+    {
+      "name": "Block",
+      "included": true,
+      "fortune500": {
+        "rank": 191,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "CASH APP INVESTING LLC",
+          "crd": 144076,
+          "source": "https://brokercheck.finra.org/firm/summary/144076"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: BLOCK, INC. > Third Party Technologies Inc. (https://files.brokercheck.finra.org/firm/firm_144076.pdf)",
+      "searchName": "Block",
+      "aliases": [
+        "cash app",
+        "block, inc."
+      ],
+      "aliasesLeftOut": [
+        "block",
+        "square"
+      ]
+    },
+    {
+      "name": "State Street",
+      "included": true,
+      "fortune500": {
+        "rank": 202,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "STATE STREET GLOBAL MARKETS, LLC",
+          "crd": 285852,
+          "source": "https://brokercheck.finra.org/firm/summary/285852"
+        },
+        {
+          "firm": "STATE STREET GLOBAL ADVISORS FUNDS DISTRIBUTORS, LLC",
+          "crd": 30107,
+          "source": "https://brokercheck.finra.org/firm/summary/30107"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: STATE STREET CORPORATION [parent company] for 285852 (https://api.brokercheck.finra.org/search/firm/285852); 30107 direct owner State Street Global Advisors, Inc. (chain to State Street Corp not separately read)",
+      "searchName": "State Street",
+      "aliases": [
+        "state street corporation",
+        "state street global markets",
+        "state street bank and trust",
+        "state street global advisors"
+      ],
+      "aliasesLeftOut": [
+        "state street"
+      ]
+    },
+    {
+      "name": "Ameriprise Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 230,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "AMERIPRISE FINANCIAL SERVICES, LLC",
+          "crd": 6363,
+          "source": "https://brokercheck.finra.org/firm/summary/6363"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: AMERIPRISE FINANCIAL, INC. > AMPF Holding, LLC (https://files.brokercheck.finra.org/firm/firm_6363.pdf)",
+      "searchName": "Ameriprise",
+      "aliases": [
+        "ameriprise"
+      ]
+    },
+    {
+      "name": "Guardian Life Ins. Co. of America",
+      "included": true,
+      "fortune500": {
+        "rank": 232,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "PARK AVENUE SECURITIES LLC",
+          "crd": 46173,
+          "source": "https://brokercheck.finra.org/firm/summary/46173"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: THE GUARDIAN LIFE INSURANCE COMPANY OF AMERICA [owner] (https://api.brokercheck.finra.org/search/firm/46173)",
+      "searchName": "Guardian Life",
+      "aliases": [
+        "guardian life",
+        "park avenue securities"
+      ],
+      "aliasesLeftOut": [
+        "guardian"
+      ]
+    },
+    {
+      "name": "Corebridge Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 236,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "COREBRIDGE CAPITAL SERVICES, INC.",
+          "crd": 13158,
+          "source": "https://brokercheck.finra.org/firm/summary/13158"
+        },
+        {
+          "firm": "VALIC FINANCIAL ADVISORS, INC.",
+          "crd": 42803,
+          "source": "https://brokercheck.finra.org/firm/summary/42803"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: COREBRIDGE FINANCIAL, INC. > Corebridge Life Holdings, Inc. > AGC Life Insurance Company > American General Life Insurance Company (> VALIC for 42803) (https://files.brokercheck.finra.org/firm/firm_13158.pdf, https://files.brokercheck.finra.org/firm/firm_42803.pdf)",
+      "searchName": "Corebridge Financial",
+      "aliases": [
+        "valic",
+        "corebridge"
+      ]
+    },
+    {
+      "name": "Pacific Life",
+      "included": true,
+      "fortune500": {
+        "rank": 240,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "PACIFIC SELECT DISTRIBUTORS, LLC",
+          "crd": 4452,
+          "source": "https://brokercheck.finra.org/firm/summary/4452"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: PACIFIC LIFE INSURANCE COMPANY [parent of applicant] (https://api.brokercheck.finra.org/search/firm/4452)",
+      "searchName": "Pacific Life",
+      "aliases": [
+        "pacific life",
+        "pacific select distributors"
+      ]
+    },
+    {
+      "name": "Lincoln National",
+      "included": true,
+      "fortune500": {
+        "rank": 243,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "LINCOLN FINANCIAL DISTRIBUTORS, INC.",
+          "crd": 145,
+          "source": "https://brokercheck.finra.org/firm/summary/145"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: LINCOLN NATIONAL CORPORATION > The Lincoln National Life Insurance Company (https://files.brokercheck.finra.org/firm/firm_145.pdf). No active firm named Lincoln Financial Advisors appeared in the search",
+      "searchName": "Lincoln Financial",
+      "aliases": [
+        "lincoln national",
+        "lincoln financial"
+      ],
+      "aliasesLeftOut": [
+        "lincoln"
+      ]
+    },
+    {
+      "name": "Jones Financial (Edward Jones)",
+      "included": true,
+      "fortune500": {
+        "rank": 249,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "EDWARD JONES",
+          "crd": 250,
+          "source": "https://brokercheck.finra.org/firm/summary/250"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: THE JONES FINANCIAL COMPANIES, L.L.L.P. [limited partner]; registered name 'EDWARD JONES', other name 'Edward D. Jones & Co., L.P.' (https://api.brokercheck.finra.org/search/firm/250)",
+      "searchName": "Edward Jones",
+      "aliases": [
+        "edward jones",
+        "edward d. jones & co.",
+        "the jones financial companies"
+      ]
+    },
+    {
+      "name": "LPL Financial Holdings",
+      "included": true,
+      "fortune500": {
+        "rank": 264,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "LPL FINANCIAL LLC",
+          "crd": 6413,
+          "source": "https://brokercheck.finra.org/firm/summary/6413"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: LPL FINANCIAL HOLDINGS INC. > LPL Holdings, Inc. (https://files.brokercheck.finra.org/firm/firm_6413.pdf)",
+      "searchName": "LPL Financial",
+      "aliases": [
+        "lpl financial"
+      ],
+      "aliasesLeftOut": [
+        "lpl"
+      ]
+    },
+    {
+      "name": "Raymond James Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 283,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "RAYMOND JAMES & ASSOCIATES, INC.",
+          "crd": 705,
+          "source": "https://brokercheck.finra.org/firm/summary/705"
+        },
+        {
+          "firm": "RAYMOND JAMES FINANCIAL SERVICES, INC.",
+          "crd": 6694,
+          "source": "https://brokercheck.finra.org/firm/summary/6694"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: RAYMOND JAMES FINANCIAL, INC. [holding company/owner] (https://api.brokercheck.finra.org/search/firm/705, https://api.brokercheck.finra.org/search/firm/6694)",
+      "searchName": "Raymond James",
+      "aliases": [
+        "raymond james"
+      ]
+    },
+    {
+      "name": "Principal Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 287,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "PRINCIPAL SECURITIES, INC.",
+          "crd": 1137,
+          "source": "https://brokercheck.finra.org/firm/summary/1137"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: PRINCIPAL FINANCIAL GROUP INC. > Principal Financial Services, Inc. (https://files.brokercheck.finra.org/firm/firm_1137.pdf)",
+      "searchName": "Principal Financial Group",
+      "aliases": [
+        "principal financial",
+        "principal securities"
+      ],
+      "aliasesLeftOut": [
+        "principal"
+      ]
+    },
+    {
+      "name": "Mutual of Omaha",
+      "included": true,
+      "fortune500": {
+        "rank": 288,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "MUTUAL OF OMAHA INVESTOR SERVICES, INC.",
+          "crd": 611,
+          "source": "https://brokercheck.finra.org/firm/summary/611"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: MUTUAL OF OMAHA INSURANCE CO. > Mutual of Omaha Holdings Inc. (https://files.brokercheck.finra.org/firm/firm_611.pdf)",
+      "searchName": "Mutual of Omaha",
+      "aliases": [
+        "mutual of omaha"
+      ]
+    },
+    {
+      "name": "Ally Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 295,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "ALLY INVEST SECURITIES LLC",
+          "crd": 136131,
+          "source": "https://brokercheck.finra.org/firm/summary/136131"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: ALLY FINANCIAL, INC. > Ally Invest Group Inc. (https://files.brokercheck.finra.org/firm/firm_136131.pdf)",
+      "searchName": "Ally Financial",
+      "aliases": [
+        "ally bank",
+        "ally invest",
+        "ally financial"
+      ],
+      "aliasesLeftOut": [
+        "ally"
+      ]
+    },
+    {
+      "name": "First Citizens BancShares",
+      "included": true,
+      "fortune500": {
+        "rank": 309,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "FIRST CITIZENS CAPITAL SECURITIES, LLC",
+          "crd": 41504,
+          "source": "https://brokercheck.finra.org/firm/summary/41504"
+        },
+        {
+          "firm": "FIRST CITIZENS INVESTOR SERVICES, INC.",
+          "crd": 44430,
+          "source": "https://brokercheck.finra.org/firm/summary/44430"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: FIRST CITIZENS BANCSHARES, INC. [shareholder] (41504, https://api.brokercheck.finra.org/search/firm/41504); BrokerCheck detailed report (Form BD) indirect owners: FIRST CITIZENS BANCSHARES, INC. > First-Citizens Bank & Trust Company (44430, https://files.brokercheck.finra.org/firm/firm_44430.pdf)",
+      "searchName": "First Citizens Bank",
+      "aliases": [
+        "first citizens bank",
+        "first citizens bancshares"
+      ],
+      "aliasesLeftOut": [
+        "first citizens",
+        "silicon valley bank"
+      ]
+    },
+    {
+      "name": "Blackstone",
+      "included": true,
+      "fortune500": {
+        "rank": 310,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "BLACKSTONE SECURITIES PARTNERS L.P.",
+          "crd": 17917,
+          "source": "https://brokercheck.finra.org/firm/summary/17917"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: BLACKSTONE INC. > Blackstone Holdings I/II GP LLC > Blackstone Holdings I L.P. > Blackstone Group Holdings L.P. / Blackstone Advisory Services L.L.C. (https://files.brokercheck.finra.org/firm/firm_17917.pdf)",
+      "searchName": "Blackstone",
+      "aliases": [
+        "blackstone inc.",
+        "blackstone group"
+      ],
+      "aliasesLeftOut": [
+        "blackstone"
+      ]
+    },
+    {
+      "name": "Northern Trust",
+      "included": true,
+      "fortune500": {
+        "rank": 317,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "NORTHERN TRUST SECURITIES, INC.",
+          "crd": 7927,
+          "source": "https://brokercheck.finra.org/firm/summary/7927"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: NORTHERN TRUST CORPORATION [shareholder] (https://api.brokercheck.finra.org/search/firm/7927)",
+      "searchName": "Northern Trust",
+      "aliases": [
+        "northern trust"
+      ]
+    },
+    {
+      "name": "Western & Southern Financial Group",
+      "included": true,
+      "fortune500": {
+        "rank": 321,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "W&S BROKERAGE SERVICES, INC.",
+          "crd": 8099,
+          "source": "https://brokercheck.finra.org/firm/summary/8099"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: WESTERN & SOUTHERN FINANCIAL GROUP, INC. (under Western & Southern Mutual Holding Company) > The Western and Southern Life Insurance Company > Western-Southern Life Assurance Company (https://files.brokercheck.finra.org/firm/firm_8099.pdf)",
+      "searchName": "Western & Southern",
+      "aliases": [
+        "western & southern",
+        "western and southern",
+        "w&s brokerage services"
+      ]
+    },
+    {
+      "name": "Arthur J. Gallagher",
+      "included": true,
+      "fortune500": {
+        "rank": 327,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "GALLAGHER SECURITIES, INC",
+          "crd": 116605,
+          "source": "https://brokercheck.finra.org/firm/summary/116605"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: ARTHUR J. GALLAGHER & CO. [owner] (https://api.brokercheck.finra.org/search/firm/116605)",
+      "searchName": "Arthur J. Gallagher",
+      "aliases": [
+        "ajg",
+        "arthur j. gallagher"
+      ],
+      "aliasesLeftOut": [
+        "gallagher"
+      ]
+    },
+    {
+      "name": "M&T Bank",
+      "included": true,
+      "fortune500": {
+        "rank": 334,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "M&T SECURITIES, INC.",
+          "crd": 17358,
+          "source": "https://brokercheck.finra.org/firm/summary/17358"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: M&T BANK CORPORATION [shareholder] (https://api.brokercheck.finra.org/search/firm/17358)",
+      "searchName": "M&T Bank",
+      "aliases": [
+        "m&t bank",
+        "m&t securities"
+      ],
+      "aliasesLeftOut": [
+        "m t",
+        "wilmington trust"
+      ]
+    },
+    {
+      "name": "Fifth Third Bancorp",
+      "included": true,
+      "fortune500": {
+        "rank": 341,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "FIFTH THIRD SECURITIES, INC.",
+          "crd": 628,
+          "source": "https://brokercheck.finra.org/firm/summary/628"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: FIFTH THIRD BANCORP > Fifth Third Financial Corporation > Fifth Third Bank, N.A. (https://files.brokercheck.finra.org/firm/firm_628.pdf)",
+      "searchName": "Fifth Third Bank",
+      "aliases": [
+        "fifth third"
+      ]
+    },
+    {
+      "name": "Intercontinental Exchange",
+      "included": true,
+      "fortune500": {
+        "rank": 347,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "ICE BONDS SECURITIES CORPORATION",
+          "crd": 123635,
+          "source": "https://brokercheck.finra.org/firm/summary/123635"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: INTERCONTINENTAL EXCHANGE, INC. > Intercontinental Exchange Holdings, Inc. > Creditex Group Inc. > CreditTrade Inc. (https://files.brokercheck.finra.org/firm/firm_123635.pdf)",
+      "searchName": "Intercontinental Exchange",
+      "aliases": [
+        "ice bonds",
+        "new york stock exchange",
+        "intercontinental exchange"
+      ],
+      "aliasesLeftOut": [
+        "ice",
+        "nyse"
+      ]
+    },
+    {
+      "name": "Huntington Bancshares",
+      "included": true,
+      "fortune500": {
+        "rank": 350,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "HUNTINGTON SECURITIES, INC.",
+          "crd": 2261,
+          "source": "https://brokercheck.finra.org/firm/summary/2261"
+        },
+        {
+          "firm": "THE HUNTINGTON INVESTMENT COMPANY",
+          "crd": 16986,
+          "source": "https://brokercheck.finra.org/firm/summary/16986"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: HUNTINGTON BANCSHARES INCORPORATED [direct owner/parent] (https://api.brokercheck.finra.org/search/firm/2261, https://api.brokercheck.finra.org/search/firm/16986)",
+      "searchName": "Huntington Bank",
+      "aliases": [
+        "huntington bank",
+        "huntington bancshares",
+        "huntington securities",
+        "huntington national bank"
+      ],
+      "aliasesLeftOut": [
+        "huntington"
+      ]
+    },
+    {
+      "name": "Citizens Financial Group",
+      "included": true,
+      "fortune500": {
+        "rank": 365,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "CITIZENS SECURITIES, INC.",
+          "crd": 39550,
+          "source": "https://brokercheck.finra.org/firm/summary/39550"
+        },
+        {
+          "firm": "CITIZENS JMP SECURITIES, LLC",
+          "crd": 22208,
+          "source": "https://brokercheck.finra.org/firm/summary/22208"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: CITIZENS FINANCIAL GROUP, INC. > Citizens Bank, N.A. (39550); > Citizens JMP Group LLC > ... > JMP Holding LLC (22208) (https://files.brokercheck.finra.org/firm/firm_39550.pdf, https://files.brokercheck.finra.org/firm/firm_22208.pdf)",
+      "searchName": "Citizens Financial Group",
+      "aliases": [
+        "citizens jmp",
+        "citizens securities",
+        "citizens financial group"
+      ],
+      "aliasesLeftOut": [
+        "citizens",
+        "citizens bank"
+      ]
+    },
+    {
+      "name": "Equitable Holdings",
+      "included": true,
+      "fortune500": {
+        "rank": 379,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "EQUITABLE ADVISORS, LLC",
+          "crd": 6627,
+          "source": "https://brokercheck.finra.org/firm/summary/6627"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: EQUITABLE HOLDINGS, INC. > Equitable Financial Services, LLC > Equitable Distribution Holding Corporation (https://files.brokercheck.finra.org/firm/firm_6627.pdf)",
+      "searchName": "Equitable",
+      "aliases": [
+        "equitable holdings",
+        "equitable advisors",
+        "equitable financial"
+      ],
+      "aliasesLeftOut": [
+        "equitable",
+        "alliancebernstein"
+      ]
+    },
+    {
+      "name": "KeyCorp",
+      "included": true,
+      "fortune500": {
+        "rank": 386,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "KEYBANC CAPITAL MARKETS INC.",
+          "crd": 566,
+          "source": "https://brokercheck.finra.org/firm/summary/566"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: KEYCORP [sole shareholder] (https://api.brokercheck.finra.org/search/firm/566)",
+      "searchName": "KeyBank",
+      "aliases": [
+        "keycorp",
+        "keybank",
+        "keybanc",
+        "key bank"
+      ],
+      "aliasesLeftOut": [
+        "key"
+      ]
+    },
+    {
+      "name": "Thrivent Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 387,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "THRIVENT INVESTMENT MANAGEMENT INC.",
+          "crd": 18387,
+          "source": "https://brokercheck.finra.org/firm/summary/18387"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: THRIVENT FINANCIAL FOR LUTHERANS > Thrivent Financial Holdings, Inc. (https://files.brokercheck.finra.org/firm/firm_18387.pdf)",
+      "searchName": "Thrivent",
+      "aliases": [
+        "thrivent"
+      ]
+    },
+    {
+      "name": "Jefferies Financial Group",
+      "included": true,
+      "fortune500": {
+        "rank": 402,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "JEFFERIES LLC",
+          "crd": 2347,
+          "source": "https://brokercheck.finra.org/firm/summary/2347"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: JEFFERIES FINANCIAL GROUP INC [direct owner] (https://api.brokercheck.finra.org/search/firm/2347)",
+      "searchName": "Jefferies",
+      "aliases": [
+        "jefferies"
+      ]
+    },
+    {
+      "name": "Fidelity National Information (FIS)",
+      "included": true,
+      "fortune500": {
+        "rank": 406,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "FIS BROKERAGE & SECURITIES SERVICES LLC",
+          "crd": 104162,
+          "source": "https://brokercheck.finra.org/firm/summary/104162"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: FIDELITY NATIONAL INFORMATION SERVICES, INC. > FIS-SG Holding Corp. > FIS Capital Markets US LLC (https://files.brokercheck.finra.org/firm/firm_104162.pdf)",
+      "searchName": "FIS",
+      "aliases": [
+        "fis",
+        "fidelity national information services"
+      ],
+      "aliasesLeftOut": [
+        "fidelity"
+      ]
+    },
+    {
+      "name": "Interactive Brokers Group",
+      "included": true,
+      "fortune500": {
+        "rank": 410,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "INTERACTIVE BROKERS LLC",
+          "crd": 36418,
+          "source": "https://brokercheck.finra.org/firm/summary/36418"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: INTERACTIVE BROKERS GROUP, INC. (public reporting, 25%-<50% of IBG LLC, 'directs management: Yes') > IBG LLC [managing member] ; IBG Holdings LLC holds 75%+ (https://files.brokercheck.finra.org/firm/firm_36418.pdf). NOTE: listed parent is a minority economic owner that controls management",
+      "searchName": "Interactive Brokers",
+      "aliases": [
+        "interactive brokers"
+      ],
+      "aliasesLeftOut": [
+        "ibkr"
+      ]
+    },
+    {
+      "name": "Regions Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 428,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "REGIONS SECURITIES LLC",
+          "crd": 159475,
+          "source": "https://brokercheck.finra.org/firm/summary/159475"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: REGIONS FINANCIAL CORP > RFC Financial Services Holding LLC (https://files.brokercheck.finra.org/firm/firm_159475.pdf)",
+      "searchName": "Regions Bank",
+      "aliases": [
+        "regions bank",
+        "regions financial",
+        "regions securities"
+      ],
+      "aliasesLeftOut": [
+        "regions"
+      ]
+    },
+    {
+      "name": "Franklin Templeton",
+      "included": true,
+      "fortune500": {
+        "rank": 452,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "FRANKLIN DISTRIBUTORS, LLC",
+          "crd": 109064,
+          "source": "https://brokercheck.finra.org/firm/summary/109064"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: FRANKLIN TEMPLETON, INC. > Legg Mason, Inc. > Templeton Worldwide, Inc. (https://files.brokercheck.finra.org/firm/firm_109064.pdf)",
+      "searchName": "Franklin Templeton",
+      "aliases": [
+        "legg mason",
+        "franklin templeton",
+        "franklin resources"
+      ],
+      "aliasesLeftOut": [
+        "franklin"
+      ]
+    },
+    {
+      "name": "Securian Financial Group",
+      "included": true,
+      "fortune500": {
+        "rank": 457,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "SECURIAN FINANCIAL SERVICES, INC.",
+          "crd": 15296,
+          "source": "https://brokercheck.finra.org/firm/summary/15296"
+        }
+      ],
+      "ownership": "BrokerCheck direct owner: SECURIAN FINANCIAL GROUP, INC. [100% shareholder] (https://api.brokercheck.finra.org/search/firm/15296)",
+      "searchName": "Securian Financial",
+      "aliases": [
+        "securian"
+      ],
+      "aliasesLeftOut": [
+        "minnesota life"
+      ]
+    },
+    {
+      "name": "Nasdaq",
+      "included": true,
+      "fortune500": {
+        "rank": 470,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "NASDAQ EXECUTION SERVICES, LLC",
+          "crd": 7270,
+          "source": "https://brokercheck.finra.org/firm/summary/7270"
+        },
+        {
+          "firm": "NASDAQ CAPITAL MARKETS ADVISORY LLC",
+          "crd": 104295,
+          "source": "https://brokercheck.finra.org/firm/summary/104295"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: NASDAQ, INC. > The Nasdaq Stock Market, LLC (https://files.brokercheck.finra.org/firm/firm_7270.pdf); 104295 direct owner Nasdaq Corporate Solutions, LLC (chain not separately read)",
+      "searchName": "Nasdaq",
+      "aliases": [
+        "nasdaq"
+      ]
+    },
+    {
+      "name": "Voya Financial",
+      "included": true,
+      "fortune500": {
+        "rank": 477,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [
+        {
+          "firm": "VOYA FINANCIAL PARTNERS, LLC",
+          "crd": 34815,
+          "source": "https://brokercheck.finra.org/firm/summary/34815"
+        },
+        {
+          "firm": "VOYA FINANCIAL ADVISORS, INC.",
+          "crd": 2882,
+          "source": "https://brokercheck.finra.org/firm/summary/2882"
+        }
+      ],
+      "ownership": "BrokerCheck detailed report (Form BD) indirect owners: VOYA FINANCIAL, INC. > Voya Holdings, Inc. (> Voya Retirement Insurance and Annuity Company for 34815) (https://files.brokercheck.finra.org/firm/firm_34815.pdf, https://files.brokercheck.finra.org/firm/firm_2882.pdf)",
+      "searchName": "Voya Financial",
+      "aliases": [
+        "voya"
+      ]
+    },
+    {
+      "name": "American Express",
+      "included": false,
+      "fortune500": {
+        "rank": 56,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. search 'American Express': 10 hits, only active one is Ameriprise Financial Services, LLC (CRD 6363, a former Amex unit now owned by Ameriprise)"
+    },
+    {
+      "name": "Synchrony Financial",
+      "included": false,
+      "fortune500": {
+        "rank": 197,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. search 'Synchrony': 3 hits, none belonging to Synchrony active"
+    },
+    {
+      "name": "AIG",
+      "included": false,
+      "fortune500": {
+        "rank": 172,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. search 'AIG': 21 hits, none active in top 12 (former AIG Capital Services is now Corebridge Capital Services, CRD 13158, owned by Corebridge)"
+    },
+    {
+      "name": "Visa",
+      "included": false,
+      "fortune500": {
+        "rank": 119,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Mastercard",
+      "included": false,
+      "fortune500": {
+        "rank": 141,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (0 hits)"
+    },
+    {
+      "name": "PayPal Holdings",
+      "included": false,
+      "fortune500": {
+        "rank": 139,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (0 hits)"
+    },
+    {
+      "name": "Fiserv",
+      "included": false,
+      "fortune500": {
+        "rank": 215,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (7 hits, 0 active)"
+    },
+    {
+      "name": "Global Payments",
+      "included": false,
+      "fortune500": {
+        "rank": 415,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (0 hits)"
+    },
+    {
+      "name": "Unum Group",
+      "included": false,
+      "fortune500": {
+        "rank": 338,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Aflac",
+      "included": false,
+      "fortune500": {
+        "rank": 261,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Travelers",
+      "included": false,
+      "fortune500": {
+        "rank": 96,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Progressive",
+      "included": false,
+      "fortune500": {
+        "rank": 51,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (23 hits for a generic word)"
+    },
+    {
+      "name": "Berkshire Hathaway",
+      "included": false,
+      "fortune500": {
+        "rank": 7,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (0 hits; subsidiaries under other names not searched)"
+    },
+    {
+      "name": "Fannie Mae",
+      "included": false,
+      "fortune500": {
+        "rank": 26,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (0 hits)"
+    },
+    {
+      "name": "Freddie Mac",
+      "included": false,
+      "fortune500": {
+        "rank": 33,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (0 hits)"
+    },
+    {
+      "name": "Farmers Insurance Exchange",
+      "included": false,
+      "fortune500": {
+        "rank": 271,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. FARMERS FINANCIAL SOLUTIONS, LLC (CRD 103863, https://brokercheck.finra.org/firm/summary/103863, ACTIVE, FINRA registered) exists, but Form BD owners stop at FFS Holding, LLC > Mid-Century Insurance; no primary source read tying that to Farmers Insurance Exchange"
+    },
+    {
+      "name": "FM",
+      "included": false,
+      "fortune500": {
+        "rank": 392,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. FM GLOBAL MARKETS INC (CRD 174843) is active but its owners (Clarity Solutions Inc., Foundation Financial Holdings Corp., an individual) are unrelated to the insurer FM"
+    },
+    {
+      "name": "Liberty Mutual Insurance Group",
+      "included": false,
+      "fortune500": {
+        "rank": 95,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "American Family Insurance Group",
+      "included": false,
+      "fortune500": {
+        "rank": 226,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Intuit",
+      "included": false,
+      "fortune500": {
+        "rank": 231,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "S&P Global",
+      "included": false,
+      "fortune500": {
+        "rank": 294,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Fidelity National Financial",
+      "included": false,
+      "fortune500": {
+        "rank": 311,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Moody's",
+      "included": false,
+      "fortune500": {
+        "rank": 492,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Markel Group",
+      "included": false,
+      "fortune500": {
+        "rank": 270,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Loews",
+      "included": false,
+      "fortune500": {
+        "rank": 237,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Icahn Enterprises",
+      "included": false,
+      "fortune500": {
+        "rank": 427,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Assurant",
+      "included": false,
+      "fortune500": {
+        "rank": 345,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Reinsurance Group of America",
+      "included": false,
+      "fortune500": {
+        "rank": 193,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "GuideWell Mutual Holding",
+      "included": false,
+      "fortune500": {
+        "rank": 140,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "W.R. Berkley",
+      "included": false,
+      "fortune500": {
+        "rank": 305,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Erie Insurance Group",
+      "included": false,
+      "fortune500": {
+        "rank": 308,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Auto-Owners Insurance",
+      "included": false,
+      "fortune500": {
+        "rank": 241,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Old Republic International",
+      "included": false,
+      "fortune500": {
+        "rank": 439,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Cincinnati Financial",
+      "included": false,
+      "fortune500": {
+        "rank": 348,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "American Financial Group",
+      "included": false,
+      "fortune500": {
+        "rank": 478,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way (former Great American Advisors is now MM Ascend Life Investor Services, CRD 36451, a MassMutual-named firm)"
+    },
+    {
+      "name": "Bitgo Holdings",
+      "included": false,
+      "fortune500": {
+        "rank": 278,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Welltower",
+      "included": false,
+      "fortune500": {
+        "rank": 401,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "American Tower",
+      "included": false,
+      "fortune500": {
+        "rank": 408,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Equinix",
+      "included": false,
+      "fortune500": {
+        "rank": 436,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "Prologis",
+      "included": false,
+      "fortune500": {
+        "rank": 451,
+        "year": 2026,
+        "source": "https://fortune.com/ranking/fortune500/"
+      },
+      "finra": [],
+      "excludedReason": "On the 2026 Fortune 500, but no FINRA member broker-dealer was confirmed. No ACTIVE firm under this name in BrokerCheck name search (top 12 hits by score); a differently named subsidiary would not be found this way"
+    },
+    {
+      "name": "T. Rowe Price",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #509 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Coinbase Global",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #520 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Rocket Companies",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #527 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Broadridge Financial Solutions",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #539 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "CME Group",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #559 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Stifel Financial",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #569 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "SS&C Technologies Holdings",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #573 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Carlyle Group",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #695 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Cboe Global Markets",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #705 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Robinhood Markets",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #734 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Brighthouse Financial",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on Fortune 500 - Fortune 1000 rank #545 (2026)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Fidelity Investments / FMR",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on list - not in the 1,000 companies on the Fortune page (private; only Fidelity National Financial #311 and Fidelity National Information Services #406 match \"Fidelity\")). BrokerCheck was not queried."
+    },
+    {
+      "name": "Discover Financial Services",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on list - not in the 1,000 companies on the Fortune page (candidate note says acquired by Capital One in 2025; only \"Warner Bros. Discovery\" matches)). BrokerCheck was not queried."
+    },
+    {
+      "name": "Aon",
+      "included": false,
+      "fortune500": null,
+      "finra": [],
+      "excludedReason": "Not on the 2026 Fortune 500 (not on list - not in the 1,000 companies on the Fortune page). BrokerCheck was not queried."
+    }
+  ]
+}
