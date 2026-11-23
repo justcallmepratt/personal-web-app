@@ -91,12 +91,19 @@ export function readEntry(buffer, name, maxBytes) {
   if (end > buffer.length) throw new ZipError(`The zip entry "${name}" is cut short.`)
   const raw = buffer.subarray(start, end)
 
-  if (entry.method === 0) return Buffer.from(raw)
+  if (entry.method === 0) {
+    // Stored means not compressed, so the two sizes are the same number or the directory lies.
+    if (entry.compressedSize !== entry.size) throw new ZipError(`The zip entry "${name}" is damaged (its sizes disagree).`)
+    return Buffer.from(raw)
+  }
   if (entry.method !== 8) throw new ZipError(`"${name}" uses compression method ${entry.method}, which is not supported.`)
+  let data
   try {
     // maxOutputLength guards against a size field that understates the real output.
-    return inflateRawSync(raw, { maxOutputLength: maxBytes })
+    data = inflateRawSync(raw, { maxOutputLength: maxBytes })
   } catch {
     throw new ZipError(`The zip entry "${name}" could not be decompressed.`)
   }
+  if (data.length !== entry.size) throw new ZipError(`The zip entry "${name}" is damaged (it is not the size the archive declares).`)
+  return data
 }

@@ -68,6 +68,8 @@ Nothing is stored: no password, token or state file. Exit codes: 0 done (includi
 (options, data files, backup).`
 
 class UsageError extends Error {}
+/** The owner stopped the run at a prompt. */
+class Cancelled extends Error {}
 
 function wholeNumber(text, name, min, max) {
   if (!/^\d+$/.test(text)) throw new UsageError(`--${name} takes a whole number.`)
@@ -94,7 +96,7 @@ function readJsonFile(path, what) {
 export function promptOnTerminal(question, { secret = false, input = process.stdin, output = process.stderr } = {}) {
   return new Promise((resolvePrompt, reject) => {
     if (!input.isTTY) {
-      reject(new Error('not a terminal'))
+      reject(Object.assign(new Error('not a terminal'), { code: 'NOT_A_TERMINAL' }))
       return
     }
     output.write(question)
@@ -110,7 +112,7 @@ export function promptOnTerminal(question, { secret = false, input = process.std
     const onData = (chunk) => {
       for (const ch of String(chunk)) {
         if (ch === '\r' || ch === '\n' || ch === '\u0004') return finish()
-        if (ch === '\u0003') return finish(new Error('cancelled'))
+        if (ch === '\u0003') return finish(Object.assign(new Error('cancelled'), { code: 'CANCELLED' }))
         if (ch === '\u007f' || ch === '\b') value = value.slice(0, -1)
         else value += ch
       }
@@ -140,8 +142,8 @@ export function promptOnTerminal(question, { secret = false, input = process.std
 export async function run(argv, io = {}) {
   const {
     env = process.env,
-    out = (line) => process.stdout.write(`${line}\n`),
-    err = (line) => process.stderr.write(`${line}\n`),
+    out: rawOut = (line) => process.stdout.write(`${line}\n`),
+    err: rawErr = (line) => process.stderr.write(`${line}\n`),
     fetch: fetchImpl = globalThis.fetch,
     sleep,
     prompt = promptOnTerminal,
@@ -150,11 +152,24 @@ export async function run(argv, io = {}) {
     home = homedir(),
   } = io
 
+  // Everything printed can contain text from a backup, the profile or the server. Each
+  // call prints exactly one line: control characters, line breaks and invisible direction
+  // marks included, become spaces,
+  // so that text can neither drive the terminal nor fake a line of this tool's output.
+  const safe = (line) => String(line).replace(/[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/g, ' ')
+  const out = (line) => rawOut(safe(line))
+  const err = (line) => rawErr(safe(line))
+
   try {
     return await main()
   } catch (error) {
+    if (error instanceof Cancelled) {
+      err(error.message)
+      return EXIT_FAILED
+    }
     if (error instanceof UsageError) {
-      err(`${error.message}\nRun with --help for the options.`)
+      err(error.message)
+      err('Run with --help for the options.')
       return EXIT_USAGE
     }
     if (error instanceof ConfigError || error instanceof BackupError) {
@@ -166,7 +181,8 @@ export async function run(argv, io = {}) {
       return error.kind === 'bad_url' ? EXIT_USAGE : EXIT_FAILED
     }
     if (error instanceof UnsafeSuggestionError) {
-      err(`${error.message}\nNothing was filed. This is a fault in the tool or in an edited data file, not in your data.`)
+      err(error.message)
+      err('Nothing was filed. This is a fault in the tool or in an edited data file, not in your data.')
       return EXIT_FAILED
     }
     throw error
@@ -197,7 +213,7 @@ export async function run(argv, io = {}) {
       throw new UsageError(error.message)
     }
     if (values.help) {
-      out(HELP)
+      for (const line of HELP.split('\n')) out(line)
       return EXIT_OK
     }
 
@@ -267,6 +283,7 @@ export async function run(argv, io = {}) {
       [skipped.status, 'in an excluded status'],
       [skipped.title, 'title not in the target list'],
       [skipped.company, 'company not on the allow-list'],
+      [skipped.duplicate, 'the same posting entered more than once (counted once)'],
     ]
     for (const [count, why] of reasons) if (count > 0) out(`  ${count} left out: ${why}.`)
     if (companiesNotListed.size > 0) {
@@ -296,9 +313,12 @@ export async function run(argv, io = {}) {
     }
 
     // ── proposals ──
-    const { suggestions, counts, stackFull } = buildSuggestions({ matching, dictionary, profile, minJobs, max })
+    const { suggestions, counts, stackFull, leftOut } = buildSuggestions({ matching, dictionary, profile, minJobs, max })
     if (counts.length > 0) {
       out(`Most asked for in those ${matching.length}: ${counts.slice(0, 12).map((c) => `${c.skill} (${c.jobs})`).join(', ')}.`)
+    }
+    for (const { skill, why } of leftOut) {
+      out(`  Left out "${skill.length > 60 ? `${skill.slice(0, 59)}…` : skill}": ${why}.`)
     }
     if (stackFull) {
       out('The profile tech stack already holds the most items the API allows. Nothing to propose.')
@@ -325,8 +345,12 @@ export async function run(argv, io = {}) {
     try {
       if (username === '') username = (await prompt('Admin username: ', { secret: false })).trim()
       if (password === '') password = await prompt('Admin password: ', { secret: true })
-    } catch {
-      throw new UsageError('Set SITE_ADMIN_USERNAME and SITE_ADMIN_PASSWORD, or run in a terminal to be asked for them.')
+    } catch (error) {
+      if (error?.code === 'CANCELLED') throw new Cancelled('Cancelled at the prompt. No sign-in was attempted and nothing was filed.')
+      if (error?.code === 'NOT_A_TERMINAL') {
+        throw new UsageError('Set SITE_ADMIN_USERNAME and SITE_ADMIN_PASSWORD, or run in a terminal to be asked for them.')
+      }
+      throw new UsageError(`The username and password could not be read from the terminal (${error?.message ?? error}).`)
     }
     if (username === '' || password === '') throw new UsageError('A username and a password are both needed to file suggestions.')
 

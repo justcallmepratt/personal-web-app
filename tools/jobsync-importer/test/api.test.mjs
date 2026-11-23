@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, test } from 'node:test'
-import { ApiError, createClient, normaliseBaseUrl, parseRetryAfter } from '../src/api.mjs'
+import { ApiError, createClient, normaliseBaseUrl, parseRetryAfter, printable } from '../src/api.mjs'
 import { mockApi, PROFILE } from './helpers.mjs'
 
 // A made-up credential for the mock server only.
@@ -207,7 +207,16 @@ test('an API that is down, or does not answer in time, is reported as such', asy
 test('a redirect is not followed', async () => {
   const elsewhere = await api({ 'GET /api/profile': { status: 200, body: PROFILE } })
   const server = await api({ 'GET /api/profile': { status: 302, headers: { Location: `${elsewhere.url}/api/profile` } } })
-  assert.equal(await kindOf(client(server).c.getProfile()), 'unreachable')
+  const error = await client(server).c.getProfile().catch((e) => e)
+  assert.equal(error.kind, 'redirect')
+  assert.match(error.message, /answered GET \/api\/profile with a redirect \(302\), which this tool does not follow/)
+  assert.equal(elsewhere.requests.length, 0)
+
+  // The same on sign-in: the password is not sent on to wherever the redirect points.
+  const login = await api({ [LOGIN]: { status: 307, headers: { Location: `${elsewhere.url}/api/admin/auth/login` } } })
+  const { c } = client(login)
+  assert.equal(await kindOf(c.signIn(USER, PASS)), 'redirect')
+  assert.equal(login.count(LOGIN), 1)
   assert.equal(elsewhere.requests.length, 0)
 })
 
@@ -237,4 +246,67 @@ test('Retry-After is read as seconds or as a date', () => {
   assert.equal(parseRetryAfter('soon'), null)
   assert.equal(parseRetryAfter(''), null)
   assert.equal(parseRetryAfter(null), null)
+})
+
+// ── post-merge review fixes ─────────────────────────────────────────────────
+
+test('a 403 on sign-in is a refused sign-in, not an expired token', async () => {
+  const server = await api({ [LOGIN]: { status: 403, raw: '<html>Forbidden</html>' } })
+  const { c } = client(server)
+  const error = await c.signIn(USER, PASS).catch((e) => e)
+  assert.equal(error.kind, 'sign_in_refused')
+  assert.match(error.message, /Sign-in was refused \(403\)/)
+  assert.doesNotMatch(error.message, /token|expired/)
+  assert.equal(server.count(LOGIN), 1)
+})
+
+test('a failed secure connection is reported as that, with its cause', async () => {
+  const failing = (code) => async () => {
+    throw Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error(code), { code }) })
+  }
+  for (const code of ['DEPTH_ZERO_SELF_SIGNED_CERT', 'CERT_HAS_EXPIRED', 'ERR_TLS_CERT_ALTNAME_INVALID', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'ERR_SSL_WRONG_VERSION_NUMBER']) {
+    const error = await createClient({ baseUrl: 'https://api.example.com', fetch: failing(code) }).getProfile().catch((e) => e)
+    assert.equal(error.kind, 'tls', code)
+    assert.ok(error.message.includes(code))
+    assert.match(error.message, /secure connection .* failed/)
+  }
+  for (const code of ['ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET']) {
+    const error = await createClient({ baseUrl: 'https://api.example.com', fetch: failing(code) }).getProfile().catch((e) => e)
+    assert.equal(error.kind, 'unreachable', code)
+    assert.ok(error.message.includes(code))
+  }
+  const bare = await createClient({ baseUrl: 'https://api.example.com', fetch: async () => Promise.reject(new TypeError('fetch failed')) })
+    .getProfile()
+    .catch((e) => e)
+  assert.equal(bare.kind, 'unreachable')
+})
+
+test('the server\'s error text is printed without control characters and at a bounded length', async () => {
+  const hostile = `bad value\u001b[2J\u001b]0;owned\u0007\r\nFiled 3 suggestions.\u0000 ${'x'.repeat(2000)}`
+  const server = await api({ [CREATE]: { status: 400, body: { error: hostile, code: 'invalid' } } })
+  const { c } = client(server)
+  await c.signIn(USER, PASS)
+  const error = await c.createSuggestion(SUGGESTION).catch((e) => e)
+  assert.equal(error.kind, 'refused')
+  assert.doesNotMatch(error.message, /[\u0000-\u001f\u007f-\u009f]/)
+  assert.match(error.message, /bad value \[2J \]0;owned Filed 3 suggestions\./)
+  assert.ok(error.message.length < 400)
+
+  assert.equal(printable('a b\u009bc\td'), 'a b c d')
+  assert.equal(printable('  ok  '), 'ok')
+  assert.equal(printable('x'.repeat(50), 10), `${'x'.repeat(9)}…`)
+
+  // An error value that is not text, or blank, adds nothing.
+  const odd = await api({ [CREATE]: { status: 400, body: { error: { nested: true } } } })
+  const o = client(odd).c
+  await o.signIn(USER, PASS)
+  assert.match((await o.createSuggestion(SUGGESTION).catch((e) => e)).message, /refused creating a suggestion \(400\)\.$/)
+})
+
+test('a failed handshake (EPROTO) is a secure-connection failure; direction marks are stripped', async () => {
+  const fetch = async () => {
+    throw Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error('x'), { code: 'EPROTO' }) })
+  }
+  assert.equal(await kindOf(createClient({ baseUrl: 'https://api.example.com', fetch }).getProfile()), 'tls')
+  assert.equal(printable('ok‮detrevni⁩​!'), 'ok detrevni !')
 })
