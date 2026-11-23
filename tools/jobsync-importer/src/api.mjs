@@ -11,8 +11,8 @@
 /** A failed call. `kind` is stable; `message` is for people and never holds a secret. */
 export class ApiError extends Error {
   /**
-   * @param {'bad_url'|'unreachable'|'timeout'|'bad_response'|'not_found'|'sign_in_refused'|'sign_in_off'
-   *   |'rate_limited'|'unauthorized'|'refused'|'server'} kind
+   * @param {'bad_url'|'unreachable'|'tls'|'redirect'|'timeout'|'bad_response'|'not_found'|'sign_in_refused'
+   *   |'sign_in_off'|'rate_limited'|'unauthorized'|'refused'|'server'} kind
    * @param {string} message
    * @param {{status?: number, retryAfterSeconds?: number, code?: string}} [details]
    */
@@ -57,6 +57,20 @@ export function parseRetryAfter(value, now = Date.now()) {
   return Number.isNaN(date) ? null : Math.max(0, Math.ceil((date - now) / 1000))
 }
 
+/** Error codes Node reports when the secure connection itself fails (certificate or handshake). */
+const TLS_FAILURE = /CERT|TLS|SSL|SELF_SIGNED|UNABLE_TO_VERIFY|UNABLE_TO_GET_ISSUER|EPROTO/
+
+/**
+ * Text from the server made safe to print: control characters (line breaks, terminal
+ * escape codes) become spaces and the length is bounded.
+ */
+export function printable(text, max = 300) {
+  const clean = String(text)
+    .replace(/[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]+/g, ' ')
+    .trim()
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean
+}
+
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
@@ -93,15 +107,36 @@ export function createClient({
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
-        // A redirect could carry the token or password to another host.
-        redirect: 'error',
+        // Never followed: a redirect could carry the token or password to another host.
+        // "manual" hands back the 3xx answer itself, so it can be reported for what it is.
+        redirect: 'manual',
         signal: AbortSignal.timeout(timeoutMs),
       })
     } catch (error) {
       if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
         throw new ApiError('timeout', `The API did not answer within ${timeoutMs / 1000} s (${method} ${path}).`)
       }
-      throw new ApiError('unreachable', `The API could not be reached at ${base} (${method} ${path}). It may be down, or the address is wrong.`)
+      const code = typeof error?.cause?.code === 'string' ? error.cause.code : ''
+      if (TLS_FAILURE.test(code)) {
+        throw new ApiError(
+          'tls',
+          `The secure connection to ${base} failed (${code}): the certificate or the handshake was not accepted. Nothing was sent (${method} ${path}).`,
+        )
+      }
+      throw new ApiError(
+        'unreachable',
+        `The API could not be reached at ${base} (${method} ${path}${code ? `, ${code}` : ''}). It may be down, or the address is wrong.`,
+      )
+    }
+    if ((response.status >= 300 && response.status < 400) || response.type === 'opaqueredirect') {
+      // Drain and drop the body; the answer is not used.
+      await response.body?.cancel().catch(() => {})
+      throw new ApiError(
+        'redirect',
+        `The API answered ${method} ${path} with a redirect (${response.status}), which this tool does not follow. ` +
+          'Check the API address: give the final https address, not one that forwards elsewhere.',
+        { status: response.status },
+      )
     }
     let parsed = null
     try {
@@ -130,7 +165,7 @@ export function createClient({
     }
   }
 
-  const apiMessage = (body) => (body && typeof body.error === 'string' ? body.error : null)
+  const apiMessage = (body) => (body && typeof body.error === 'string' && body.error.trim() !== '' ? printable(body.error) : null)
 
   function failure(result, what) {
     const { status, body } = result
@@ -192,6 +227,14 @@ export function createClient({
             { status: 429, retryAfterSeconds: wait ?? undefined },
           )
         }
+        case 403:
+          // No token exists yet, so this is not an expired session: the API, or a proxy or
+          // firewall in front of it, turned the sign-in request itself away.
+          throw new ApiError(
+            'sign_in_refused',
+            'Sign-in was refused (403): the API, or something in front of it, did not accept the sign-in request. Not retrying.',
+            { status: 403 },
+          )
         case 503:
           throw new ApiError('sign_in_off', 'Admin sign-in is not switched on (ADMIN_PASSWORD_HASH is not set on the API). This is not a wrong password.', {
             status: 503,

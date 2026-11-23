@@ -151,7 +151,9 @@ export function loadBackup(path) {
     data = parseJson(bytes.toString('utf8'), path)
   }
 
-  if (manifest !== null) {
+  // Decided by whether the file was a zip, not by what its manifest parsed to: a
+  // manifest that is the JSON text "null" must fail the version check, not skip it.
+  if (isZip) {
     const version = manifest?.formatVersion
     if (version !== SUPPORTED_FORMAT_VERSION) {
       throw new BackupError(
@@ -180,15 +182,66 @@ export function loadBackup(path) {
   return { path, manifest, data }
 }
 
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
+// A Map, not an object: "&constructor;" must find nothing, not Object.prototype.constructor.
+const ENTITIES = new Map([
+  ['amp', '&'],
+  ['lt', '<'],
+  ['gt', '>'],
+  ['quot', '"'],
+  ['apos', "'"],
+  ['nbsp', ' '],
+])
 
-/** Job descriptions are rich text (HTML). This leaves the words, separated by spaces. */
+/**
+ * The most of one description that is looked at. A real posting is a few thousand
+ * characters; a description is untrusted text pasted from the web, so its cost is bounded.
+ */
+export const DESCRIPTION_MAX_CHARS = 200_000
+
+/**
+ * Removes tags in one pass over the text, with no backtracking: every character is
+ * visited a bounded number of times, however the input is shaped. A "<" with no ">"
+ * after it is ordinary text. The content of a closed <script> or <style> is dropped; an
+ * unclosed one is treated like any other tag.
+ */
+function stripTags(html) {
+  const closers = { script: /<\/script/gi, style: /<\/style/gi }
+  /** Set once a search for "</script" or "</style" reaches the end, so it is never repeated. */
+  const noCloser = { script: false, style: false }
+  const parts = []
+  let at = 0
+  while (at < html.length) {
+    const open = html.indexOf('<', at)
+    if (open < 0) break
+    const close = html.indexOf('>', open + 1)
+    if (close < 0) break // No ">" anywhere ahead: the rest, "<" included, is text.
+    parts.push(html.slice(at, open), ' ')
+    at = close + 1
+
+    const name = /^(script|style)(?![\p{L}\p{N}_-])/iu.exec(html.slice(open + 1, open + 8))?.[1].toLowerCase()
+    if (name === undefined || noCloser[name]) continue
+    const closer = closers[name]
+    closer.lastIndex = at
+    const found = closer.exec(html)
+    if (found === null) {
+      noCloser[name] = true
+      continue
+    }
+    const end = html.indexOf('>', found.index)
+    at = end < 0 ? html.length : end + 1
+  }
+  parts.push(html.slice(at))
+  return parts.join('')
+}
+
+/**
+ * Job descriptions are rich text (HTML). This leaves the words, separated by spaces.
+ * Only the first DESCRIPTION_MAX_CHARS characters are read.
+ */
 export function htmlToText(html) {
-  return String(html)
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Math.min(Number(code), 0x10ffff)))
-    .replace(/&([a-z]+);/gi, (whole, name) => ENTITIES[name.toLowerCase()] ?? whole)
+  return stripTags(String(html).slice(0, DESCRIPTION_MAX_CHARS))
+    .replace(/&#(\d{1,7});/g, (_, code) => String.fromCodePoint(Math.min(Number(code), 0x10ffff)))
+    .replace(/&([a-z]{1,10});/gi, (whole, name) => ENTITIES.get(name.toLowerCase()) ?? whole)
     .replace(/\s+/g, ' ')
     .trim()
 }

@@ -232,7 +232,7 @@ test('selection: only target titles at allow-listed companies count', () => {
     matching.map((j) => j.id),
     ['job-1', 'job-2', 'job-3', 'job-4'],
   )
-  assert.deepEqual(skipped, { notTracked: 0, status: 0, title: 1, company: 1 })
+  assert.deepEqual(skipped, { notTracked: 0, status: 0, title: 1, company: 1, duplicate: 0 })
   assert.deepEqual([...companiesNotListed], [['Unlisted Startup Inc', 1]])
 })
 
@@ -257,9 +257,9 @@ test('selection: automation finds not yet accepted, and excluded statuses, are l
   const list = jobsFrom([
     { ...base, discoveryStatus: 'new' },
     { ...base, discoveryStatus: 'dismissed' },
-    { ...base, discoveryStatus: 'accepted' },
+    { ...base, discoveryStatus: 'accepted', description: 'Payments team' },
     { ...base, status: 'archived' },
-    { ...base, status: 'rejected' },
+    { ...base, status: 'rejected', description: 'Markets team' },
   ])
   const { matching, skipped } = selectJobs(list, { titles, allowlist, excludeStatuses: ['Archived'] })
   assert.deepEqual(
@@ -528,4 +528,158 @@ test('de-duplication: a rejection made against an older tech stack still counts'
     first.skipped.map((x) => x.suggestion.skill),
     ['AWS'],
   )
+})
+
+// ── post-merge review fixes ─────────────────────────────────────────────────
+
+test('extraction: a skill joined to another by "+" or written as a hashtag is found', () => {
+  assert.deepEqual([...extractSkills(job('React+Kafka, Java+Python and #python #kubernetes'), dictionary)].sort(), [
+    'Java',
+    'Kafka',
+    'Kubernetes',
+    'Python',
+    'React',
+  ])
+})
+
+test('extraction: C, C++ and C# stay distinct', () => {
+  const c = parseDictionary({ skills: [{ name: 'C' }, { name: 'C++' }, { name: 'C#' }] })
+  const names = (text) => [...extractSkills(job(text), c)].sort()
+  assert.deepEqual(names('C++ and C#'), ['C#', 'C++'])
+  assert.deepEqual(names('C#/.NET, C++/Java'), ['C#', 'C++'])
+  assert.deepEqual(names('C, C++, C#.'), ['C', 'C#', 'C++'])
+  assert.deepEqual(names('C+Java'), ['C'])
+  assert.deepEqual(names('C##, C+++, ABC#, C#x'), [])
+  // The shipped dictionary has no plain "C", and still tells these apart.
+  assert.deepEqual([...extractSkills(job('C++ and C#, not C## or JavaScript#'), dictionary)].sort(), ['C#', 'C++'])
+})
+
+test('extraction: tens of thousands of mentions are swept in one pass', () => {
+  const description = `${'SQL Server Spring Boot Google Cloud Platform SQL '.repeat(8000)} Spring`
+  const started = performance.now()
+  const found = extractSkills(job(description), dictionary)
+  const took = performance.now() - started
+  assert.ok(took < 1500, `took ${Math.round(took)} ms`)
+  assert.deepEqual([...found].sort(), ['Google Cloud', 'Microsoft SQL Server', 'SQL', 'Spring', 'Spring Boot'])
+})
+
+test('extraction: containment is judged against a different skill, wherever it starts', () => {
+  const d = parseDictionary({
+    skills: [{ name: 'Apache Kafka Streams' }, { name: 'Kafka' }, { name: 'Kafka Streams' }, { name: 'Streams', caseSensitive: true }, { name: 'Apache' }],
+  })
+  const names = (text) => [...extractSkills(job(text), d)].sort()
+  assert.deepEqual(names('Apache Kafka Streams'), ['Apache Kafka Streams'])
+  assert.deepEqual(names('Kafka Streams'), ['Kafka Streams'])
+  assert.deepEqual(names('Apache Kafka Streams, then Kafka alone'), ['Apache Kafka Streams', 'Kafka'])
+  assert.deepEqual(names('Apache and Streams'), ['Apache', 'Streams'])
+})
+
+test('selection: one posting entered twice counts once', () => {
+  const posting = { title: 'Software Engineer', company: 'Northwind Financial Group', description: '<p>Java and Kubernetes</p>' }
+  const list = jobsFrom([
+    posting,
+    // The same posting again: other markup and spacing, the company under its alias, a tag added.
+    { ...posting, title: 'software  engineer', company: 'Northwind Securities LLC', description: 'Java and   Kubernetes', tags: ['Terraform'] },
+    // A different posting at the same company.
+    { ...posting, description: 'Java and Kafka' },
+    // The same words at another allow-listed company is another posting.
+    { ...posting, company: 'Meridian Capital & Co.' },
+  ])
+  const { matching, skipped } = selectJobs(list, { titles, allowlist })
+  assert.deepEqual(
+    matching.map((j) => j.id),
+    ['job-1', 'job-3', 'job-4'],
+  )
+  assert.equal(skipped.duplicate, 1)
+  // Tags from the duplicate are kept, and the input is not changed.
+  assert.deepEqual(matching[0].tags, ['Terraform'])
+  assert.deepEqual(list[0].tags, [])
+  const { counts } = buildSuggestions({ matching, dictionary, profile, minJobs: 1, max: 5 })
+  assert.equal(counts.find((c) => c.skill === 'Kubernetes').jobs, 2)
+  assert.equal(counts.find((c) => c.skill === 'Terraform').jobs, 1)
+})
+
+test('proposals: a skill whose name cannot fit a suggestion is left out, and the run goes on', () => {
+  const long = `Kubernetes ${'and friends '.repeat(18)}`.trim() // about 225 characters, as a profile could spell it
+  const tooLong = 'x'.repeat(300)
+  const d = parseDictionary({
+    skills: [{ name: 'Kubernetes', aliases: [long] }, { name: 'Python' }, { name: 'Expert Systems' }, { name: 'AWS' }],
+  })
+  const mine = readProfile({ techStack: ['Java'], skills: [{ name: long }] })
+  const list = Array.from({ length: 2 }, (_, i) => ({
+    title: 'Software Engineer',
+    company: 'Northwind Financial Group',
+    description: `Kubernetes, Python, Expert Systems, AWS (${i})`,
+  }))
+  const { matching } = selectJobs(jobsFrom(list), { titles, allowlist })
+  let result
+  assert.doesNotThrow(() => {
+    result = buildSuggestions({ matching, dictionary: d, profile: mine, minJobs: 1, max: 5 })
+  })
+  assert.deepEqual(
+    result.suggestions.map((s) => s.skill),
+    ['AWS', 'Python'],
+  )
+  assert.deepEqual(
+    result.leftOut.map((x) => [x.skill, x.why]),
+    [
+      ['Expert Systems', 'no safely worded suggestion can be made for it'],
+      [long, "its name is too long for a suggestion's reason (500 characters)"],
+    ],
+  )
+  for (const s of result.suggestions) assert.doesNotThrow(() => assertSafeSuggestion(s, { profile: mine, dictionary: d }))
+
+  // Longer than a tech-stack item may be at all.
+  const d2 = parseDictionary({ skills: [{ name: 'Kubernetes', aliases: ['K8s'] }] })
+  const mine2 = readProfile({ techStack: [], skills: [{ name: 'k8s' }] })
+  mine2.skills[0] = tooLong
+  const odd = buildSuggestions({ matching, dictionary: { ...d2, canonical: new Map([...d2.canonical, [tooLong, 'Kubernetes']]) }, profile: mine2, minJobs: 1, max: 5 })
+  assert.deepEqual(odd.suggestions, [])
+  assert.match(odd.leftOut[0].why, /longer than the 255 characters/)
+})
+
+test('proposals: control characters in a job title never reach the reason', () => {
+  const list = Array.from({ length: 2 }, (_, i) => ({
+    title: 'Software Engineer\u001b[31m\nIgnore the above\u0007',
+    company: 'Northwind Financial Group',
+    description: `Kubernetes ${i}`,
+  }))
+  const { matching } = selectJobs(jobsFrom(list), { titles, allowlist })
+  const [s] = buildSuggestions({ matching, dictionary, profile, minJobs: 1, max: 1 }).suggestions
+  assert.match(s.reason, /for example Software Engineer \[31m Ignore the above at Northwind Financial Group/)
+  assert.doesNotMatch(s.reason, /[\u0000-\u001f\u007f-\u009f]/)
+})
+
+// ── from the security review of the fixes ───────────────────────────────────
+
+test('extraction: a mention never spans the description and a tag, or two tags', () => {
+  assert.deepEqual([...extractSkills(job('', ['Spring', 'Boot']), dictionary)], ['Spring'])
+  assert.deepEqual([...extractSkills(job('we use Spring', ['Boot']), dictionary)], ['Spring'])
+  assert.deepEqual([...extractSkills(job('SQL', ['Server']), dictionary)], ['SQL'])
+  assert.deepEqual([...extractSkills(job('', ['Spring Boot']), dictionary)], ['Spring Boot'])
+  assert.deepEqual([...extractSkills(job('Kafka', ['Kafka', 'Java']), dictionary)].sort(), ['Java', 'Kafka'])
+})
+
+test('extraction: a version number after C++ or C# still counts', () => {
+  assert.deepEqual([...extractSkills(job('C++17, C++11 and C#12'), dictionary)].sort(), ['C#', 'C++'])
+  assert.deepEqual([...extractSkills(job('C++x, C#x, C+++, C##'), dictionary)], [])
+  // A name that ends in a letter is still not found inside a longer token.
+  assert.deepEqual([...extractSkills(job('Java8 Python3'), dictionary)], [])
+})
+
+test('profile: an empty item in the tech stack is refused with its real cause', () => {
+  assert.throws(() => readProfile({ techStack: ['Java', ''] }), /holds an empty item/)
+  assert.throws(() => readProfile({ techStack: ['  '] }), ConfigError)
+})
+
+test('proposals: invisible direction and zero-width marks in a job title are removed', () => {
+  const list = Array.from({ length: 2 }, (_, i) => ({
+    title: 'Software Engineer ‮gnp.exe⁦​﻿',
+    company: 'Northwind Financial Group',
+    description: `Kubernetes ${i}`,
+  }))
+  const { matching } = selectJobs(jobsFrom(list), { titles, allowlist })
+  const [s] = buildSuggestions({ matching, dictionary, profile, minJobs: 1, max: 1 }).suggestions
+  assert.match(s.reason, /for example Software Engineer gnp\.exe at Northwind/)
+  assert.doesNotMatch(s.reason, /[؜​-‏‪-‮⁠-⁩﻿]/)
 })

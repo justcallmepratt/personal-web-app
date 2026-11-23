@@ -173,6 +173,13 @@ It still needs a fresh backup each week; with an old one it runs and warns.
 | API down, slow (10 s) or answering nonsense | Says which; exit 1; nothing filed |
 | Sign-in refused, locked (429) or switched off (503) | One attempt, then stops; exit 1. Never retried, because the API locks sign-in after 5 failures |
 | API rate limits another call (429) | Waits for `Retry-After` (up to 2 minutes, twice), then gives up |
+| The API address forwards elsewhere (a redirect) | Not followed, so the password and token never go to another host; says so; exit 1. Give the final https address |
+| The secure connection fails (certificate) | Says so with the cause; nothing is sent; exit 1 |
+| You press Ctrl-C at the password prompt | "Cancelled at the prompt"; no sign-in is attempted; exit 1 |
+| The same posting is in JobSync twice (same title, company and description) | Counted once, and reported |
+| A very long job description | Only its first 200,000 characters are read |
+| A skill whose name is too long for a suggestion (roughly 190 characters and up), or that cannot be worded as a question | Left out and named; the rest of the run continues |
+| Text in a backup or from the server contains control characters | Replaced by spaces before anything is printed or put in a reason |
 | The same suggestion is pending, or you rejected that skill | Skipped, with the reason |
 | A suggestion fails part-way | The ones already filed stay; the error is shown; exit 1. Running again does not duplicate them |
 

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { chmodSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { BackupError, htmlToText, loadBackup, readJobs, resolveBackupPath } from '../src/backup.mjs'
+import { BackupError, DESCRIPTION_MAX_CHARS, htmlToText, loadBackup, readJobs, resolveBackupPath } from '../src/backup.mjs'
+import { readEntry, ZipError } from '../src/zip.mjs'
 import { JOBS, makeData, makeManifest, makeZip, tempDir, writeBackup } from './helpers.mjs'
 
 const kindOf = (fn) => {
@@ -152,4 +153,107 @@ test('single unusable rows are skipped and counted; no jobs at all is not an err
 test('htmlToText keeps the words and decodes common entities', () => {
   assert.equal(htmlToText('<ul><li>C#&nbsp;&amp; .NET</li><li>R&#38;D</li></ul><script>alert(1)</script>'), 'C# & .NET R&D')
   assert.equal(htmlToText('plain text'), 'plain text')
+})
+
+// ── hostile input ───────────────────────────────────────────────────────────
+
+/** Runs fn and fails if it takes longer than the budget (the old code took a minute on these). */
+function within(ms, fn) {
+  const started = performance.now()
+  const result = fn()
+  const took = performance.now() - started
+  assert.ok(took < ms, `took ${Math.round(took)} ms, budget ${ms} ms`)
+  return result
+}
+
+test('htmlToText stays fast on input built to make tag matching backtrack', () => {
+  const size = 400_000
+  for (const [what, input] of [
+    ['stray "<"', '<'.repeat(size)],
+    ['unclosed tags', '<a '.repeat(size / 3)],
+    ['unclosed <script>', '<script>'.repeat(size / 8)],
+    ['unclosed <style> with attributes', '<style x="'.repeat(size / 10)],
+    ['closed tags, many', '<b>x</b>'.repeat(size / 8)],
+    ['"<" then a late ">"', `${'<'.repeat(size)}>`],
+    ['ampersands', '&'.repeat(size)],
+    ['long entity names', `&${'a'.repeat(size)};`],
+    ['digits', `&#${'9'.repeat(size)};`],
+    ['white space', ' \n\t'.repeat(size / 3)],
+  ]) {
+    const text = within(1000, () => htmlToText(input))
+    assert.ok(text.length <= DESCRIPTION_MAX_CHARS, what)
+  }
+})
+
+test('htmlToText reads only the first part of an enormous description', () => {
+  const text = htmlToText(`Java ${'x'.repeat(DESCRIPTION_MAX_CHARS)} Kubernetes`)
+  assert.ok(text.startsWith('Java x'))
+  assert.ok(!text.includes('Kubernetes'))
+  assert.equal(text.length, DESCRIPTION_MAX_CHARS)
+})
+
+test('htmlToText: a "<" with no ">" after it is text; script and style content is dropped only when closed', () => {
+  assert.equal(htmlToText('salary < 200k'), 'salary < 200k')
+  assert.equal(htmlToText('<p>Java</p> and 3 < 4'), 'Java and 3 < 4')
+  assert.equal(htmlToText('a <b>bold</b> c'), 'a bold c')
+  assert.equal(htmlToText('x<br/>y'), 'x y')
+  assert.equal(htmlToText('a<SCRIPT type="x">var Kafka = 1</ScRiPt >b'), 'a b')
+  assert.equal(htmlToText('a<style>.k8s{}</style>b<style>.x{}</style>c'), 'a b c')
+  // Unclosed: only the tag goes, as for any other tag.
+  assert.equal(htmlToText('a<script>Kafka'), 'a Kafka')
+  // Not a script tag at all.
+  assert.equal(htmlToText('<scripted>Kafka</scripted>'), 'Kafka')
+  assert.equal(htmlToText('<script>x</script'), '')
+})
+
+test('htmlToText: an entity name is looked up, never resolved through the object prototype', () => {
+  assert.equal(htmlToText('&constructor; &toString; &__proto__; &hasOwnProperty;'), '&constructor; &toString; &__proto__; &hasOwnProperty;')
+  assert.equal(htmlToText('R&amp;D &LT;tag&GT; &unknown; &#65;&#0;'.replace('&#0;', '')), 'R&D <tag> &unknown; A')
+})
+
+/** Rewrites the uncompressed-size field of one entry in the zip's directory. */
+function withDeclaredSize(zip, name, size) {
+  const copy = Buffer.from(zip)
+  const at = copy.indexOf(Buffer.concat([Buffer.from([0x50, 0x4b, 0x01, 0x02])]))
+  let offset = at
+  while (offset >= 0) {
+    const nameLength = copy.readUInt16LE(offset + 28)
+    if (copy.toString('utf8', offset + 46, offset + 46 + nameLength) === name) {
+      copy.writeUInt32LE(size, offset + 24)
+      return copy
+    }
+    offset = copy.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]), offset + 4)
+  }
+  throw new Error(`no entry ${name}`)
+}
+
+test('a zip entry whose size is not what the archive declares is refused', () => {
+  const content = JSON.stringify({ hello: 'world' })
+  for (const method of [0, 8]) {
+    const zip = makeZip({ 'data.json': content }, { method })
+    assert.equal(readEntry(zip, 'data.json', 1000).toString(), content)
+    for (const declared of [content.length - 1, content.length + 1, 0]) {
+      assert.throws(() => readEntry(withDeclaredSize(zip, 'data.json', declared), 'data.json', 1000), ZipError, `method ${method}, declared ${declared}`)
+    }
+  }
+  // And through the backup reader: reported as "not a backup", not a crash.
+  const dir = tempDir()
+  const path = join(dir, 'lying.zip')
+  const good = makeZip({ 'manifest.json': JSON.stringify(makeManifest()), 'data.json': JSON.stringify(makeData(JOBS)) }, { method: 0 })
+  writeFileSync(path, withDeclaredSize(good, 'data.json', 5))
+  assert.equal(kindOf(() => loadBackup(path)), 'not_a_backup')
+})
+
+test('a manifest that is not an object fails the version check instead of skipping it', () => {
+  const dir = tempDir()
+  for (const [name, manifest] of [
+    ['null.zip', 'null'],
+    ['number.zip', '1'],
+    ['text.zip', '"1"'],
+    ['list.zip', '[]'],
+  ]) {
+    const path = join(dir, name)
+    writeFileSync(path, makeZip({ 'manifest.json': manifest, 'data.json': JSON.stringify(makeData(JOBS)) }))
+    assert.equal(kindOf(() => loadBackup(path)), 'schema', name)
+  }
 })

@@ -51,7 +51,7 @@ async function cli(args, { env = {}, prompt, repoRoot = tempDir(), home = tempDi
     out: (line) => lines.push(line),
     err: (line) => errors.push(line),
     sleep: async () => {},
-    prompt: prompt ?? (async () => Promise.reject(new Error('not a terminal'))),
+    prompt: prompt ?? (async () => Promise.reject(Object.assign(new Error('not a terminal'), { code: 'NOT_A_TERMINAL' }))),
     now: now ?? (() => Date.parse('2026-11-21T12:00:00Z')),
     repoRoot,
     home,
@@ -420,4 +420,93 @@ test('in this repository the default list is the backend\'s reviewed one', async
   // The made-up firms in the test backup are not real companies, so nothing matches.
   assert.match(out, /No tracked job matches your targets/)
   assert.equal(server.requests.length, 0)
+})
+
+// ── post-merge review fixes ─────────────────────────────────────────────────
+
+test('cancelling at the password prompt says so, and nothing is sent', async () => {
+  const server = await api()
+  const { dir, allowlist } = workspace()
+  const prompt = async (_question, { secret }) => {
+    if (secret) throw Object.assign(new Error('cancelled'), { code: 'CANCELLED' })
+    return USER
+  }
+  const { code, err } = await cli(['--file', '--backup', dir, '--allowlist', allowlist, '--api-url', server.url], { prompt })
+  assert.equal(code, EXIT_FAILED)
+  assert.match(err, /Cancelled at the prompt\. No sign-in was attempted and nothing was filed\./)
+  assert.doesNotMatch(err, /SITE_ADMIN|--help/)
+  assert.equal(server.count(LOGIN), 0)
+
+  // Any other prompt failure is reported as what it was.
+  const broken = await cli(['--file', '--backup', dir, '--allowlist', allowlist, '--api-url', server.url], {
+    prompt: async () => {
+      throw new Error('stdin closed')
+    },
+  })
+  assert.equal(broken.code, EXIT_USAGE)
+  assert.match(broken.err, /could not be read from the terminal \(stdin closed\)/)
+})
+
+test('a redirect, and a 403 on sign-in, are each reported with their own cause', async () => {
+  const { dir, allowlist } = workspace()
+  const moved = await api({ [PROFILE_GET]: { status: 301, headers: { Location: 'https://elsewhere.example/api/profile' } } })
+  const a = await cli(['--backup', dir, '--allowlist', allowlist, '--api-url', moved.url])
+  assert.equal(a.code, EXIT_FAILED)
+  assert.match(a.err, /with a redirect \(301\), which this tool does not follow/)
+  assert.doesNotMatch(a.err, /could not be reached/)
+
+  const blocked = await api({ [LOGIN]: { status: 403 } })
+  const b = await cli(['--file', '--backup', dir, '--allowlist', allowlist, '--api-url', blocked.url], { env: CREDS })
+  assert.equal(b.code, EXIT_FAILED)
+  assert.match(b.err, /Sign-in was refused \(403\)/)
+  assert.doesNotMatch(b.err, /token/)
+  assert.equal(blocked.count(LOGIN), 1)
+  assert.equal(blocked.count(CREATE), 0)
+})
+
+test('text from the backup and the server cannot put control characters on the terminal', async () => {
+  const jobs = [
+    ...JOBS,
+    { title: 'Software Engineer', company: 'Evil\u001b[2J\u001b]0;title\u0007 Corp\r\nFiled 9 suggestions.', description: 'Kubernetes' },
+  ]
+  const { dir, allowlist } = workspace(jobs)
+  const server = await api({ [CREATE]: { status: 400, body: { error: 'no\u001b[31m thanks\nFiled 9 suggestions.', code: 'invalid' } } })
+  const { code, out, err } = await cli(['--file', '--backup', dir, '--allowlist', allowlist, '--api-url', server.url], { env: CREDS })
+  assert.equal(code, EXIT_FAILED)
+  assert.match(out, /Evil \[2J \]0;title  Corp  Filed 9 suggestions\. \(1\)/)
+  assert.match(err, /refused creating a suggestion \(400\): no \[31m thanks Filed 9 suggestions\./)
+  // The only line breaks are the ones between this tool's own lines.
+  for (const text of [out, err]) assert.doesNotMatch(text, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/)
+  // Each printed line is still one line: injected line breaks did not start a new one.
+  assert.ok(!out.split('\n').some((line) => line.startsWith('Filed 9')))
+})
+
+test('a duplicated posting and an unusable skill name are reported, and the run continues', async () => {
+  const long = `Kubernetes ${'and friends '.repeat(18)}`.trim()
+  const server = await api({ [PROFILE_GET]: { status: 200, body: { techStack: ['Java'], skills: [{ name: long }] } } })
+  const { dir, allowlist } = workspace([...JOBS, JOBS[0]])
+  const skills = join(dir, 'skills.json')
+  writeFileSync(skills, JSON.stringify({ skills: [{ name: 'Kubernetes', aliases: [long] }, { name: 'Python' }, { name: 'AWS' }] }))
+  const { code, out, err } = await cli(['--backup', dir, '--allowlist', allowlist, '--skills', skills, '--api-url', server.url])
+  assert.equal(code, EXIT_OK, err)
+  assert.match(out, /Jobs: 7 in the backup, 4 match your targets/)
+  assert.match(out, /1 left out: the same posting entered more than once \(counted once\)/)
+  assert.match(out, /Left out "Kubernetes and friends .*…": its name is too long for a suggestion's reason/)
+  assert.match(out, /Would file 2 suggestions/)
+  assert.match(out, /"Python" is asked for in 3 of your 4 tracked jobs/)
+})
+
+test('direction marks in backup text are not printed; an empty tech-stack item stops the run with its cause', async () => {
+  const jobs = [...JOBS, { title: 'Software Engineer', company: 'Acme‮knaB⁩ Corp', description: 'Kubernetes' }]
+  const { dir, allowlist } = workspace(jobs)
+  const server = await api()
+  const a = await cli(['--backup', dir, '--allowlist', allowlist, '--api-url', server.url])
+  assert.equal(a.code, EXIT_OK)
+  assert.match(a.out, /Acme knaB  Corp \(1\)/)
+  assert.doesNotMatch(a.out, /[​-‏‪-‮⁠-⁩]/)
+
+  const blank = await api({ [PROFILE_GET]: { status: 200, body: { techStack: ['Java', ''], skills: [] } } })
+  const b = await cli(['--backup', dir, '--allowlist', allowlist, '--api-url', blank.url])
+  assert.equal(b.code, EXIT_USAGE)
+  assert.match(b.err, /"techStack" holds an empty item/)
 })

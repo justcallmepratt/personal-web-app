@@ -6,6 +6,8 @@
 // every reason as evidence plus a question. assertSafeSuggestion() enforces that on every
 // suggestion before it is printed or sent.
 
+import { createHash } from 'node:crypto'
+
 /** A data file that is not usable. The message says which file and why. */
 export class ConfigError extends Error {
   constructor(message) {
@@ -201,25 +203,48 @@ export function matchCompany(allowlist, employer) {
 export function selectJobs(jobs, { titles, allowlist, excludeStatuses = [] }) {
   const excluded = new Set(excludeStatuses.map((s) => s.trim().toLowerCase()))
   const matching = []
-  const skipped = { notTracked: 0, status: 0, title: 0, company: 0 }
+  const skipped = { notTracked: 0, status: 0, title: 0, company: 0, duplicate: 0 }
+  /** posting key → the matching job already kept for it */
+  const kept = new Map()
   /** Companies with a matching title that are not on the allow-list, with how many jobs. */
   const companiesNotListed = new Map()
 
   for (const job of jobs) {
+    const company = matchCompany(allowlist, job.company)
     if (job.discoveryStatus !== null && job.discoveryStatus !== 'accepted') {
       skipped.notTracked++
     } else if (excluded.has(job.status)) {
       skipped.status++
     } else if (!matchesTitle(job.title, titles)) {
       skipped.title++
-    } else if (matchCompany(allowlist, job.company) === null) {
+    } else if (company === null) {
       skipped.company++
       companiesNotListed.set(job.company, (companiesNotListed.get(job.company) ?? 0) + 1)
     } else {
-      matching.push(job)
+      // The same posting entered twice (same title, company and description) is one
+      // job: counting it twice would overstate how often a skill is asked for.
+      const key = postingKey(job, company)
+      const first = kept.get(key)
+      if (first === undefined) {
+        const copy = { ...job, tags: [...job.tags] }
+        kept.set(key, copy)
+        matching.push(copy)
+      } else {
+        skipped.duplicate++
+        for (const tag of job.tags) if (!first.tags.includes(tag)) first.tags.push(tag)
+      }
     }
   }
   return { matching, skipped, companiesNotListed }
+}
+
+/**
+ * Identifies a posting by its normalised title, the allow-listed company it belongs to
+ * and a hash of its description.
+ */
+function postingKey(job, company) {
+  const description = createHash('sha256').update(normaliseWords(job.description)).digest('hex')
+  return JSON.stringify([normaliseWords(job.title), company, description])
 }
 
 // ── skills ──────────────────────────────────────────────────────────────────
@@ -254,18 +279,27 @@ export function parseDictionary(raw) {
       }
       canonical.set(key, name)
     }
-    // A match must not sit inside a longer word or symbol run: "Java" is not found in
-    // "JavaScript", "SQL" not in "MySQL", "C#" not in "C##".
+    // A match must not sit inside a longer word: "Java" is not found in "JavaScript",
+    // "SQL" not in "MySQL". After a match, a "#", or a "+" that does not join the next
+    // word, would make it a different name ("C" in "C#" or "C++", "C#" in "C##"), so
+    // those are refused too; "React+Redux" and "#python" are found.
+    // A spelling that ends in a symbol ("C++", "C#") may be followed by a version number
+    // ("C++17"), but not by a letter or by more of the symbol.
     const alternatives = spellings
       .sort((a, b) => b.length - a.length)
-      .map((s) => escapeRegExp(s).replace(/ /g, '\\s+'))
+      .map((s) => {
+        const after = /[\p{L}\p{N}]$/u.test(s) ? '(?![\\p{L}\\p{N}_#]|\\+(?![\\p{L}\\p{N}]))' : '(?![\\p{L}_#+])'
+        return `${escapeRegExp(s).replace(/ /g, '\\s+')}${after}`
+      })
       .join('|')
-    const pattern = new RegExp(`(?<![\\p{L}\\p{N}_+#])(?:${alternatives})(?![\\p{L}\\p{N}_+#])`, entry.caseSensitive === true ? 'gu' : 'giu')
+    const pattern = new RegExp(`(?<![\\p{L}\\p{N}_])(?:${alternatives})`, entry.caseSensitive === true ? 'gu' : 'giu')
     skills.push({ name, pattern })
   }
   if (skills.length === 0) throw new ConfigError('The skills dictionary is empty, so nothing could be found.')
   return { skills, canonical }
 }
+
+const FIELD_SEPARATOR = '\u0000'
 
 /**
  * The dictionary skills a job asks for, by name: from its description and its tags.
@@ -273,19 +307,34 @@ export function parseDictionary(raw) {
  * Server" is Microsoft SQL Server, not also SQL, and "Spring Boot" is not also Spring.
  */
 export function extractSkills(job, dictionary) {
-  const text = [job.description, ...job.tags].join('\n')
+  // The description and each tag are separate texts. They are joined by a character that
+  // is neither white space nor part of a word, so no mention can span two of them
+  // ("Spring" in one tag and "Boot" in the next is not Spring Boot).
+  const text = [job.description, ...job.tags].join(FIELD_SEPARATOR)
   const mentions = []
   for (const skill of dictionary.skills) {
     for (const match of text.matchAll(skill.pattern)) {
       mentions.push({ name: skill.name, start: match.index, end: match.index + match[0].length })
     }
   }
+  // One sweep, left to right, longest first at the same start: anything that contains a
+  // mention has then already been seen. It is enough to remember the two mentions that
+  // reach furthest right and belong to different skills, since a container must be of
+  // another skill than the mention it contains.
+  mentions.sort((a, b) => a.start - b.start || b.end - a.end)
+  const contains = (outer, m) =>
+    outer !== null && outer.name !== m.name && outer.end >= m.end && outer.end - outer.start > m.end - m.start
   const found = new Set()
+  let furthest = null
+  let runnerUp = null
   for (const m of mentions) {
-    const inside = mentions.some(
-      (other) => other.name !== m.name && other.start <= m.start && other.end >= m.end && other.end - other.start > m.end - m.start,
-    )
-    if (!inside) found.add(m.name)
+    if (!contains(furthest, m) && !contains(runnerUp, m)) found.add(m.name)
+    if (furthest === null || m.end > furthest.end) {
+      if (furthest !== null && furthest.name !== m.name) runnerUp = furthest
+      furthest = m
+    } else if (m.name !== furthest.name && (runnerUp === null || m.end > runnerUp.end)) {
+      runnerUp = m
+    }
   }
   return found
 }
@@ -303,6 +352,11 @@ export function readProfile(profile) {
   const rawStack = profile.techStack ?? []
   if (!Array.isArray(rawStack) || !rawStack.every((item) => typeof item === 'string')) {
     throw new ConfigError('The profile\'s "techStack" is not a list of text.')
+  }
+  // A suggestion sends the whole list back with one item added, and the API refuses a
+  // list with an empty item, so nothing could be proposed against this profile.
+  if (!rawStack.every(isText)) {
+    throw new ConfigError('The profile\'s "techStack" holds an empty item. Remove it from the profile first; no suggestion can be made against that list.')
   }
   const rawSkills = profile.skills ?? []
   if (!Array.isArray(rawSkills) || !rawSkills.every((s) => isObject(s) && typeof s.name === 'string')) {
@@ -337,13 +391,23 @@ function reasonFor({ skill, kind, jobs, of, examples }) {
   return `${evidence}${shown}. ${question} ${effect}`
 }
 
-const clip = (text, max) => (text.length > max ? `${text.slice(0, max - 1)}…` : text)
+/**
+ * Control characters turned into spaces: line breaks, escape codes, and the invisible
+ * direction and zero-width marks that can reorder or hide text on a screen.
+ */
+export const withoutControlCharacters = (text) => String(text).replace(/[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]+/g, ' ')
+
+const clip = (text, max) => {
+  const clean = withoutControlCharacters(text).replace(/\s+/g, ' ').trim()
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean
+}
 
 /**
  * Works out what to propose: skills asked for by at least `minJobs` matching jobs that
  * are not in the profile's tech stack, most asked-for first, at most `max`.
  * @param {{matching: import('./backup.mjs').TrackedJob[], dictionary: ReturnType<typeof parseDictionary>, profile: ReturnType<typeof readProfile>, minJobs: number, max: number}} input
- * @returns {{suggestions: Suggestion[], counts: {skill: string, jobs: number}[], stackFull: boolean}}
+ * @returns {{suggestions: Suggestion[], counts: {skill: string, jobs: number}[], stackFull: boolean, leftOut: {skill: string, why: string}[]}}
+ *   `leftOut` lists skills that qualified but cannot be put into a valid suggestion
  */
 export function buildSuggestions({ matching, dictionary, profile, minJobs, max }) {
   const canonicalKey = (text) => skillKey(dictionary.canonical.get(skillKey(text)) ?? text)
@@ -364,6 +428,7 @@ export function buildSuggestions({ matching, dictionary, profile, minJobs, max }
 
   const stackFull = profile.techStack.length >= LIST_MAX_ITEMS
   const suggestions = []
+  const leftOut = []
   if (!stackFull) {
     for (const { skill, jobs } of counts) {
       if (suggestions.length >= Math.min(max, MAX_SUGGESTIONS_LIMIT)) break
@@ -373,14 +438,25 @@ export function buildSuggestions({ matching, dictionary, profile, minJobs, max }
       const kind = inSkills.has(key) ? 'feature' : 'ask'
       // A skill the owner already lists is proposed in the owner's own spelling.
       const item = kind === 'feature' ? inSkills.get(key) : skill
-      if (item.length > LIST_ITEM_MAX || profile.techStack.includes(item)) continue
+      if (profile.techStack.includes(item)) continue
+      // The spelling can come from the live profile or an edited dictionary, so a name
+      // that cannot be proposed is left out and reported; it must not end the run.
+      if (item.length > LIST_ITEM_MAX) {
+        leftOut.push({ skill: item, why: `its name is longer than the ${LIST_ITEM_MAX} characters a tech-stack item may have` })
+        continue
+      }
+      if (reasonFor({ skill: item, kind, jobs, of: matching.length, examples: [] }).length > REASON_MAX) {
+        leftOut.push({ skill: item, why: `its name is too long for a suggestion's reason (${REASON_MAX} characters)` })
+        continue
+      }
       const examples = jobsBySkill
         .get(skill)
         .slice(0, 2)
         .map((job) => `${clip(job.title, 60)} at ${clip(job.company, 40)}`)
       // Example job titles are a courtesy and come from postings, so they are untrusted
       // text: if they make the reason too long or trip the wording guard, they are
-      // dropped. A reason with no examples that still fails is a bug, and is thrown.
+      // dropped. If the reason fails even with no examples (a name that itself reads
+      // as a claim, say), the item is left out and reported: nothing unsafe is produced.
       for (let shown = examples.length; shown >= 0; shown--) {
         const suggestion = {
           targetType: 'profile',
@@ -396,15 +472,17 @@ export function buildSuggestions({ matching, dictionary, profile, minJobs, max }
         try {
           assertSafeSuggestion(suggestion, { profile, dictionary })
         } catch (error) {
-          if (shown > 0 && error instanceof UnsafeSuggestionError) continue
-          throw error
+          if (!(error instanceof UnsafeSuggestionError)) throw error
+          if (shown > 0) continue
+          leftOut.push({ skill: item, why: 'no safely worded suggestion can be made for it' })
+          break
         }
         suggestions.push(suggestion)
         break
       }
     }
   }
-  return { suggestions, counts, stackFull }
+  return { suggestions, counts, stackFull, leftOut }
 }
 
 /** Wording that would state the owner has a skill, rather than ask. */
