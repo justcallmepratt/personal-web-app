@@ -147,6 +147,16 @@ export const plannedProjects: PlannedProject[] = [
     name: 'Google Bookmark Sorter',
     goal: 'Categorising and de-duplicating browser bookmarks and finding dead links.',
   },
+  {
+    id: 6,
+    name: 'Deal Watch',
+    goal: 'Scheduled agents that watch sale-season prices against a wish list and only alert on deals worth acting on.',
+  },
+  {
+    id: 7,
+    name: 'TV Cleanup',
+    goal: 'Debloating a Google TV with the open-source CleanYourTV tool: no ads or telemetry, a plain launcher, and a one-command restore.',
+  },
 ]
 
 export const experience: Experience[] = [
