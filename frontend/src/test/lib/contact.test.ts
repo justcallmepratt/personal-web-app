@@ -5,7 +5,7 @@ const sendMail = vi.hoisted(() => vi.fn())
 vi.mock('nodemailer', () => ({ default: { createTransport: () => ({ sendMail, close: vi.fn() }) } }))
 vi.mock('node:dns/promises', () => ({ resolveMx: vi.fn().mockResolvedValue([{ exchange: 'mx' }]) }))
 
-import { isRateLimited, resetRateLimit, validateEmailDomain, validatePayload } from '@/lib/contact'
+import { isRateLimited, positiveIntEnv, resetRateLimit, trackedAddresses, validateEmailDomain, validatePayload } from '@/lib/contact'
 import { POST } from '@/app/api/contact/route'
 
 const valid = { name: 'Alice', email: 'alice@real-inbox.dev', subject: 'Hi', body: 'Hello there' }
@@ -83,6 +83,27 @@ describe('isRateLimited', () => {
     expect(isRateLimited('ip', 3, 3, hour)).toBe(true)
     expect(isRateLimited('other', 3, 3, hour)).toBe(false)
     expect(isRateLimited('ip', hour + 3, 3, hour)).toBe(false)
+  })
+
+  it('forgets addresses whose hits have all expired once it tracks many', () => {
+    resetRateLimit()
+    const hour = 3600_000
+    for (let i = 0; i < 1000; i++) isRateLimited(`ip-${i}`, 0, 3, hour)
+    expect(trackedAddresses()).toBe(1000)
+    isRateLimited('late', hour + 1, 3, hour)
+    expect(trackedAddresses()).toBe(1)
+    resetRateLimit()
+  })
+})
+
+describe('positiveIntEnv', () => {
+  it('uses the fallback for unset, blank, non-numeric, zero or negative values', () => {
+    for (const v of [undefined, '', '  ', 'abc', '0', '-2']) expect(positiveIntEnv(v, 3)).toBe(3)
+  })
+
+  it('reads a positive whole number', () => {
+    expect(positiveIntEnv('5', 3)).toBe(5)
+    expect(positiveIntEnv(' 7 ', 3)).toBe(7)
   })
 })
 

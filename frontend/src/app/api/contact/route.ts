@@ -9,6 +9,7 @@ import {
   validateEmailDomain,
   validatePayload,
 } from '@/lib/contact'
+import { backendUrl } from '@/lib/api'
 
 // Relay (4 s) + MX lookup (2 s) + SMTP (10 s) is 16 s at worst; cap the function above that.
 export const maxDuration = 25
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
   //    checks, persistence to the inbox, email). A definite answer, including a
   //    4xx such as validation or rate limit, goes straight back to the visitor.
   let fellBackBecause: string | undefined
-  const backend = process.env.BACKEND_URL
+  const backend = backendUrl()
   if (backend) {
     const relayed = await relayToBackend(backend, payload.value, ip)
     if (relayed.kind === 'reply') {

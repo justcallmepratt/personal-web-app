@@ -22,8 +22,13 @@ const REVALIDATE_SECONDS = 3600
 // A cold or hung backend must not hold a render open; fall back instead.
 const API_TIMEOUT_MS = 5000
 
+/** BACKEND_URL without trailing slashes, so `${base}/api/...` never has `//`. */
+export function backendUrl(): string | undefined {
+  return process.env.BACKEND_URL?.trim().replace(/\/+$/, '') || undefined
+}
+
 async function load<T>(path: string, local: () => T): Promise<T> {
-  const base = process.env.BACKEND_URL
+  const base = backendUrl()
   if (!base) return local()
   try {
     const res = await fetch(`${base}${path}`, {

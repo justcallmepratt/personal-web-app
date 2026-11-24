@@ -5,6 +5,7 @@ import sitemap from '@/app/sitemap'
 import { metadata as homeMetadata } from '@/app/page'
 import { metadata as experienceMetadata } from '@/app/experience/page'
 import { metadata as projectsMetadata } from '@/app/projects/layout'
+import { metadata as kafkaMetadata } from '@/app/projects/kafka/page'
 import { metadata as skillsMetadata } from '@/app/skills/page'
 import { metadata as certificationsMetadata } from '@/app/certifications/page'
 import { metadata as resumeMetadata } from '@/app/resume/page'
@@ -31,6 +32,7 @@ describe('sitemap.xml', () => {
       HOST,
       `${HOST}/experience`,
       `${HOST}/projects`,
+      `${HOST}/projects/kafka`,
       `${HOST}/skills`,
       `${HOST}/certifications`,
       `${HOST}/research`,
@@ -54,6 +56,8 @@ describe('per-page metadata', () => {
     ['/experience', experienceMetadata, 'Experience // Career Log'],
     // /projects keeps its metadata in a layout; page.tsx exports the same title.
     ['/projects', projectsMetadata, 'Projects'],
+    // Without its own metadata it inherited /projects' canonical link from the layout.
+    ['/projects/kafka', kafkaMetadata, 'Kafka Live Demo'],
     ['/skills', skillsMetadata, 'Skills // Loadout'],
     ['/certifications', certificationsMetadata, 'Certifications'],
     ['/resume', resumeMetadata, 'Resume'],

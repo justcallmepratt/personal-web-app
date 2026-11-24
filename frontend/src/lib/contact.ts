@@ -71,12 +71,26 @@ export async function validateEmailDomain(
 // slows casual abuse rather than enforcing a hard cap.
 const hits = new Map<string, number[]>()
 
+/** A positive whole number from the environment, or the fallback when unset, blank or invalid. */
+export function positiveIntEnv(value: string | undefined, fallback: number): number {
+  const n = Number.parseInt(value ?? '', 10)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
+// Past this many tracked addresses, a call first drops the ones with no recent hits.
+const SWEEP_AT = 1000
+
 export function isRateLimited(
   ip: string,
   now = Date.now(),
-  max = Number(process.env.CONTACT_RATE_LIMIT_MAX ?? 3),
-  windowMs = Number(process.env.CONTACT_RATE_LIMIT_WINDOW ?? 3600) * 1000,
+  max = positiveIntEnv(process.env.CONTACT_RATE_LIMIT_MAX, 3),
+  windowMs = positiveIntEnv(process.env.CONTACT_RATE_LIMIT_WINDOW, 3600) * 1000,
 ): boolean {
+  if (hits.size >= SWEEP_AT) {
+    for (const [key, times] of hits) {
+      if (!times.some((t) => now - t < windowMs)) hits.delete(key)
+    }
+  }
   const recent = (hits.get(ip) ?? []).filter((t) => now - t < windowMs)
   if (recent.length >= max) {
     hits.set(ip, recent)
@@ -84,6 +98,11 @@ export function isRateLimited(
   }
   hits.set(ip, [...recent, now])
   return false
+}
+
+/** How many addresses the limiter is tracking (for tests). */
+export function trackedAddresses(): number {
+  return hits.size
 }
 
 export function resetRateLimit() {

@@ -29,7 +29,7 @@ export const siteDescription =
   'Pratham Sachan — backend software developer in Tampa, FL. Java, Spring Boot and Kafka.'
 
 /** Public, indexable routes. `/api/*` is deliberately absent. */
-export const publicRoutes = ['/', '/experience', '/projects', '/skills', '/certifications', '/research', '/resume', '/contact', '/credits'] as const
+export const publicRoutes = ['/', '/experience', '/projects', '/projects/kafka', '/skills', '/certifications', '/research', '/resume', '/contact', '/credits'] as const
 export type PublicRoute = (typeof publicRoutes)[number]
 
 export const RESUME_PATH = '/resume' satisfies PublicRoute
