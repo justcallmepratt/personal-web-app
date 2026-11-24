@@ -1,6 +1,6 @@
 export interface Skill {
   name: string
-  category: 'Frontend' | 'Backend' | 'DevOps' | 'Other'
+  category: 'Frontend' | 'Backend' | 'DevOps' | 'Business & Leadership' | 'Other'
   /** 0–100 rating. Optional: the repo content lists skills without one. */
   level?: number
 }
@@ -130,4 +130,21 @@ export interface KafkaRecord {
 
 export interface KafkaMessagesResponse extends ApiResponse {
   records: KafkaRecord[]
+}
+
+/** A research paper or substantial write-up by the owner. Repo content only: the API has no endpoint for it. */
+export interface Research {
+  id: number
+  title: string
+  /** Course, school or setting it was written for, when known. */
+  context?: string
+  /** ISO date, as precise as is known: '2020' or '2020-05'. */
+  date?: string
+  /** One or two plain sentences on the question and the finding. */
+  summary: string
+  /** Named co-authors only; leave out when unknown. */
+  coAuthors?: string[]
+  /** Public link to the paper, when there is one. */
+  url?: string
+  sortOrder: number
 }

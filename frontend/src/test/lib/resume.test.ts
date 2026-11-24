@@ -96,7 +96,7 @@ describe('resume from the repo content', () => {
   })
 
   it('groups skills by area in a fixed order', () => {
-    expect(section(data, 'skills')?.entries.map((e) => e.title)).toEqual(['Backend', 'Frontend', 'DevOps', 'Other'])
+    expect(section(data, 'skills')?.entries.map((e) => e.title)).toEqual(['Backend', 'Frontend', 'DevOps', 'Business & Leadership', 'Other'])
     expect(section(data, 'skills')?.entries[2].text).toBe('Splunk, Dynatrace')
   })
 

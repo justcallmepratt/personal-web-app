@@ -178,7 +178,7 @@ function projectEntries(items: unknown): ResumeEntry[] {
   })
 }
 
-const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'Other']
+const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'Business & Leadership', 'Other']
 
 function skillEntries(profile: Profile | null): ResumeEntry[] {
   const groups = new Map<string, string[]>()

@@ -1,5 +1,5 @@
 import type {
-  Profile, Project, Experience, Certification, PlannedProject, Education, Leadership,
+  Profile, Project, Experience, Certification, PlannedProject, Education, Leadership, Research,
 } from '@/lib/types'
 
 // Site content. Edit this file and push to update the site — no database or
@@ -47,6 +47,12 @@ export const profile: Profile = {
     { name: 'Dynatrace', category: 'DevOps' },
     { name: 'C', category: 'Other' },
     { name: 'Swift', category: 'Other' },
+    { name: 'Strategic planning', category: 'Business & Leadership' },
+    { name: 'Team leadership', category: 'Business & Leadership' },
+    { name: 'Partnerships & networking', category: 'Business & Leadership' },
+    { name: 'Public speaking & debate', category: 'Business & Leadership' },
+    { name: 'Fundraising & community outreach', category: 'Business & Leadership' },
+    { name: 'Business management', category: 'Business & Leadership' },
   ],
   updatedAt: '2026-11-20',
 }
@@ -305,5 +311,27 @@ export const leadership: Leadership[] = [
     role: 'Mentor for new post-college associates',
     organization: 'Raymond James',
     sortOrder: 1,
+  },
+]
+
+// Research papers, shown on /research. Repo content only. Summaries come from
+// the papers themselves; no links because the files are private in Drive.
+export const research: Research[] = [
+  {
+    id: 1,
+    title: 'How Generative AI Affects Customer Experience in Fintech',
+    date: '2023-07',
+    summary:
+      'A literature review of generative AI and large language models in financial services, with case studies of Capital One and American Express. It concludes that generative AI can make financial services more personal and cheaper to deliver, though most firms were still a year or two from using it.',
+    sortOrder: 1,
+  },
+  {
+    id: 2,
+    title: 'The Art and Science of Course Selection',
+    context: 'AP Research, East Lake High School',
+    date: '2020-05',
+    summary:
+      'A mixed-methods survey of high-school students who had taken career and technical courses, asking what should guide course choices. 94% wanted help choosing courses but only 44% had used online tools; the paper concludes there is no one-size-fits-all rule, and students refine their choices with help from school staff, parents and peers.',
+    sortOrder: 2,
   },
 ]
