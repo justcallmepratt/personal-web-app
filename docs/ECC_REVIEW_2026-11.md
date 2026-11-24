@@ -29,6 +29,8 @@
 | #115 | supabase | RLS on every table in `init.sql`, plus a Postgres test |
 | #117 | frontend | Limiter env parsing and memory, `BACKEND_URL` trailing slash, Kafka page canonical, KafkaDemo count |
 | #118 | apps/kafka | Contrast, focus ring, reduced motion, bounded limiter, KafkaDemo count |
+| #120 | frontend | Contact relay falls back on a non-API 4xx; API data normalised (#8, #9) |
+| #121 | backend, admin | Mark read/unread sets instead of toggling (#10) |
 | Athllinkmvp-DEMO#2 | Athlink | Demo banner covered the mobile tab bars, duplicate anchor ids, scroll reset, pinned `*` versions |
 
 ## Findings, by severity
@@ -42,9 +44,9 @@
 | 5 | Medium | frontend | A blank `CONTACT_RATE_LIMIT_MAX=` became 0, so every message got 429. A typo became NaN, so there was no limit | Fixed #117 |
 | 6 | Medium | frontend | A trailing slash in `BACKEND_URL` gave `//api/...`. Content then fell back silently and contact went to SMTP | Fixed #117 |
 | 7 | Medium | frontend | `/projects/kafka` inherited `canonical: /projects` and the Open Graph URL from the layout | Fixed #117 |
-| 8 | Medium | frontend | `relayToBackend` treats any JSON 4xx as final, including a 404, 401 or 403 from a misrouted backend. No SMTP fallback runs | Ask |
-| 9 | Medium | frontend | `api.load` casts backend JSON without a shape check, so `tags: null` crashes a page. `demoUrl`, `repoUrl` and socials reach `href` unchecked, unlike `CertificationsList`, which uses `isHttpUrl` | Ask |
-| 10 | Medium | backend | `PATCH /api/admin/messages/{id}/read` toggles the flag instead of setting it, so a retry or double click flips it back | Ask: the admin UI may rely on the toggle |
+| 8 | Medium | frontend | `relayToBackend` treats any JSON 4xx as final, including a 404, 401 or 403 from a misrouted backend. No SMTP fallback runs | Fixed #120 |
+| 9 | Medium | frontend | `api.load` casts backend JSON without a shape check, so `tags: null` crashes a page. `demoUrl`, `repoUrl` and socials reach `href` unchecked, unlike `CertificationsList`, which uses `isHttpUrl` | Fixed #120 |
+| 10 | Medium | backend | `PATCH /api/admin/messages/{id}/read` toggles the flag instead of setting it, so a retry or double click flips it back | Fixed #121 (sets `?read=`) |
 | 11 | Medium | backend | Accepting one market suggestion supersedes the run's other `profile.techStack` suggestions, so only one skill a week can be adopted | Ask: design choice |
 | 12 | Medium | backend | `MarketResearchService` and `MarketResearchJob` log only the exception class name, never the trace, so a failed run can't be diagnosed. A failed suggestion step reports "COMPLETED, 0 created" | Ask: class-name-only logging was a deliberate guard against leaking Adzuna URLs |
 | 13 | Medium | admin | `NewSuggestionForm` keeps its old textarea text after `load()` refreshes the target. A proposal built on that stale value can later overwrite a newer accepted change | Ask: UI behaviour |
