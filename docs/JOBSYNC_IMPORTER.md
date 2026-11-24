@@ -241,11 +241,13 @@ VM and the volume, so download a backup first.
   (see part 3), so a fully hands-off weekly run is not possible without opening that
   database to the host. A direct, read-only database reader is the natural follow-up if
   the weekly download becomes a chore.
-- **It has only read an empty real backup.** On 2026-11-24 a dry run read a backup from
-  the local JobSync 1.2.1 with no jobs in it. The tool opened it, accepted the format and
-  reported "no jobs" (exit 0). Job rows have only been tested on synthetic backups built
-  from JobSync's source (backup schema version 1), so check the first dry run with real
-  jobs by eye.
+- **It has read real backups, but only with sample jobs.** On 2026-11-24 dry runs read
+  backups exported by the local JobSync 1.2.1 (backup schema version 1). The first backup
+  was empty and gave "no jobs" (exit 0). The second held six sample jobs: four target
+  titles at allow-listed companies, one company not on the list and one non-target title.
+  The tool matched the four, left out and named the other two, skipped the skills already
+  on the profile, and proposed Kubernetes (4 of 4), AWS (3) and Terraform (2), as
+  expected. Check the first dry run with your real jobs by eye.
 - **It has not been run against the live API.** The client was written from the backend
   source and tested against a mock server.
 - **Keyword matching, not understanding.** A skill counts when its name or an alias
