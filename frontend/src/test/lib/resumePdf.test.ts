@@ -57,7 +57,7 @@ describe('resume PDF from the site content', () => {
   it('contains the owner\'s name and every section heading as real text', () => {
     const runs = pdfTextRuns(pdf)
     expect(runs[0]).toMatchObject({ text: 'Pratham Sachan', font: 'bold', page: 0 })
-    const headings = ['EXPERIENCE', 'EDUCATION', 'PROJECTS', 'PUBLICATIONS', 'SKILLS', 'CERTIFICATIONS', 'LEADERSHIP']
+    const headings = ['EXPERIENCE', 'EDUCATION', 'PROJECTS', 'SKILLS', 'CERTIFICATIONS']
     for (const heading of headings) {
       expect(runs).toContainEqual(expect.objectContaining({ text: heading, font: 'bold' }))
     }
@@ -68,16 +68,14 @@ describe('resume PDF from the site content', () => {
     for (const expected of [
       'Backend Software Developer at Raymond James', 'Tampa, FL', 'Jul 2024 – Present',
       "Bachelor's in Computer Science", 'Business Management', 'Kafka Producer & Consumer Demo',
-      'Microsoft Technology Associate', 'Mentor for new post-college associates',
+      'Microsoft Technology Associate', 'Mentor new post-college associates joining the team',
     ]) {
       expect(text).toContain(expected)
     }
   })
 
-  // One page is the goal (docs/RESUME_GUIDE.md). Reaching it needs content
-  // trims the owner has not approved yet, so this still allows two.
-  it('fits on at most two pages, inside the margins, in 10 pt body text', () => {
-    expect(pdfPageCount(pdf)).toBeLessThanOrEqual(2)
+  it('fits on one page, inside the margins, in 10 pt body text', () => {
+    expect(pdfPageCount(pdf)).toBe(1)
     expectInsideMargins(pdf)
     const sizes = pdfTextRuns(pdf).map((run) => run.size)
     expect(Math.min(...sizes)).toBe(10)

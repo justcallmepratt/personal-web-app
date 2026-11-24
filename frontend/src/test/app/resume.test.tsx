@@ -24,7 +24,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-const HEADINGS = ['Experience', 'Education', 'Projects', 'Publications', 'Skills', 'Certifications', 'Leadership']
+const HEADINGS = ['Experience', 'Education', 'Projects', 'Skills', 'Certifications']
 
 const apiDown = () => {
   vi.stubEnv('BACKEND_URL', 'http://backend.test')
@@ -108,7 +108,7 @@ describe('/resume page', () => {
     vi.spyOn(api, 'getLeadership').mockResolvedValue([])
     vi.spyOn(api, 'getProjects').mockRejectedValue(new Error('boom'))
     render(await ResumePage())
-    expect(h2s()).toEqual(['Experience', 'Education', 'Publications', 'Skills'])
+    expect(h2s()).toEqual(['Experience', 'Education', 'Skills'])
     expect(screen.queryByRole('region', { name: 'Certifications' })).not.toBeInTheDocument()
   })
 

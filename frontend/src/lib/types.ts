@@ -59,6 +59,8 @@ export interface Certification {
   credentialId?: string
   /** Link to the credential or its verification page. */
   url?: string
+  /** `false` keeps it off the resume; it is still listed on /certifications. */
+  resume?: boolean
   sortOrder?: number
 }
 
@@ -146,7 +148,5 @@ export interface Research {
   coAuthors?: string[]
   /** Public link to the paper, when there is one. */
   url?: string
-  /** `false` keeps the paper off the resume; it is still listed on /research. */
-  resume?: boolean
   sortOrder: number
 }

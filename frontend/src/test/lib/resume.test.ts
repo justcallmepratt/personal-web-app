@@ -16,7 +16,7 @@ afterEach(() => {
 })
 
 const empty: ResumeSources = {
-  profile: null, experience: [], education: [], projects: [], certifications: [], leadership: [], research: [],
+  profile: null, experience: [], education: [], projects: [], certifications: [], leadership: [],
 }
 
 const section = (data: ReturnType<typeof buildResume>, id: string) => data.sections.find((s) => s.id === id)
@@ -52,9 +52,9 @@ describe('resume from the repo content', () => {
     expect(data.tagline).toBe(profile.tagline)
     expect(data.location).toBe('Tampa, FL')
     expect(data.sections.map((s) => s.id)).toEqual([
-      'experience', 'education', 'projects', 'publications', 'skills', 'certifications', 'leadership',
+      'experience', 'education', 'projects', 'skills', 'certifications',
     ])
-    expect(data.sections.map((s) => s.heading)).toEqual(Object.values(RESUME_HEADINGS))
+    expect(data.sections.map((s) => s.heading)).toEqual(data.sections.map((s) => RESUME_HEADINGS[s.id]))
   })
 
   it('links only what the profile publishes', () => {
@@ -82,11 +82,9 @@ describe('resume from the repo content', () => {
     ])
   })
 
-  it('dates leadership from the content and never marks it ongoing by itself', () => {
-    expect(leadership.every((l) => l.current === undefined)).toBe(true)
-    expect(section(data, 'leadership')?.entries.map((e) => [e.title, e.subtitle, e.date])).toEqual([
-      ['Mentor for new post-college associates', 'Raymond James', undefined],
-    ])
+  it('leaves the Leadership section out while the content has no entry', () => {
+    expect(leadership).toEqual([])
+    expect(section(data, 'leadership')).toBeUndefined()
   })
 
   it('formats experience dates like the timeline does', () => {
@@ -96,7 +94,9 @@ describe('resume from the repo content', () => {
   })
 
   it('groups skills by area in a fixed order', () => {
-    expect(section(data, 'skills')?.entries.map((e) => e.title)).toEqual(['Backend', 'Frontend', 'DevOps', 'Business & Leadership', 'Other'])
+    expect(section(data, 'skills')?.entries.map((e) => e.title)).toEqual(['Backend', 'Frontend', 'DevOps', 'Other'])
+    // The soft-skill area stays on the site but not on the resume.
+    expect(section(data, 'skills')?.entries.map((e) => e.text).join(' ')).not.toContain('Strategic planning')
     expect(section(data, 'skills')?.entries[2].text).toBe('Splunk, Dynatrace')
   })
 
@@ -130,26 +130,18 @@ describe('resume selection', () => {
     expect(mixed.sections[0].entries.map((e) => e.title)).toEqual(['B'])
   })
 
-  it('lists papers as publications, with a full address, except those marked off the resume', () => {
+
+  it('keeps the Udemy courses off the resume and prints the certification', () => {
+    const titles = localResumeData().sections.find((s) => s.id === 'certifications')?.entries.map((e) => e.title)
+    expect(titles).toEqual(['Microsoft Technology Associate'])
     const data = buildResume({
       ...empty,
-      research: [
-        { id: 1, title: 'Paper', date: '2023-07', url: '/research/p.pdf', summary: '', sortOrder: 1 },
-        { id: 2, title: 'School paper', summary: '', resume: false, sortOrder: 2 },
-        { id: 3, title: 'Script', url: 'javascript:alert(1)', summary: '', sortOrder: 3 },
-      ] as never,
+      certifications: [
+        { id: 1, name: 'Cert', issuer: 'X' },
+        { id: 2, name: 'Course', issuer: 'Y', resume: false },
+      ],
     })
-    const [paper, script] = data.sections[0].entries
-    expect(data.sections[0].heading).toBe('Publications')
-    expect(paper).toMatchObject({ title: 'Paper', date: 'Jul 2023' })
-    expect(paper.links[0].url).toMatch(/^https:\/\/.+\/research\/p\.pdf$/)
-    expect(script).toMatchObject({ title: 'Script', links: [] })
-    expect(data.sections[0].entries).toHaveLength(2)
-  })
-
-  it('keeps the high-school paper off the resume but prints the 2023 one', () => {
-    const titles = localResumeData().sections.find((s) => s.id === 'publications')?.entries.map((e) => e.title)
-    expect(titles).toEqual(['How Generative AI Affects Customer Experience in Fintech'])
+    expect(data.sections[0].entries.map((e) => e.title)).toEqual(['Cert'])
   })
 })
 
@@ -235,11 +227,10 @@ describe('buildResume edge cases', () => {
       projects: [
         { title: 'A', stack: ['Java', '', 'Kafka'], tags: ['Demo'] } as unknown as Project,
         { title: 'B', stack: [], tags: ['Prototype'] } as unknown as Project,
-        { title: 'C' } as Project,
       ],
     })
     expect(section(data, 'projects')?.entries.map((e) => e.details)).toEqual([
-      [{ label: 'Stack', value: 'Java, Kafka' }], [], [],
+      [{ label: 'Stack', value: 'Java, Kafka' }], [],
     ])
   })
 
@@ -307,7 +298,7 @@ describe('getResumeData when the API misbehaves', () => {
     const data = await getResumeData()
     expect(data.name).toBe(siteName)
     // The API-backed sections are empty and gone; the repo-only ones remain.
-    expect(data.sections.map((s) => s.id)).toEqual(['education', 'publications', 'certifications', 'leadership'])
+    expect(data.sections.map((s) => s.id)).toEqual(['education', 'certifications'])
   })
 
   it('loses only the section whose getter throws', async () => {
@@ -316,7 +307,7 @@ describe('getResumeData when the API misbehaves', () => {
     const data = await getResumeData()
     expect(data.name).toBe('Pratham Sachan')
     expect(data.sections.map((s) => s.id)).toEqual([
-      'education', 'projects', 'publications', 'skills', 'certifications', 'leadership',
+      'education', 'projects', 'skills', 'certifications',
     ])
   })
 })

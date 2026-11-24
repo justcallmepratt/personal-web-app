@@ -250,11 +250,11 @@ export const experience: Experience[] = [
     startDate: '2024-07-01',
     endDate: null,
     current: true,
-    description:
-      'Application developer working with Spring Boot and Java (Amazon Corretto), Kafka and Confluent Kafka, SQL databases, and Splunk and Dynatrace.',
+    description: '',
     highlights: [
-      'Worked on a publish-subscribe Kafka service supporting a legacy database',
-      'Worked with data-intensive applications',
+      'Built a publish-subscribe Kafka service in Java and Spring Boot that feeds a legacy database',
+      'Develop data-intensive applications on Oracle and Microsoft SQL Server, monitored with Splunk and Dynatrace',
+      'Mentor new post-college associates joining the team',
     ],
     technologies: [
       'Java (Amazon Corretto)', 'Spring', 'Spring Boot', 'Kafka', 'Confluent Kafka',
@@ -298,8 +298,9 @@ export const experience: Experience[] = [
 // (ISO: '2023', '2023-05' or '2023-05-14'), `credentialId` and `url` when known.
 export const certifications: Certification[] = [
   { id: 1, name: 'Microsoft Technology Associate', issuer: 'Microsoft', sortOrder: 1 },
-  { id: 2, name: 'Java Programming Masterclass', issuer: 'Udemy', sortOrder: 2 },
-  { id: 3, name: 'TensorFlow', issuer: 'Udemy', sortOrder: 3 },
+  // Courses rather than certifications: on /certifications, not on the resume.
+  { id: 2, name: 'Java Programming Masterclass', issuer: 'Udemy', resume: false, sortOrder: 2 },
+  { id: 3, name: 'TensorFlow', issuer: 'Udemy', resume: false, sortOrder: 3 },
 ]
 
 // Shown on /certifications and on the resume. Only `degree` and `institution`
@@ -317,14 +318,8 @@ export const education: Education[] = [
 
 // Shown on the resume only. Dates are ISO ('2023-01'); a role with a start
 // date, no end date and no `current: true` shows its start month only.
-export const leadership: Leadership[] = [
-  {
-    id: 1,
-    role: 'Mentor for new post-college associates',
-    organization: 'Raymond James',
-    sortOrder: 1,
-  },
-]
+// Mentoring at Raymond James is a bullet of that role, so it is not repeated here.
+export const leadership: Leadership[] = []
 
 // Research papers, shown on /research. Repo content only. Summaries come from
 // the papers themselves. The PDFs are served from frontend/public/research.
@@ -344,8 +339,6 @@ export const research: Research[] = [
     context: 'AP Research, East Lake High School',
     date: '2020-05',
     url: '/research/course-selection-ap-research-2020.pdf',
-    // High-school work: on /research, but not on the resume.
-    resume: false,
     summary:
       'A mixed-methods survey of high-school students who had taken career and technical courses, asking what should guide course choices. 94% wanted help choosing courses but only 44% had used online tools; the paper concludes there is no one-size-fits-all rule, and students refine their choices with help from school staff, parents and peers.',
     sortOrder: 2,

@@ -195,7 +195,21 @@ only you can confirm; nothing in them is published until you do.
       for applications. It would never be built or deployed. Only worth doing
       if you want it.
 
-### Status (24 Nov 2026)
+### Status (24 Nov 2026, final)
+
+**The resume is one page.** The test now requires exactly one. Getting there
+took these changes:
+
+- new verb-first bullets for the Raymond James role, also applied to Supabase;
+- two projects;
+- no Publications section;
+- no separate Leadership entry, since mentoring is now a bullet;
+- no soft-skills row and no Udemy courses;
+- one-line sections reserve only one row under their heading.
+
+In the OpenResume parser, every title, company, date and skill row now comes
+out correctly. The notes below record the steps along the way.
+
 
 - **Done: 1, 4 and 7.**
   - Stream-order extraction now reads `Backend Software Developer Jul 2024 – Present`.
@@ -207,12 +221,99 @@ only you can confirm; nothing in them is published until you do.
   **still two pages**: about 220 pt of Skills, Certifications and Leadership
   spills over. Getting to one page needs trims to content, so the test still
   allows two pages until you decide:
-  - turn the current role's tool paragraph into bullets (3);
-  - drop the "Business & Leadership" row from the resume (6);
-  - drop the Udemy courses (9).
+  - turn the current role's tool paragraph into bullets (3).
+- **Done: 9, by leaving them out.** The two Udemy courses carry
+  `resume: false`, so they stay on /certifications and are left off the
+  resume.
+- **Done: the soft-skills part of 6.** The "Business & Leadership" row is off
+  the resume (`RESUME_HIDDEN_SKILL_AREAS`) and stays on the site. The resume
+  is still two pages: Skills, Certifications and Leadership spill over.
 - **Still to do.** Layout-based extractors such as pdfminer still file a
   right-aligned date as its own text block. If that matters, the date can move
   onto the subtitle row (`Raymond James · Tampa, FL · Jul 2024 – Present`).
+
+## 5. Parser test (OpenResume, run locally, 24 Nov 2026)
+
+[OpenResume](https://github.com/xitanggg/open-resume)'s open-source parser
+(pdf.js) was run in Node on the live PDF and on this branch's PDF. Nothing was
+uploaded.
+
+| Field | Live PDF | This branch |
+|---|---|---|
+| Name, location, LinkedIn, headline | correct | correct |
+| Job title | **empty** for all 3 roles | correct |
+| Job date | `Jul 2024 – PresentBackend Software Developer` | `Jul 2024 – Present` |
+| Company | `Raymond James · Tampa, FL` (location kept with the company) | same |
+| Education date | empty (none in the content) | same |
+| Skills | 7 rows, one value split onto its own row | **empty**, see below |
+
+The empty Skills section is a page-break effect. OpenResume joins the last line
+of page 1 to the first line of page 2, so `…pdfSKILLS` is no longer seen as a
+section title. Fitting on one page removes it. Until then, it is a reason to
+avoid a page break directly before a section heading.
+
+Two small rendering changes would help further:
+
+- write the location apart from the company (`Raymond James` on one row and
+  `Tampa, FL` beside it, or in a separate field);
+- add a graduation date once you confirm it (A6).
+
+## 6. Tools and tactics (second research round)
+
+The full notes are kept outside the repo, in `resume-tools.md` and
+`resume-tactics.md`.
+
+**Tools, most useful first**
+
+1. Local text extraction: pdfminer and pypdf, as in this audit. It is free and
+   could run in CI.
+2. **The real ATS's autofill.** Start an application on Workday or iCIMS,
+   upload the PDF, compare every pre-filled field, and stop before
+   submitting. This is the closest thing to a free production parse.
+3. The OpenResume parser, run locally (above).
+4. A job-description gap check, by hand or with an LLM. For each listed
+   qualification, quote the resume line that proves it, or mark it missing.
+5. The free tiers of Jobscan (about 5 scans a month) or SkillSyncer, used only
+   for the list of missing keywords. Their "ATS score" is the tool's own
+   formula, not anything a real ATS outputs.
+6. Skip template sellers' scores (Enhancv, Rezi, Kickresume), which have a
+   conflict of interest. Commercial demos (Textkernel, Affinda) need an
+   upload, so use a copy without contact details.
+
+**Tactics, with evidence level**
+
+- **Workday HiredScore** [V]. Since August 2026, an LLM checks each listed
+  qualification separately. Meeting every *basic* qualification decides A/B
+  versus C/D. Write each basic qualification in close to the posting's
+  wording.
+- **Greenhouse Talent Matching** [V] reads the resume only. It takes skills,
+  titles, years (worked out from your dates), employers and each employer's
+  industry. It matches by meaning and never rejects anyone automatically.
+  Eightfold weighs title relevance, and Lever scores resume against posting
+  [V].
+- **Two base variants, backend and FDE.** For each application, change only
+  the headline, the order of the skill rows and 1–2 bullets. The target title
+  goes in the headline, never in the employment history.
+- **Boolean search** [R]. Write each acronym out once:
+  "Amazon Web Services (AWS)", "Anti-Money Laundering (AML)".
+- **Titles and background checks** [V/regulator]. Employment verification
+  confirms titles and dates. Use the official title, optionally followed by
+  the functional one, e.g. `Official Title (Backend Java/Kafka)`, and never an
+  inflated one.
+  - Tech staff with access to books and records can be fingerprinted under
+    SEC Rule 17f-2.
+  - Form U4 applies only to registered roles.
+- **Credentials** [V/regulator]. Anyone can take the SIE exam without a
+  sponsoring firm; write "Passed FINRA SIE exam", not "licensed". Confluent
+  CCDAK and AWS Associate are verifiable and widely searched.
+- **Application mechanics** [R/survey].
+  - Knockout questions can reject automatically, so answer them consistently.
+  - Referrals passed initial screens at 52%, against 35% overall (Ashby 2026).
+  - Applying early helps a little; sources disagree on how much.
+- **Tricks that backfire.** Hidden prompt injection was found in about 1% of
+  roughly 196,000 resumes (USENIX Security 2026), and detectors now exist.
+  Parsers show white text in plain view. Generic text that reads as written
+  by AI is penalised.
 
 ## Sources
 

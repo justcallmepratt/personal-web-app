@@ -1,11 +1,10 @@
 import { api } from './api'
 import { formatDateRange, formatIsoDate } from './dates'
 import { absoluteUrl, siteName } from './site'
-import type { Certification, Education, Experience, Leadership, Profile, Project, Research } from './types'
+import type { Certification, Education, Experience, Leadership, Profile, Project } from './types'
 import {
   profile as localProfile, projects as localProjects, experience as localExperience,
   certifications as localCertifications, education as localEducation, leadership as localLeadership,
-  research as localResearch,
 } from '@/content'
 
 // ── The resume ───────────────────────────────────────────────────────────────
@@ -46,7 +45,7 @@ export interface ResumeEntry {
 }
 
 export type ResumeSectionId =
-  | 'experience' | 'education' | 'projects' | 'publications' | 'skills' | 'certifications' | 'leadership'
+  | 'experience' | 'education' | 'projects' | 'skills' | 'certifications' | 'leadership'
 
 export interface ResumeSection {
   id: ResumeSectionId
@@ -71,14 +70,12 @@ export interface ResumeSources {
   projects: Project[]
   certifications: Certification[]
   leadership: Leadership[]
-  research: Research[]
 }
 
 export const RESUME_HEADINGS: Record<ResumeSectionId, string> = {
   experience: 'Experience',
   education: 'Education',
   projects: 'Projects',
-  publications: 'Publications',
   skills: 'Skills',
   certifications: 'Certifications',
   leadership: 'Leadership',
@@ -161,7 +158,7 @@ function educationEntries(items: unknown): ResumeEntry[] {
 }
 
 /** The most projects the resume prints, so that it stays on one page. */
-export const MAX_RESUME_PROJECTS = 3
+export const MAX_RESUME_PROJECTS = 2
 
 /**
  * The featured projects, in order, or the first few when none is featured.
@@ -193,7 +190,13 @@ function projectEntries(items: unknown): ResumeEntry[] {
   })
 }
 
-const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'Business & Leadership', 'Other']
+const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'Other']
+
+/**
+ * Soft-skill areas the site lists but the resume leaves out: screeners weigh
+ * evidence in bullets over soft-skill keywords, and the row costs two lines.
+ */
+export const RESUME_HIDDEN_SKILL_AREAS = ['Business & Leadership']
 
 function skillEntries(profile: Profile | null): ResumeEntry[] {
   const groups = new Map<string, string[]>()
@@ -201,6 +204,7 @@ function skillEntries(profile: Profile | null): ResumeEntry[] {
     const name = clean(skill.name)
     if (!name) continue
     const category = clean(skill.category) || 'Other'
+    if (RESUME_HIDDEN_SKILL_AREAS.includes(category)) continue
     const names = groups.get(category) ?? []
     if (!names.includes(name)) names.push(name)
     groups.set(category, names)
@@ -217,27 +221,11 @@ function skillEntries(profile: Profile | null): ResumeEntry[] {
 function certificationEntries(items: unknown): ResumeEntry[] {
   return records<Certification>(items).flatMap((c, i) => {
     const title = clean(c.name)
-    if (!title) return []
+    if (!title || c.resume === false) return []
     const id = clean(c.credentialId)
     return [entry(`certification-${i}`, {
       title,
       text: join([clean(c.issuer), formatIsoDate(c.date) ?? '', id ? `Credential ID ${id}` : '']) || undefined,
-    })]
-  })
-}
-
-/** Papers marked `resume: false` stay on /research only. */
-function publicationEntries(items: unknown): ResumeEntry[] {
-  return records<Research>(items).flatMap((r, i) => {
-    const title = clean(r.title)
-    if (!title || r.resume === false) return []
-    const url = clean(r.url)
-    const link = toLink('Paper', url.startsWith('/') && !url.startsWith('//') ? absoluteUrl(url) : url)
-    return [entry(`publication-${i}`, {
-      title,
-      subtitle: clean(r.context) || undefined,
-      date: formatIsoDate(r.date) ?? undefined,
-      links: link ? [link] : [],
     })]
   })
 }
@@ -277,7 +265,6 @@ export function buildResume(sources: ResumeSources): ResumeData {
       section('experience', 'entries', experienceEntries(sources.experience)),
       section('education', 'entries', educationEntries(sources.education)),
       section('projects', 'entries', projectEntries(sources.projects)),
-      section('publications', 'entries', publicationEntries(sources.research)),
       section('skills', 'inline', skillEntries(profile)),
       section('certifications', 'inline', certificationEntries(sources.certifications)),
       section('leadership', 'entries', leadershipEntries(sources.leadership)),
@@ -294,7 +281,6 @@ export function localResumeData(): ResumeData {
     projects: localProjects,
     certifications: localCertifications,
     leadership: localLeadership,
-    research: localResearch,
   })
 }
 
@@ -304,16 +290,15 @@ export function localResumeData(): ResumeData {
  * only empties its own section instead of failing the page or the PDF.
  */
 export async function getResumeData(): Promise<ResumeData> {
-  const [profile, experience, education, projects, certifications, leadership, research] = await Promise.all([
+  const [profile, experience, education, projects, certifications, leadership] = await Promise.all([
     api.getProfile().catch(() => localProfile),
     api.getExperience().catch(() => []),
     api.getEducation().catch(() => []),
     api.getProjects().catch(() => []),
     api.getCertifications().catch(() => []),
     api.getLeadership().catch(() => []),
-    api.getResearch().catch(() => []),
   ])
-  return buildResume({ profile, experience, education, projects, certifications, leadership, research })
+  return buildResume({ profile, experience, education, projects, certifications, leadership })
 }
 
 /** "Pratham-Sachan-Resume.pdf": ASCII only, so it is safe in a header as is. */

@@ -63,10 +63,9 @@ describe('site content', () => {
     ])
   })
 
-  it('lists only the one leadership role the owner asked for, with no invented dates or description', () => {
-    expect(leadership).toEqual([
-      { id: 1, role: 'Mentor for new post-college associates', organization: 'Raymond James', sortOrder: 1 },
-    ])
+  it('lists no separate leadership role: mentoring is a bullet of the Raymond James role', () => {
+    expect(leadership).toEqual([])
+    expect(experience[0].highlights).toContain('Mentor new post-college associates joining the team')
   })
 
   it('marks exactly one role as current and leaves the unconfirmed internship end date empty', () => {

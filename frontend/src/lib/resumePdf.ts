@@ -168,10 +168,11 @@ class Layout {
     this.page.rule(PAGE.margin, RIGHT, this.y, thickness)
   }
 
-  heading(text: string): void {
+  /** `firstRow`: the height that must fit under the heading (the start of its first entry). */
+  heading(text: string, firstRow = (SIZE.title + SIZE.body) * LINE_HEIGHT): void {
     this.gap(9)
     // Keep a heading together with the start of its first entry.
-    this.ensure(SIZE.heading * LINE_HEIGHT + 6 + (SIZE.title + SIZE.body) * LINE_HEIGHT)
+    this.ensure(SIZE.heading * LINE_HEIGHT + 6 + firstRow)
     this.paragraph(text.toUpperCase(), 'bold', SIZE.heading)
     this.gap(1)
     this.rule(0.5)
@@ -224,7 +225,8 @@ class Layout {
     // a table and separate the labels from their values.
     // A short list (skills, certifications) is kept whole.
     this.keepTogether(() => {
-      this.heading(section.heading)
+      // A one-line row, not a title and body, is all that has to follow the heading.
+      this.heading(section.heading, SIZE.body * LINE_HEIGHT)
       for (const item of section.entries) {
         this.labelled(item.text ? `${item.title}:` : item.title, item.text ?? '', SIZE.body, 4)
       }
