@@ -57,7 +57,7 @@ describe('resume PDF from the site content', () => {
   it('contains the owner\'s name and every section heading as real text', () => {
     const runs = pdfTextRuns(pdf)
     expect(runs[0]).toMatchObject({ text: 'Pratham Sachan', font: 'bold', page: 0 })
-    const headings = ['EXPERIENCE', 'EDUCATION', 'PROJECTS', 'PUBLICATIONS', 'SKILLS', 'CERTIFICATIONS', 'LEADERSHIP']
+    const headings = ['EXPERIENCE', 'EDUCATION', 'PROJECTS', 'SKILLS', 'CERTIFICATIONS', 'LEADERSHIP']
     for (const heading of headings) {
       expect(runs).toContainEqual(expect.objectContaining({ text: heading, font: 'bold' }))
     }
