@@ -1,19 +1,21 @@
 # Deployment
 
 How the site is built, deployed and configured, and what is still outstanding. State as of
-2026-11-21. This replaces the earlier `REMAINING_WORK.md`, `DEPLOYMENT_OPTIONS.md` and
+2026-11-24. The roadmap and research notes this page used to link moved to Notion; see
+"Planning docs" in the [README](../README.md#planning-docs). This replaces the earlier `REMAINING_WORK.md`, `DEPLOYMENT_OPTIONS.md` and
 `docs/MIGRATION_TO_GITHUB_PAGES.md` (see git history).
 
 ## Where things stand
 
 | Part | Where | State |
 |---|---|---|
-| Public site (`frontend/`) | Vercel project `frontend`, root directory `frontend`, <https://justcallmepratt.dev> (`www` redirects to it) | Live. Profile, projects and experience come from the API (database); certifications and "In the works" come from `frontend/src/content/index.ts`, which is also the fallback. |
+| Public site (`frontend/`) | Vercel project `frontend`, root directory `frontend`, <https://justcallmepratt.dev> (`www` redirects to it) | Live. Profile, projects and experience come from the API (database); certifications, education, research and "In the works" come from `frontend/src/content/index.ts`, which is also the fallback. The two research PDFs are static files in `frontend/public/research/`. |
 | API (`backend/`) | Railway project `kafka-demo`, service `personal-web-app-api` | Deployed and healthy at `https://personal-web-app-api-production.up.railway.app`. **Used by the production site** (`BACKEND_URL`); previews have no `BACKEND_URL` and use the repo content. |
 | API custom domain `api.justcallmepratt.dev` | Railway + Vercel DNS | Not attached. |
 | Kafka demo | Site page `/projects/kafka`, relaying to Railway service `kafka-demo-api` | Live. This is the demo's only home; `/kafka` and everything under it redirect here (308, from `frontend`). |
-| `apps/kafka` | Nothing | Built and tested in CI, **not deployed**. Checked on 2026-11-21: the team that owns `frontend` has no `kafka` project and `frontend` is in no microfrontends group. Optional; see [the checklist](#if-you-want-the-separate-kafka-project-later). |
-| `apps/admin` (`/admin`) | Vercel project `admin` (own address; the microfrontends group is optional) | Not deployed: no Vercel project yet, and admin sign-in is off on the API. Owner steps: [Turn on admin](#turn-on-admin). |
+| `apps/kafka` | Nothing | Built and tested in CI, **not deployed**. The team that owns `frontend` has no `kafka` project, and the microfrontends group holds only `frontend` and `admin`. Optional; see [the checklist](#if-you-want-the-separate-kafka-project-later). |
+| `apps/admin` (`/admin`) | Vercel project `admin`, served at `justcallmepratt.dev/admin` through the microfrontends group | Deployed. `ADMIN_PASSWORD_HASH` is set on Railway, but as of 2026-11-23 the owner's password did not match it, so sign-in is not working yet: redo [Turn on admin](#turn-on-admin) step 3. |
+| Athlink demo | Its own repo [`justcallmepratt/Athllinkmvp-DEMO`](https://github.com/justcallmepratt/Athllinkmvp-DEMO) and its own Vercel project, <https://athllinkmvp-demo.vercel.app/> | Live, sample data only. Not part of this repo or the microfrontends group; the Athlink project card links to it. See [Athlink demo](#athlink-demo). |
 | Database | Supabase Postgres | Used by the API (session pooler) and by the Kafka demo (`kafka_demo` schema). |
 
 ```
@@ -21,7 +23,7 @@ How the site is built, deployed and configured, and what is still outstanding. S
   browser ───────────▶ ┌──────────────────────────────────────────┐
                        │ frontend  (frontend/)   public pages      │
                        │   /kafka/* redirects to /projects/kafka   │
-                       │ admin     (apps/admin)  /admin/*  (planned)│
+                       │ admin     (apps/admin)  /admin/*          │
                        └───────────────┬──────────────────────────┘
                                        │ server-side only
                                        ▼
@@ -47,7 +49,8 @@ How the site is built, deployed and configured, and what is still outstanding. S
 
 ## Outstanding work
 
-One list, in order. Nothing done is on it; what is done is in [ROADMAP.md](ROADMAP.md).
+One list, in order. Nothing done is on it; what is done is in the Roadmap page in Notion
+([Planning docs](../README.md#planning-docs)), which is no longer kept current.
 
 **First, before merging the content-suggestions pull request:** run
 `supabase/migrations/2026-11-21_content_suggestions.sql` on the Supabase database
@@ -59,15 +62,14 @@ not start without that table.
 ([steps and order](#market-research-run-the-migration-before-merging)). The job itself
 stays off until its three variables are set ([turn it on](#turn-on-market-research)).
 
-1. **Delete the two unused Vercel projects `personal-web-app` and `backend`.** Checked
-   2026-11-21: the team has exactly three projects (`frontend`, `backend`,
-   `personal-web-app`). The last two never had a working deployment but still build on
-   every push. Then delete the GitHub environments they created (`… – backend`,
-   `… – personal-web-app`).
-2. **Turn on admin** ([checklist](#turn-on-admin)): create the Vercel `admin` project in
-   the team that owns `frontend`, then set `ADMIN_PASSWORD_HASH` on the Railway service.
-   The sign-in rate limiter is live (PR #73), so nothing blocks this. Until the hash is
-   set, admin sign-in answers 503 "Admin not configured", by design.
+1. **Check the GitHub environments of the deleted Vercel projects.** The unused Vercel
+   projects `personal-web-app` and `backend` were removed (2026-11-23). If the GitHub
+   environments they created (`… – backend`, `… – personal-web-app`) are still listed
+   under the repository's Environments, delete them.
+2. **Reset the admin password** ([Turn on admin](#turn-on-admin), step 3). The `admin`
+   project is deployed and served at `/admin`, and a hash is set on Railway, but the
+   owner's password did not match it on 2026-11-23. Make a new hash, set it, and sign in
+   typing the password by hand (browser autofill may hold an older one).
 3. **Turn on contact email.** The contact form relays to the API, which stores each
    message but sends no email until `MAIL_USER` and `MAIL_PASS` are set on the Railway
    service. Also set the Vercel variables ([steps](#turn-on-contact-email)) for the SMTP
@@ -83,15 +85,14 @@ stays off until its three variables are set ([turn it on](#turn-on-market-resear
    - `SeedRunner.java` still seeds the old placeholder persona into *empty* tables, so a
      fresh database would get it.
 6. **Security follow-ups** (Swagger behind GitHub sign-in, Content-Security-Policy,
-   contact rate limit, two CodeQL alerts to dismiss) are in
-   [ROADMAP.md](ROADMAP.md#security-follow-ups).
+   contact rate limit, two CodeQL alerts to dismiss) are under "Security follow-ups" in
+   the [Roadmap page](https://app.notion.com/p/4225bf59b8cc81c2a80cd113cd9d99d8) in Notion.
 7. **Dependabot PR #38** (Maven wrapper 3.10.0 → 3.10.1) is held: its diff rewrites
    `backend/mvnw.cmd` with CRLF line endings. Merge or close it deliberately.
 8. **Product work, not operations:** Vercel Web Analytics (decided, not
    added); turning on the weekly market research (built, off:
    [steps](#turn-on-market-research)); the monorepo move (later);
-   an optional microfrontends group (`/admin` on the main domain) and an optional
-   separate `kafka` project. See [ROADMAP.md](ROADMAP.md).
+   and an optional separate `kafka` project. See the [Roadmap page](https://app.notion.com/p/4225bf59b8cc81c2a80cd113cd9d99d8).
 
 ## Vercel
 
@@ -105,9 +106,9 @@ Every push to `main` deploys production and every PR gets a preview; CI does not
 - **Settings worth turning on** (dashboard, not in the repo): skip builds when nothing
   under the project's root directory changed, and a spend limit under Billing → Spend
   Management.
-- **Footprint:** the target is two projects (`frontend`, and `admin` once created), none
-  for services; today there are three (`frontend` plus the two unused ones). A separate
-  `kafka` project is optional and not planned.
+- **Footprint:** two projects in this repository's team, `frontend` and `admin`, none for
+  services. A separate `kafka` project is optional and not planned. The Athlink demo is a
+  third project, deployed from its own repository.
   Pages are static and re-rendered at most hourly (`REVALIDATE_SECONDS` in
   `frontend/src/lib/api.ts`), so the API sees about one request per page per hour. The
   functions are `POST /api/contact` (25 s max; bodies over 16 KB rejected before reading;
@@ -143,16 +144,18 @@ Variable changes apply only to new deployments: redeploy after editing.
 ### Microfrontends: `kafka` and `admin`
 
 `apps/kafka` and `apps/admin` are separate Next.js apps built to be served on the main
-domain through Vercel Microfrontends, with `frontend` as the default application. Only
-`admin` is planned; `kafka` is optional (see the end of this section). State on
-2026-11-21: neither project exists in the team that owns `frontend`, and `frontend` is in
-no microfrontends group. In the repository:
+domain through Vercel Microfrontends, with `frontend` as the default application. The
+group exists and holds `frontend` and `admin`; `kafka` is optional (see the end of this
+section). In the repository:
 
 - `frontend/next.config.ts` wraps its config in `withMicrofrontends`, and
-  `frontend/microfrontends.json` lists only `frontend`, so every path is served by the
-  public site. The keys under `applications` must be Vercel project names; an entry for a
-  project that does not exist routes nowhere, so add one only after its project is in the
-  group.
+  `frontend/microfrontends.json` lists `frontend` and `admin` (`/admin` and
+  `/admin/:path*`); every other path is served by the public site.
+- **Every key under `applications` must be a Vercel project already in the group.** If
+  it names one the group does not contain, Vercel fails the `frontend` deployment. This
+  happened in PR #101, which routed `/projects/athlink` to an `athlink` app before that
+  project existed; the route was taken out and the PR closed (see
+  [Athlink demo](#athlink-demo)). Add the project to the group first, then the entry.
 - `/kafka`, `/kafka/` and `/kafka/<anything>` are redirected by `frontend` to
   `/projects/kafka` (308; `frontend/src/lib/redirects.ts`, tested in
   `src/test/lib/redirects.test.ts`). The two addresses the micro-frontend would have
@@ -164,9 +167,8 @@ no microfrontends group. In the repository:
   `basePath`, which Vercel Microfrontends does not support. Neither has a `public/`
   directory: files there are not covered by the asset prefix.
 
-To deploy `admin`, follow [Turn on admin](#turn-on-admin); serving it on the main
-domain is its optional last step (it needs the group, with `frontend` as the default
-application, and an `admin` entry in `frontend/microfrontends.json`).
+`admin` is deployed this way; [Turn on admin](#turn-on-admin) records how, for a
+rebuild.
 
 Notes: moving between the public site and an app is a full page load. **Rollback:**
 remove the app's entry from `microfrontends.json` and redeploy `frontend`.
@@ -363,7 +365,7 @@ repository, and none should ever be.
    missing the job stays off and the log says which.
 3. **Keep the service always on.** The schedule lives inside the API process, so
    Railway's serverless / app-sleeping option must stay off for this service
-   ([RESEARCH.md 2.4](RESEARCH.md#24-scheduled-and-background-jobs-on-railway-and-the-supabase-free-tier)).
+   (section 2.4 of the [Research notes](https://app.notion.com/p/4225bf59b8cc813c91bdcc6d5fca7af4) in Notion).
 4. **Run it once by hand** instead of waiting for Monday (needs [admin](#turn-on-admin)
    switched on, for the token): `POST /api/admin/market-research/run` with the admin
    `Authorization: Bearer …` header answers 202 and runs in the background (six to
@@ -441,7 +443,7 @@ Limits to keep in mind when reading the numbers:
   adjust search names after the first run.
 - Adzuna's terms allow personal research and job search; anything published must credit
   Adzuna. Nothing here is published, so keep it that way or add the credit
-  ([RESEARCH.md](RESEARCH.md#adzuna-jobs-api-market-research)).
+  ("Adzuna jobs API" in the [Research notes](https://app.notion.com/p/4225bf59b8cc813c91bdcc6d5fca7af4) in Notion).
 
 ### The target roles, the allow-list and the skills dictionary
 
@@ -487,10 +489,11 @@ API still starts.
 ## Turn on admin
 
 `apps/admin` is sign-in and the contact-message inbox: `/admin` (inbox), `/admin/login`,
-and handlers under `/admin/api/*`. As of 2026-11-21 it is **not deployed**: the team has
-no Vercel project for it, and the API answers every sign-in with 503 "Admin not
-configured" because `ADMIN_PASSWORD_HASH` is unset. Only the owner can do the steps
-below, in this order. Steps 1 to 4 are enough to use admin; step 5 is optional.
+and handlers under `/admin/api/*`. Steps 1, 2 and 5 are done: the Vercel project `admin`
+exists and is in the microfrontends group, and `frontend/microfrontends.json` routes
+`/admin` to it. A hash is set on Railway, but on 2026-11-23 the owner's password did not
+match it, so step 3 needs redoing. Only the owner can do these steps. They are kept in
+order, for a rebuild.
 
 1. **Create the Vercel project.** Vercel dashboard → Add New → Project → import
    `justcallmepratt/personal-web-app`, in the **same team as `frontend`**.
@@ -576,6 +579,25 @@ page loads and one dummy sign-in shows the "not switched on yet" message; the AP
 answers 403 to the inbox endpoints without a token. Everything after a successful
 sign-in (inbox, mark read, expiry, 429, outages) has only been run against a local
 stand-in for the API and in the unit tests, because no admin password exists yet.
+
+## Athlink demo
+
+The Athlink recruiting prototype runs outside this repository: source in
+[`justcallmepratt/Athllinkmvp-DEMO`](https://github.com/justcallmepratt/Athllinkmvp-DEMO),
+deployed as its own Vercel project at <https://athllinkmvp-demo.vercel.app/>. That repo
+adds a "sample data" banner to every screen, `noindex` and security headers
+(`vercel.json`); nothing entered there is saved.
+
+- **On this site** it is only a link: the Athlink card in `frontend/src/content/index.ts`
+  (and its Supabase `projects` row) has `demoUrl` set to that address. It is the one
+  off-site demo `OFF_SITE_DEMOS` in `frontend/src/test/content/content.test.ts` allows;
+  every other `demoUrl` must be a path on this site. A new off-site demo needs adding
+  there.
+- **Not a micro-frontend.** PR #101 tried serving it at `/projects/athlink` from
+  `apps/athlink` through the microfrontends group. Vercel failed the `frontend`
+  deployment because `microfrontends.json` named an `athlink` app the group did not
+  contain, and a third microfrontends project would also be billed extra. The PR was
+  closed in favour of the separate project.
 
 ## Kafka live demo
 
