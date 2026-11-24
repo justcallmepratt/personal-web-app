@@ -31,6 +31,8 @@
 | #118 | apps/kafka | Contrast, focus ring, reduced motion, bounded limiter, KafkaDemo count |
 | #120 | frontend | Contact relay falls back on a non-API 4xx; API data normalised (#8, #9) |
 | #121 | backend, admin | Mark read/unread sets instead of toggling (#10) |
+| #122 | backend | Market-job failures logged in full; a rejected address keeps its contact slot (#12, #15) |
+| #123 | admin | Suggestion form flags text built on a value that changed (#13) |
 | Athllinkmvp-DEMO#2 | Athlink | Demo banner covered the mobile tab bars, duplicate anchor ids, scroll reset, pinned `*` versions |
 
 ## Findings, by severity
@@ -48,10 +50,10 @@
 | 9 | Medium | frontend | `api.load` casts backend JSON without a shape check, so `tags: null` crashes a page. `demoUrl`, `repoUrl` and socials reach `href` unchecked, unlike `CertificationsList`, which uses `isHttpUrl` | Fixed #120 |
 | 10 | Medium | backend | `PATCH /api/admin/messages/{id}/read` toggles the flag instead of setting it, so a retry or double click flips it back | Fixed #121 (sets `?read=`) |
 | 11 | Medium | backend | Accepting one market suggestion supersedes the run's other `profile.techStack` suggestions, so only one skill a week can be adopted | Ask: design choice |
-| 12 | Medium | backend | `MarketResearchService` and `MarketResearchJob` log only the exception class name, never the trace, so a failed run can't be diagnosed. A failed suggestion step reports "COMPLETED, 0 created" | Ask: class-name-only logging was a deliberate guard against leaking Adzuna URLs |
-| 13 | Medium | admin | `NewSuggestionForm` keeps its old textarea text after `load()` refreshes the target. A proposal built on that stale value can later overwrite a newer accepted change | Ask: UI behaviour |
+| 12 | Medium | backend | `MarketResearchService` and `MarketResearchJob` log only the exception class name, never the trace, so a failed run can't be diagnosed. A failed suggestion step reports "COMPLETED, 0 created" | Fixed #122 (AdzunaClient already strips the credentialed URL) |
+| 13 | Medium | admin | `NewSuggestionForm` keeps its old textarea text after `load()` refreshes the target. A proposal built on that stale value can later overwrite a newer accepted change | Fixed #123 |
 | 14 | Low-Med | backend | Two concurrent `accept()` calls on one field can deadlock. One locks the row then the profile, the other the profile then the row, and one gets a 500 | Ask: uncertain, needs a lock-order change |
-| 15 | Low-Med | backend | The contact rate-limit slot is spent before validation. Three typos in the email domain lock the sender out for an hour | Ask |
+| 15 | Low-Med | backend | The contact rate-limit slot is spent before validation. Three typos in the email domain lock the sender out for an hour | Fixed #122 (the slot is given back) |
 | 16 | Low | frontend, kafka | The rate-limit maps never evicted keys | Fixed #117, #118 |
 | 17 | Low | frontend, kafka | KafkaDemo's reload fetch overwrote the expected count, so "consumed" could show too early | Fixed #117, #118 |
 | 18 | Low | backend | An email over 255 characters passed `@Email`, then failed on insert with a 500 | Fixed #114 |
