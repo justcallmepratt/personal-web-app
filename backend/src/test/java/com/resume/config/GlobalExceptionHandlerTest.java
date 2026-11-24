@@ -68,8 +68,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleBadInput_returns400_withoutEchoingTheInput() {
-        ResponseEntity<ApiResponse> response = handler.handleBadInput(new RuntimeException("For input string: \"abc\""));
+    void handleBadInput_returns400_withAGenericMessage() {
+        ResponseEntity<ApiResponse> response = handler.handleBadInput();
 
         assertThat(response.getStatusCode().value()).isEqualTo(400);
         assertThat(response.getBody().message()).isEqualTo("Invalid request");
