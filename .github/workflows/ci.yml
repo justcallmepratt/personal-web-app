@@ -231,3 +231,47 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # ── Athlink demo (static Vite app, served under /projects/athlink) ────────
+  athlink:
+    name: Athlink — Node 22 / pnpm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/athlink
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Get pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-athlink-${{ hashFiles('apps/athlink/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-athlink-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The app is a design-tool export kept as exported, so CI only checks that
+      # it builds and that every asset lands under the /projects/athlink/ base.
+      - name: Build
+        run: pnpm build
+
+      - name: Check the build layout
+        run: |
+          test -f build/projects/athlink/index.html
+          ! grep -q 'src="/assets/' build/projects/athlink/index.html

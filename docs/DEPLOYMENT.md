@@ -14,6 +14,7 @@ How the site is built, deployed and configured, and what is still outstanding. S
 | Kafka demo | Site page `/projects/kafka`, relaying to Railway service `kafka-demo-api` | Live. This is the demo's only home; `/kafka` and everything under it redirect here (308, from `frontend`). |
 | `apps/kafka` | Nothing | Built and tested in CI, **not deployed**. Checked on 2026-11-21: the team that owns `frontend` has no `kafka` project and `frontend` is in no microfrontends group. Optional; see [the checklist](#if-you-want-the-separate-kafka-project-later). |
 | `apps/admin` (`/admin`) | Vercel project `admin` (own address; the microfrontends group is optional) | Not deployed: no Vercel project yet, and admin sign-in is off on the API. Owner steps: [Turn on admin](#turn-on-admin). |
+| `apps/athlink` (`/projects/athlink`) | Vercel project `athlink` in the `frontend` microfrontends group | **Not deployed yet.** Static Vite build of the Athlink prototype (sample data only). Owner steps: [Turn on the Athlink demo](#turn-on-the-athlink-demo). Until they are done the Projects card's DEMO link 404s. |
 | Database | Supabase Postgres | Used by the API (session pooler) and by the Kafka demo (`kafka_demo` schema). |
 
 ```
@@ -668,3 +669,27 @@ the same commands. Full stack: `docker compose up --build` (Postgres + API + fro
 reading from the API). Running the API outside Docker on an Apple Silicon Mac needs an
 arm64 JDK 21; the Corretto 21 in `backend/run-dev.sh` is x86_64 and fails with "Bad CPU
 type in executable".
+
+## Turn on the Athlink demo
+
+`apps/athlink` is the Athlink prototype as a static Vite app. It builds into
+`build/projects/athlink/` with every asset URL under `/projects/athlink/`, so it cannot
+collide with the main site. `frontend/microfrontends.json` routes `/projects/athlink` and
+everything under it to the `athlink` application. Only the owner can do these steps, and
+they must be done **before** the PR that adds the routing entry is merged, because the
+group must contain an `athlink` project for that entry to resolve.
+
+1. **Create the Vercel project.** Vercel dashboard → Add New → Project → import
+   `justcallmepratt/personal-web-app`, in the same team as `frontend`.
+   - Project name: `athlink` (the routing entry needs exactly this name).
+   - Root directory: `apps/athlink`. Leave the other settings alone;
+     `apps/athlink/vercel.json` sets framework, build, output directory and headers.
+   - No environment variables and no domain.
+2. **Check it on its own address:** `https://<the project's address>.vercel.app/` redirects
+   to `/projects/athlink/`, which shows the landing page with the dark "Prototype demo"
+   banner at the bottom.
+3. **Add it to the microfrontends group:** `frontend` → Settings → Microfrontends, add
+   `athlink`; or from `apps/athlink` run `vercel link` and then
+   `vercel microfrontends add-to-group` (interactive; it may ask you to confirm billing).
+4. **Merge the PR**, then open <https://justcallmepratt.dev/projects/athlink/>.
+

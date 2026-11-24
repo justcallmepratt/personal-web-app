@@ -101,6 +101,22 @@ export const projects: Project[] = [
     createdAt: '2023-02-01',
   },
   {
+    id: 9,
+    title: 'Athlink: International Athlete Recruiting',
+    description:
+      'A clickable prototype of a recruiting platform connecting international student athletes with college coaches. It began as Rocket Portal, a Techstars Startup Weekend concept in November 2025.',
+    longDescription:
+      'A React and TypeScript prototype with two sides: athletes onboard, build a profile and get an AI-style evaluation report; recruiters search, compare and shortlist athletes. The live demo runs on sample data.',
+    tags: ['React', 'TypeScript', 'Product', 'Startup'],
+    stack: ['React', 'TypeScript', 'Vite', 'Tailwind CSS', 'shadcn/ui'],
+    demoUrl: '/projects/athlink/',
+    repoUrl: 'https://github.com/justcallmepratt/Athllinkmvp-DEMO',
+    imageUrl: '',
+    featured: false,
+    sortOrder: 4,
+    createdAt: '2026-05-01',
+  },
+  {
     id: 5,
     title: 'Basketball Activity Recognition',
     description:
@@ -113,7 +129,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 4,
+    sortOrder: 5,
     createdAt: '2023-09-01',
   },
   {
@@ -129,7 +145,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 5,
+    sortOrder: 6,
     createdAt: '2023-10-01',
   },
   {
@@ -145,7 +161,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 6,
+    sortOrder: 7,
     createdAt: '2021-10-01',
   },
   {
@@ -161,7 +177,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 7,
+    sortOrder: 8,
     createdAt: '2019-05-01',
   },
   {
@@ -177,7 +193,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 8,
+    sortOrder: 9,
     createdAt: '2017-08-01',
   },
 ]
