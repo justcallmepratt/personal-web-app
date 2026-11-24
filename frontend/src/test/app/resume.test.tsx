@@ -24,7 +24,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-const HEADINGS = ['Experience', 'Education', 'Projects', 'Skills', 'Certifications', 'Leadership']
+const HEADINGS = ['Experience', 'Education', 'Projects', 'Skills', 'Certifications']
 
 const apiDown = () => {
   vi.stubEnv('BACKEND_URL', 'http://backend.test')

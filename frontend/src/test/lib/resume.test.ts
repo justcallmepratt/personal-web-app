@@ -52,9 +52,9 @@ describe('resume from the repo content', () => {
     expect(data.tagline).toBe(profile.tagline)
     expect(data.location).toBe('Tampa, FL')
     expect(data.sections.map((s) => s.id)).toEqual([
-      'experience', 'education', 'projects', 'skills', 'certifications', 'leadership',
+      'experience', 'education', 'projects', 'skills', 'certifications',
     ])
-    expect(data.sections.map((s) => s.heading)).toEqual(Object.values(RESUME_HEADINGS))
+    expect(data.sections.map((s) => s.heading)).toEqual(data.sections.map((s) => RESUME_HEADINGS[s.id]))
   })
 
   it('links only what the profile publishes', () => {
@@ -82,11 +82,9 @@ describe('resume from the repo content', () => {
     ])
   })
 
-  it('dates leadership from the content and never marks it ongoing by itself', () => {
-    expect(leadership.every((l) => l.current === undefined)).toBe(true)
-    expect(section(data, 'leadership')?.entries.map((e) => [e.title, e.subtitle, e.date])).toEqual([
-      ['Mentor for new post-college associates', 'Raymond James', undefined],
-    ])
+  it('leaves the Leadership section out while the content has no entry', () => {
+    expect(leadership).toEqual([])
+    expect(section(data, 'leadership')).toBeUndefined()
   })
 
   it('formats experience dates like the timeline does', () => {
@@ -300,7 +298,7 @@ describe('getResumeData when the API misbehaves', () => {
     const data = await getResumeData()
     expect(data.name).toBe(siteName)
     // The API-backed sections are empty and gone; the repo-only ones remain.
-    expect(data.sections.map((s) => s.id)).toEqual(['education', 'certifications', 'leadership'])
+    expect(data.sections.map((s) => s.id)).toEqual(['education', 'certifications'])
   })
 
   it('loses only the section whose getter throws', async () => {
@@ -309,7 +307,7 @@ describe('getResumeData when the API misbehaves', () => {
     const data = await getResumeData()
     expect(data.name).toBe('Pratham Sachan')
     expect(data.sections.map((s) => s.id)).toEqual([
-      'education', 'projects', 'skills', 'certifications', 'leadership',
+      'education', 'projects', 'skills', 'certifications',
     ])
   })
 })
