@@ -20,6 +20,11 @@ spring:
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
+      # Jakarta Mail waits forever by default. The send runs inside the contact
+      # request's transaction, so a stalled SMTP server would hold a DB connection.
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   lifecycle:
     timeout-per-shutdown-phase: 30s
 

@@ -69,6 +69,18 @@ class ContactControllerTest {
     }
 
     @Test
+    void postContact_withEmailLongerThanTheColumn_returns400() throws Exception {
+        // The messages.email column is VARCHAR(255); @Email alone accepts longer addresses.
+        // 262 characters made of valid labels (each under 64), so only the
+        // length rule rejects it.
+        String email = "a@" + ("b".repeat(60) + ".").repeat(4) + "c".repeat(12) + ".com";
+        String body = objectMapper.writeValueAsString(new ContactRequest("Alice", email, "Hi", "Payload here"));
+        mockMvc.perform(post("/api/contact")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void postContact_rateLimited_returns429() throws Exception {
         when(rateLimiter.isAllowed(anyString())).thenReturn(false);
         String body = objectMapper.writeValueAsString(
