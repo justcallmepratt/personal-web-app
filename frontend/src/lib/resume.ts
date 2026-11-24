@@ -190,7 +190,7 @@ function projectEntries(items: unknown): ResumeEntry[] {
   })
 }
 
-const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'Other']
+const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'AI/ML', 'Other']
 
 /**
  * Soft-skill areas the site lists but the resume leaves out: screeners weigh
