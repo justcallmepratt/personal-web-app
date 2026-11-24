@@ -195,7 +195,21 @@ only you can confirm; nothing in them is published until you do.
       for applications. It would never be built or deployed. Only worth doing
       if you want it.
 
-### Status (24 Nov 2026)
+### Status (24 Nov 2026, final)
+
+**The resume is one page.** The test now requires exactly one. Getting there
+took these changes:
+
+- new verb-first bullets for the Raymond James role, also applied to Supabase;
+- two projects;
+- no Publications section;
+- no separate Leadership entry, since mentoring is now a bullet;
+- no soft-skills row and no Udemy courses;
+- one-line sections reserve only one row under their heading.
+
+In the OpenResume parser, every title, company, date and skill row now comes
+out correctly. The notes below record the steps along the way.
+
 
 - **Done: 1, 4 and 7.**
   - Stream-order extraction now reads `Backend Software Developer Jul 2024 – Present`.

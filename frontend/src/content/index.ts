@@ -323,14 +323,8 @@ export const education: Education[] = [
 
 // Shown on the resume only. Dates are ISO ('2023-01'); a role with a start
 // date, no end date and no `current: true` shows its start month only.
-export const leadership: Leadership[] = [
-  {
-    id: 1,
-    role: 'Mentor for new post-college associates',
-    organization: 'Raymond James',
-    sortOrder: 1,
-  },
-]
+// Mentoring at Raymond James is a bullet of that role, so it is not repeated here.
+export const leadership: Leadership[] = []
 
 // Research papers, shown on /research. Repo content only. Summaries come from
 // the papers themselves. The PDFs are served from frontend/public/research.
