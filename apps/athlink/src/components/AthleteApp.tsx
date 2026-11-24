@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Home, Upload, MessageCircle, User, ArrowLeft, Plus, Play, Edit, School, Eye, TrendingUp, Award, DollarSign, Calendar, BookOpen, Activity, Trophy, Target, Dumbbell, GraduationCap, FileText, Clock, MapPin, Video, CheckCircle2, Star, BarChart3, Zap, TrendingDown, Globe, Linkedin, Share2, ExternalLink, Download, Bell, Settings, Search, Filter, Briefcase, Users, LineChart, PieChart, ArrowUpRight, Check, AlertCircle, FileCheck, Package, Lightbulb, PlayCircle, Info, HelpCircle, Sparkles } from 'lucide-react';
+import { Home, Upload, MessageCircle, User, ArrowLeft, Plus, Play, Edit, Eye, Award, DollarSign, Calendar, Trophy, Dumbbell, GraduationCap, Clock, MapPin, CheckCircle2, Star, Linkedin, Share2, ExternalLink, Check, Lightbulb, PlayCircle, Info, HelpCircle, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
@@ -435,7 +434,6 @@ export function AthleteApp({ profile, onBack }: AthleteAppProps) {
   const [videoCaption, setVideoCaption] = useState('');
   const [preferredLanguage, setPreferredLanguage] = useState('English');
   const [showAdPopup, setShowAdPopup] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Scroll to top when changing tabs
   useEffect(() => {

@@ -8,7 +8,6 @@ import {
   AlertCircle, Check, ArrowUpRight, Info, Lightbulb, BarChart3, CheckCircle2,
   Star, MessageCircle, Calendar, Download, LineChart, Video, PlayCircle, Play
 } from 'lucide-react';
-import athlinkLogo from 'figma:asset/2dea44558ee75ccc34db0ab7f1dff6684b053f54.png';
 
 interface Athlete {
   id: number;

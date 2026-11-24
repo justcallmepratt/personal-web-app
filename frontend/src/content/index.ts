@@ -109,7 +109,8 @@ export const projects: Project[] = [
       'A React and TypeScript prototype with two sides: athletes onboard, build a profile and get an AI-style evaluation report; recruiters search, compare and shortlist athletes. The live demo runs on sample data.',
     tags: ['React', 'TypeScript', 'Product', 'Startup'],
     stack: ['React', 'TypeScript', 'Vite', 'Tailwind CSS', 'shadcn/ui'],
-    demoUrl: '/projects/athlink/',
+    // Set to '/projects/athlink/' once the athlink app is in the microfrontends group.
+    demoUrl: '',
     repoUrl: 'https://github.com/justcallmepratt/Athllinkmvp-DEMO',
     imageUrl: '',
     featured: false,

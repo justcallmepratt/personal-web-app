@@ -5,7 +5,7 @@ import { AthletePayment } from './components/AthletePayment';
 import { RecruiterApp } from './components/RecruiterApp';
 import { RecruiterSignup } from './components/RecruiterSignup';
 import { Button } from './components/ui/button';
-import { Rocket, Users, TrendingUp, Globe, Check, Star, Video, Shield, MessageSquare, Award, Target, Clock, DollarSign, BookOpen, BarChart, Zap, Heart, MapPin, ChevronDown, Eye, Scan, Sparkles, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
+import { Rocket, Users, TrendingUp, Globe, Check, Star, Video, Shield, MessageSquare, Award, Target, Clock, DollarSign, BookOpen, BarChart, Zap, Heart, MapPin, Eye, Scan, Sparkles, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
 import { Card } from './components/ui/card';
 import { Badge } from './components/ui/badge';
 import { School } from 'lucide-react';

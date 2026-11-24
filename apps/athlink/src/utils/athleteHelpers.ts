@@ -96,7 +96,7 @@ export function formatGPA(gpa: string | number): string {
 /**
  * Check if athlete is eligible for NCAA
  */
-export function isNCAA Eligible(gpa: string | number, testScore?: number): boolean {
+export function isNCAAEligible(gpa: string | number, testScore?: number): boolean {
   const numericGPA = typeof gpa === 'string' ? parseFloat(gpa) : gpa;
   const MIN_GPA = 2.3;
   const MIN_TEST_SCORE = 1000; // SAT equivalent

@@ -6,9 +6,6 @@
     },
     "admin": {
       "routing": [{ "paths": ["/admin", "/admin/:path*"] }]
-    },
-    "athlink": {
-      "routing": [{ "paths": ["/projects/athlink", "/projects/athlink/:path*"] }]
     }
   }
 }

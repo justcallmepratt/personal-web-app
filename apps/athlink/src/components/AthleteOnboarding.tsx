@@ -6,8 +6,6 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Upload, Camera } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Textarea } from './ui/textarea';
-import athlinkLogo from 'figma:asset/2dea44558ee75ccc34db0ab7f1dff6684b053f54.png';
 
 interface AthleteOnboardingProps {
   onComplete: (profile: any) => void;

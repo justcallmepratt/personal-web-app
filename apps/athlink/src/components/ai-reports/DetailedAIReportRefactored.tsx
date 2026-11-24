@@ -13,7 +13,6 @@ import {
   AlertCircle, Lightbulb, BarChart3, CheckCircle2, Star, MessageCircle, 
   Calendar, Download, LineChart, Video, PlayCircle, Play
 } from 'lucide-react';
-import athlinkLogo from 'figma:asset/2dea44558ee75ccc34db0ab7f1dff6684b053f54.png';
 
 import { AthleteListItem } from './AthleteListItem';
 import { MetricCard } from './MetricCard';
@@ -21,7 +20,6 @@ import { SectionHeader } from './SectionHeader';
 import { SkillProgressBar } from './SkillProgressBar';
 import { PhysicalAttributeCard } from './PhysicalAttributeCard';
 import { StrengthItem, WeaknessItem } from './StrengthWeaknessItem';
-import { ProgressBar } from './ProgressBar';
 
 import type { Athlete } from '../../types/athlete';
 import {
@@ -30,7 +28,6 @@ import {
   TECHNICAL_SKILLS_LEFT,
   TECHNICAL_SKILLS_RIGHT,
   MENTAL_ATTRIBUTES,
-  SEASON_STATS_PRIMARY,
   SEASON_STATS_SECONDARY,
   TEAM_FIT_ITEMS,
   ROSTER_COMPARISONS,

@@ -7,7 +7,6 @@ import { ArrowLeft, Check, CreditCard, Building2, Users, Zap, Brain, Target, Tre
 import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import { Globe } from 'lucide-react';
-import athlinkLogo from 'figma:asset/2dea44558ee75ccc34db0ab7f1dff6684b053f54.png';
 
 interface RecruiterSignupProps {
   onComplete: () => void;

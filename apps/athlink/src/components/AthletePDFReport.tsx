@@ -2,7 +2,6 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { ArrowLeft, FileText, Heart, Send } from 'lucide-react';
-import athlinkLogo from 'figma:asset/2dea44558ee75ccc34db0ab7f1dff6684b053f54.png';
 
 interface AthletePDFReportProps {
   athlete: any;
