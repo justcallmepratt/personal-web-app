@@ -127,6 +127,54 @@ export const projects: Project[] = [
     createdAt: '2026-05-01',
   },
   {
+    id: 10,
+    title: 'Deal Watch',
+    description:
+      'Scheduled deal alerts that stay quiet unless a price is worth acting on: a wishlist match, or a saving of $100 or 30%. Runs as scheduled AI agents, with the decision rules pulled out into a tested Python engine.',
+    longDescription:
+      'Each run reads one deals sheet, researches new deals, rechecks the wishlist and drops stale prices. A row needs a price and the link it was read from, or it is rejected; nothing is estimated. The rules engine is standard-library Python with unit tests, and a setup prompt lets Claude Code build the profile, sheet and scheduled runs for anyone.',
+    tags: ['Python', 'AI Agents', 'Automation'],
+    stack: ['Python', 'unittest', 'Claude'],
+    demoUrl: '',
+    repoUrl: 'https://github.com/justcallmepratt/deal-watch',
+    imageUrl: '',
+    featured: false,
+    sortOrder: 5,
+    createdAt: '2026-11-01',
+  },
+  {
+    id: 11,
+    title: 'Gmail Label Sorter',
+    description:
+      'Keeps a Gmail inbox empty by sending every email to a category label. It labels and archives, and never deletes. The approach sorted a real inbox of about 52,000 threads.',
+    longDescription:
+      'A Google Apps Script with a list of rules, each a label and a normal Gmail search, plus a dry run, an hourly trigger and an undo per label. The backlog was sorted with Gmail filters for volume and AI agents for the judgment calls. A setup prompt has Claude Code write the rules for your own senders and walk through the dry run.',
+    tags: ['Google Apps Script', 'Automation', 'AI Agents'],
+    stack: ['Google Apps Script', 'Gmail', 'Claude'],
+    demoUrl: '',
+    repoUrl: 'https://github.com/justcallmepratt/gmail-label-sorter',
+    imageUrl: '',
+    featured: false,
+    sortOrder: 6,
+    createdAt: '2026-10-01',
+  },
+  {
+    id: 12,
+    title: 'Stream Deck Neo Kit',
+    description:
+      'A three-page layout and shell scripts that turn an Elgato Stream Deck Neo into a macro pad for coding on a Mac: open the project, run the backend, frontend and tests, and pull, push or open a pull request.',
+    longDescription:
+      'Eight keys per page, split by context (every day, coding, plans), with the coding page as its own profile tied to IntelliJ. Every script reads one config file. A setup prompt has Claude Code fill in the config, install the scripts and test the safe keys. Designed and written, not yet set up on the device.',
+    tags: ['Shell', 'macOS', 'Productivity'],
+    stack: ['Bash', 'Stream Deck', 'Claude Code'],
+    demoUrl: '',
+    repoUrl: 'https://github.com/justcallmepratt/stream-deck-neo-kit',
+    imageUrl: '',
+    featured: false,
+    sortOrder: 7,
+    createdAt: '2026-11-24',
+  },
+  {
     id: 5,
     title: 'Basketball Activity Recognition',
     description:
@@ -139,7 +187,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 5,
+    sortOrder: 8,
     createdAt: '2023-09-01',
   },
   {
@@ -155,7 +203,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 6,
+    sortOrder: 9,
     createdAt: '2023-10-01',
   },
   {
@@ -171,7 +219,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 7,
+    sortOrder: 10,
     createdAt: '2021-10-01',
   },
   {
@@ -187,7 +235,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 8,
+    sortOrder: 11,
     createdAt: '2019-05-01',
   },
   {
@@ -203,7 +251,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 9,
+    sortOrder: 12,
     createdAt: '2017-08-01',
   },
 ]
@@ -218,11 +266,6 @@ export const plannedProjects: PlannedProject[] = [
     goal: 'A set of Stream Deck plugins and profiles for common setups: office, gaming, streaming and development.',
   },
   {
-    id: 3,
-    name: 'Google Email Sorter',
-    goal: 'Sorting Gmail with AI-suggested labels, with a dry-run review step and no deletion.',
-  },
-  {
     id: 4,
     name: 'Google Drive Sorter',
     goal: 'Organising Google Drive into a sensible folder structure, with preview and rollback.',
@@ -231,11 +274,6 @@ export const plannedProjects: PlannedProject[] = [
     id: 5,
     name: 'Google Bookmark Sorter',
     goal: 'Categorising and de-duplicating browser bookmarks and finding dead links.',
-  },
-  {
-    id: 6,
-    name: 'Deal Watch',
-    goal: 'Scheduled agents that watch sale-season prices against a wish list and only alert on deals worth acting on.',
   },
   {
     id: 7,
