@@ -121,6 +121,17 @@ class PostgresPersistenceTest {
     }
 
     @Test
+    void everyTableHasRowLevelSecurityOn() {
+        // Supabase exposes public tables to its anon role; RLS with no permissive policy
+        // keeps them closed. The API connects as the owner, so it is not affected.
+        List<String> withoutRls = jdbc.queryForList(
+                "select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace "
+                        + "where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity order by 1",
+                String.class);
+        assertThat(withoutRls).isEmpty();
+    }
+
+    @Test
     void listAndMapColumnsAreJsonb() {
         List<String> jsonbColumns = jdbc.queryForList(
                 "select table_name || '.' || column_name from information_schema.columns "
