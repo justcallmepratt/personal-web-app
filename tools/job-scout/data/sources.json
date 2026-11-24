@@ -1,0 +1,32 @@
+{
+  "_comment": "Careers-site search APIs the scout reads. Every source names the allow-list entry (backend/src/main/resources/market/allow-list.json, field `name`) it belongs to; a source whose entry is missing or not included is skipped. `company` is the name written to JobSync. Workday tenants were checked against their public CXS search API on 2026-11-24.",
+  "searchTerms": ["java developer", "software engineer java", "kafka", "spring boot", "forward deployed engineer", "backend engineer", "software developer"],
+  "sources": [
+    { "type": "oracle-jpmc", "company": "JPMorgan Chase", "allowListName": "JPMorgan Chase" },
+    { "type": "bofa", "company": "Bank of America", "allowListName": "Bank of America" },
+    { "type": "workday", "company": "Raymond James", "allowListName": "Raymond James Financial", "host": "raymondjames.wd1.myworkdayjobs.com", "tenant": "raymondjames", "site": "RaymondJamesCareers" },
+    { "type": "workday", "company": "Wells Fargo", "allowListName": "Wells Fargo", "host": "wf.wd1.myworkdayjobs.com", "tenant": "wf", "site": "WellsFargoJobs" },
+    { "type": "workday", "company": "Morgan Stanley", "allowListName": "Morgan Stanley", "host": "ms.wd5.myworkdayjobs.com", "tenant": "ms", "site": "External" },
+    { "type": "workday", "company": "Citi", "allowListName": "Citigroup", "host": "citi.wd5.myworkdayjobs.com", "tenant": "citi", "site": "2" },
+    { "type": "workday", "company": "Capital One", "allowListName": "Capital One Financial", "host": "capitalone.wd12.myworkdayjobs.com", "tenant": "capitalone", "site": "Capital_One" },
+    { "type": "workday", "company": "State Street Corporation", "allowListName": "State Street", "host": "statestreet.wd1.myworkdayjobs.com", "tenant": "statestreet", "site": "Global" },
+    { "type": "workday", "company": "Northern Trust", "allowListName": "Northern Trust", "host": "ntrs.wd1.myworkdayjobs.com", "tenant": "ntrs", "site": "northerntrust" },
+    { "type": "workday", "company": "PNC", "allowListName": "PNC Financial Services Group", "host": "pnc.wd5.myworkdayjobs.com", "tenant": "pnc", "site": "External" },
+    { "type": "workday", "company": "U.S. Bank", "allowListName": "U.S. Bancorp", "host": "usbank.wd1.myworkdayjobs.com", "tenant": "usbank", "site": "US_Bank_Careers" },
+    { "type": "workday", "company": "Fifth Third", "allowListName": "Fifth Third Bancorp", "host": "fifththird.wd5.myworkdayjobs.com", "tenant": "fifththird", "site": "53careers" },
+    { "type": "workday", "company": "LPL Financial", "allowListName": "LPL Financial Holdings", "host": "lplfinancial.wd1.myworkdayjobs.com", "tenant": "lplfinancial", "site": "External" },
+    { "type": "workday", "company": "Truist", "allowListName": "Truist Financial", "host": "truist.wd1.myworkdayjobs.com", "tenant": "truist", "site": "Careers" },
+    { "type": "workday", "company": "Ameriprise Financial", "allowListName": "Ameriprise Financial", "host": "ameriprise.wd5.myworkdayjobs.com", "tenant": "ameriprise", "site": "Ameriprise" },
+    { "type": "workday", "company": "BlackRock", "allowListName": "BlackRock", "host": "blackrock.wd1.myworkdayjobs.com", "tenant": "blackrock", "site": "BlackRock_Professional" },
+    { "type": "workday", "company": "Nasdaq", "allowListName": "Nasdaq", "host": "nasdaq.wd1.myworkdayjobs.com", "tenant": "nasdaq", "site": "Global_External_Site" },
+    { "type": "workday", "company": "Prudential Financial", "allowListName": "Prudential Financial", "host": "pru.wd5.myworkdayjobs.com", "tenant": "pru", "site": "Careers" },
+    { "type": "workday", "company": "Nationwide Financial", "allowListName": "Nationwide", "host": "nationwide.wd1.myworkdayjobs.com", "tenant": "nationwide", "site": "Nationwide_Career" },
+    { "type": "workday", "company": "TIAA", "allowListName": "TIAA", "host": "tiaa.wd1.myworkdayjobs.com", "tenant": "tiaa", "site": "Search" },
+    { "type": "workday", "company": "MassMutual", "allowListName": "Massachusetts Mutual Life Insurance", "host": "massmutual.wd1.myworkdayjobs.com", "tenant": "massmutual", "site": "MMCareers" },
+    { "type": "workday", "company": "Huntington Bank", "allowListName": "Huntington Bancshares", "host": "huntington.wd12.myworkdayjobs.com", "tenant": "huntington", "site": "HNBcareers" },
+    { "type": "workday", "company": "Regions Bank", "allowListName": "Regions Financial", "host": "regions.wd5.myworkdayjobs.com", "tenant": "regions", "site": "Regions_Careers" },
+    { "type": "workday", "company": "KeyBank", "allowListName": "KeyCorp", "host": "keybank.wd5.myworkdayjobs.com", "tenant": "keybank", "site": "External_Career_Site" },
+    { "type": "workday", "company": "M&T Bank", "allowListName": "M&T Bank", "host": "mtb.wd5.myworkdayjobs.com", "tenant": "mtb", "site": "MTB" },
+    { "type": "workday", "company": "FIS", "allowListName": "Fidelity National Information (FIS)", "host": "fis.wd5.myworkdayjobs.com", "tenant": "fis", "site": "SearchJobs" }
+  ]
+}
