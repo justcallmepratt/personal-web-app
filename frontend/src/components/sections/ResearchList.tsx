@@ -2,7 +2,9 @@ import HUDChrome from '@/components/layout/HUDChrome'
 import { formatIsoDate } from '@/lib/dates'
 import type { Research } from '@/lib/types'
 
-const isHttpUrl = (url: string | undefined): url is string => !!url && /^https?:\/\//i.test(url)
+// An http(s) link, or a file on this site such as /research/paper.pdf (not //host).
+const isSafeUrl = (url: string | undefined): url is string =>
+  !!url && (/^https?:\/\//i.test(url) || /^\/(?!\/)/.test(url))
 
 interface Props {
   items: Research[]
@@ -28,7 +30,7 @@ export default function ResearchList({ items }: Props) {
                   <p className="text-xs text-cp-text/80">With {r.coAuthors.join(', ')}</p>
                 )}
                 <p className="text-sm text-cp-text/80">{r.summary}</p>
-                {isHttpUrl(r.url) && (
+                {isSafeUrl(r.url) && (
                   <a
                     href={r.url}
                     target="_blank"

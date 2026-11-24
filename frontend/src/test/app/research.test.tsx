@@ -34,6 +34,16 @@ describe('ResearchList', () => {
       .toHaveAttribute('href', 'https://example.test/paper.pdf')
   })
 
+  it('links to a PDF hosted on this site', () => {
+    render(<ResearchList items={[{ id: 4, title: 'Local', summary: 'S', url: '/research/local.pdf', sortOrder: 1 }]} />)
+    expect(screen.getByRole('link', { name: 'READ PAPER: Local (opens in a new tab)' })).toHaveAttribute('href', '/research/local.pdf')
+  })
+
+  it('does not link a protocol-relative URL', () => {
+    render(<ResearchList items={[{ id: 5, title: 'P', summary: 'S', url: '//evil.test/x.pdf', sortOrder: 1 }]} />)
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
   it('does not render a link for a non-http URL', () => {
     render(<ResearchList items={[{ id: 3, title: 'X', summary: 'Y', url: 'javascript:alert(1)', sortOrder: 1 }]} />)
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
@@ -45,6 +55,15 @@ describe('/research', () => {
     render(await ResearchPage())
     const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
     expect(titles).toEqual([...research].sort((a, b) => a.sortOrder - b.sortOrder).map((r) => r.title))
+  })
+
+  it('links every paper to a PDF that exists in public/research', async () => {
+    const { existsSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    for (const r of research) {
+      expect(r.url).toMatch(/^\/research\/[\w-]+\.pdf$/)
+      expect(existsSync(join(process.cwd(), 'public', r.url!))).toBe(true)
+    }
   })
 
   it('shows a fallback when nothing loads', async () => {
