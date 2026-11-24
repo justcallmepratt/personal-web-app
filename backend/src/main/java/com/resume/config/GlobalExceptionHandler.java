@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
 
     /** A malformed JSON body or a path variable of the wrong type is the caller's mistake. */
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
-    public ResponseEntity<ApiResponse> handleBadInput(Exception ex) {
+    public ResponseEntity<ApiResponse> handleBadInput() {
         return ResponseEntity.badRequest().body(new ApiResponse(false, "Invalid request"));
     }
 
