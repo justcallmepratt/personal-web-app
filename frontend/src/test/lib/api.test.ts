@@ -21,6 +21,15 @@ describe('api — remote source (BACKEND_URL set)', () => {
     vi.unstubAllEnvs()
   })
 
+  it('drops trailing slashes from BACKEND_URL', async () => {
+    vi.stubEnv('BACKEND_URL', 'http://backend.test//')
+    const fetchMock = mockFetch({ id: 1, name: 'Remote Name' })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.getProfile()
+    expect(String(vi.mocked(fetchMock).mock.calls[0][0])).toBe('http://backend.test/api/profile')
+  })
+
   it('getProfile resolves to a Profile', async () => {
     const profile: Partial<Profile> = { id: 1, name: 'Remote Name', tagline: 'From the API' }
     vi.stubGlobal('fetch', mockFetch(profile))

@@ -2,8 +2,14 @@ import KafkaDemo from '@/components/sections/KafkaDemo'
 import GlitchText from '@/components/ui/GlitchText'
 import NeonButton from '@/components/ui/NeonButton'
 import { kafkaDemoUrl } from '@/lib/kafka'
+import { pageMetadata } from '@/lib/site'
 
-export const metadata = { title: 'Kafka Live Demo' }
+// Its own canonical URL and social text; otherwise it inherits /projects' from the layout.
+export const metadata = pageMetadata({
+  title: 'Kafka Live Demo',
+  description: 'Send a record through a real Apache Kafka broker and watch a consumer read it back and store it.',
+  path: '/projects/kafka',
+})
 
 const REPO_URL = 'https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo'
 

@@ -93,7 +93,8 @@ export default function KafkaDemo({ configured }: { configured: boolean }) {
     if (stored) {
       sid.current = stored
       void fetchRecords().then((r) => {
-        if (r) expected.current = r.length
+        // Max, not set: a record sent before this resolved is already counted.
+        if (r) expected.current = Math.max(expected.current, r.length)
       })
     }
     return () => {
