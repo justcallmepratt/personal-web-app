@@ -127,7 +127,7 @@ public class MarketResearchJob {
         try {
             service.run(currentWeek(), force);
         } catch (Throwable e) {
-            log.error("Market research run FAILED unexpectedly ({})", e.getClass().getSimpleName());
+            log.error("Market research run FAILED unexpectedly", e);
         } finally {
             running.set(false);
         }

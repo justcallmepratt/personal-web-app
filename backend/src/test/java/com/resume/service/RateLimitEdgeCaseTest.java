@@ -19,6 +19,17 @@ class RateLimitEdgeCaseTest {
         }
     }
 
+    @Test void a_released_slot_can_be_used_again() {
+        RateLimitService svc = new RateLimitService(2, 3600);
+        assertTrue(svc.isAllowed("10.0.0.9"));
+        assertTrue(svc.isAllowed("10.0.0.9"));
+        svc.release("10.0.0.9");
+        assertTrue(svc.isAllowed("10.0.0.9"), "the released slot is free again");
+        assertFalse(svc.isAllowed("10.0.0.9"));
+        svc.release("unknown");   // no entry: nothing happens
+        svc.release(null);
+    }
+
     @Test void blocks_exactly_one_over_limit() {
         RateLimitService svc = new RateLimitService(5, 3600);
         for (int i = 0; i < 5; i++) svc.isAllowed("10.0.0.2");

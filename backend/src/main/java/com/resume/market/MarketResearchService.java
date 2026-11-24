@@ -96,10 +96,14 @@ public class MarketResearchService {
             if (done.isPresent() && !force) {
                 int created = suggest(done.get());
                 log.info("Market research: the week of {} is already summarised; no listings were fetched", weekStart);
-                return new Outcome(Status.ALREADY_DONE, weekStart, done.get().run().getListingsExamined(), created,
-                        "The week of " + weekStart + " is already summarised; no listings were fetched.");
+                return new Outcome(Status.ALREADY_DONE, weekStart, done.get().run().getListingsExamined(), Math.max(created, 0),
+                        "The week of " + weekStart + " is already summarised; no listings were fetched"
+                                + (created < 0 ? ", and no suggestions could be created; see the API log." : "."));
             }
         } catch (RuntimeException e) {
+            // Safe to log in full: AdzunaClient already reduces HTTP errors (whose text holds
+            // the credentialed request URL) to their type, so none reach this point.
+            log.error("Market research: the database could not be read for the week of {}", weekStart, e);
             return failed(weekStart, LocalDateTime.now(), 0, "The database could not be read ("
                     + e.getClass().getSimpleName() + ")");
         }
@@ -170,24 +174,29 @@ public class MarketResearchService {
         } catch (ListingsException e) {
             return failed(weekStart, startedAt, apiCalls, e.getMessage());
         } catch (RuntimeException e) {
+            log.error("Market research: the run for the week of {} failed unexpectedly", weekStart, e);
             return failed(weekStart, startedAt, apiCalls, "Unexpected error (" + e.getClass().getSimpleName() + ")");
         }
 
         int created = suggest(summary);
-        return new Outcome(Status.COMPLETED, weekStart, summary.run().getListingsExamined(), created,
-                "The week of " + weekStart + " was summarised.");
+        return new Outcome(Status.COMPLETED, weekStart, summary.run().getListingsExamined(), Math.max(created, 0),
+                "The week of " + weekStart + " was summarised"
+                        + (created < 0 ? ", but no suggestions could be created; see the API log." : "."));
     }
 
-    /** The suggestion step never fails a run: the summary is already stored. */
+    /**
+     * The suggestion step never fails a run: the summary is already stored.
+     * @return how many suggestions were created, or -1 if the step failed
+     */
     private int suggest(MarketSummaryStore.Summary summary) {
         try {
             int created = suggester.suggest(summary);
             store.addSuggestionsCreated(summary.run().getId(), created);
             return created;
         } catch (RuntimeException e) {
-            log.error("Market research: suggestions could not be created for the week of {} ({})",
-                    summary.run().getWeekStart(), e.getClass().getSimpleName());
-            return 0;
+            log.error("Market research: suggestions could not be created for the week of {}",
+                    summary.run().getWeekStart(), e);
+            return -1;
         }
     }
 

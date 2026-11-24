@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -186,6 +187,19 @@ class MarketResearchServiceTest {
     }
 
     // ── idempotent per week ──────────────────────────────────────────────────
+
+    @Test
+    void aFailedSuggestionStepIsReportedRatherThanLookingLikeAQuietWeek() {
+        when(store.completed(WEEK)).thenReturn(Optional.of(summary(WEEK, 42)));
+        when(suggester.suggest(any())).thenThrow(new IllegalStateException("boom"));
+
+        Outcome outcome = service().run(WEEK, false);
+
+        assertThat(outcome.status()).isEqualTo(Status.ALREADY_DONE);
+        assertThat(outcome.suggestionsCreated()).isZero();
+        assertThat(outcome.message()).contains("no suggestions could be created");
+        verify(store, never()).addSuggestionsCreated(anyLong(), anyInt());
+    }
 
     @Test
     void aWeekAlreadySummarisedIsNotFetchedAgain_butSuggestionsAreStillDerived() {
