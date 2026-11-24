@@ -193,7 +193,13 @@ function projectEntries(items: unknown): ResumeEntry[] {
   })
 }
 
-const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'Business & Leadership', 'Other']
+const SKILL_ORDER = ['Backend', 'Frontend', 'DevOps', 'Other']
+
+/**
+ * Soft-skill areas the site lists but the resume leaves out: screeners weigh
+ * evidence in bullets over soft-skill keywords, and the row costs two lines.
+ */
+export const RESUME_HIDDEN_SKILL_AREAS = ['Business & Leadership']
 
 function skillEntries(profile: Profile | null): ResumeEntry[] {
   const groups = new Map<string, string[]>()
@@ -201,6 +207,7 @@ function skillEntries(profile: Profile | null): ResumeEntry[] {
     const name = clean(skill.name)
     if (!name) continue
     const category = clean(skill.category) || 'Other'
+    if (RESUME_HIDDEN_SKILL_AREAS.includes(category)) continue
     const names = groups.get(category) ?? []
     if (!names.includes(name)) names.push(name)
     groups.set(category, names)

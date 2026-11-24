@@ -208,8 +208,10 @@ only you can confirm; nothing in them is published until you do.
   spills over. Getting to one page needs trims to content, so the test still
   allows two pages until you decide:
   - turn the current role's tool paragraph into bullets (3);
-  - drop the "Business & Leadership" row from the resume (6);
   - drop the Udemy courses (9).
+- **Done: the soft-skills part of 6.** The "Business & Leadership" row is off
+  the resume (`RESUME_HIDDEN_SKILL_AREAS`) and stays on the site. The resume
+  is still two pages: Skills, Certifications and Leadership spill over.
 - **Still to do.** Layout-based extractors such as pdfminer still file a
   right-aligned date as its own text block. If that matters, the date can move
   onto the subtitle row (`Raymond James · Tampa, FL · Jul 2024 – Present`).
