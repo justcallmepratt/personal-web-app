@@ -1,6 +1,6 @@
 export interface Skill {
   name: string
-  category: 'Frontend' | 'Backend' | 'DevOps' | 'Business & Leadership' | 'Other'
+  category: 'Frontend' | 'Backend' | 'DevOps' | 'AI/ML' | 'Business & Leadership' | 'Other'
   /** 0–100 rating. Optional: the repo content lists skills without one. */
   level?: number
 }

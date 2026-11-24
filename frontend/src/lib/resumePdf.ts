@@ -12,7 +12,7 @@ const PAGE = { width: 612, height: 792, margin: 43 }
 const CONTENT_WIDTH = PAGE.width - PAGE.margin * 2
 const RIGHT = PAGE.width - PAGE.margin
 const SIZE = { name: 20, tagline: 11, heading: 10.5, title: 10.5, body: 10 }
-const LINE_HEIGHT = 1.32
+const LINE_HEIGHT = 1.28
 const SEPARATOR = '   |   '
 
 /**
@@ -205,7 +205,7 @@ class Layout {
     }
     for (const detail of item.details) this.labelled(`${detail.label}:`, detail.value, size, 4)
     for (const link of item.links) this.linkRow(link, size)
-    this.gap(5)
+    this.gap(4)
   }
 
   section(section: ResumeSection): void {

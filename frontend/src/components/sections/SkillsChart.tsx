@@ -5,7 +5,7 @@ import HUDChrome from '@/components/layout/HUDChrome'
 import SkillBar from '@/components/ui/SkillBar'
 import type { Skill } from '@/lib/types'
 
-const CATEGORIES: Skill['category'][] = ['Frontend', 'Backend', 'DevOps', 'Business & Leadership', 'Other']
+const CATEGORIES: Skill['category'][] = ['Frontend', 'Backend', 'DevOps', 'AI/ML', 'Business & Leadership', 'Other']
 type Filter = 'All' | Skill['category']
 
 export default function SkillsChart({ skills }: { skills: Skill[] }) {
