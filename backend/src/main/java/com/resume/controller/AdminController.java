@@ -70,10 +70,15 @@ public class AdminController {
     @GetMapping("/messages")
     public List<Message> messages() { return messages.findAllByOrderBySentAtDesc(); }
 
+    /**
+     * Sets a message's read flag to {@code read} (default true). Setting, not
+     * toggling, so a retried or double-sent request leaves the same state.
+     */
     @PatchMapping("/messages/{id}/read")
-    public ResponseEntity<Message> markRead(@PathVariable Long id) {
+    public ResponseEntity<Message> markRead(@PathVariable Long id,
+                                            @RequestParam(defaultValue = "true") boolean read) {
         return messages.findById(id).map(m -> {
-            m.setRead(!m.isRead());
+            m.setRead(read);
             return ResponseEntity.ok(messages.save(m));
         }).orElse(ResponseEntity.notFound().build());
     }
