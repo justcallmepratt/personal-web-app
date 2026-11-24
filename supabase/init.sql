@@ -61,6 +61,17 @@ CREATE TABLE IF NOT EXISTS messages (
     sent_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Supabase's Data API (PostgREST) exposes public tables to the anon and authenticated
+-- roles. Only the API reads these tables, and it connects as the owner, which row level
+-- security does not restrict. With RLS on and no permissive policy, those roles get
+-- nothing, including the visitors' names and addresses in messages. The live database
+-- already has this, plus an explicit deny-all policy; a database built from this file
+-- now matches it.
+ALTER TABLE profile    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages   ENABLE ROW LEVEL SECURITY;
+
 -- content_suggestions: proposed changes to profile, experience and project fields.
 -- Nothing here is public; a row only changes the tables above when the owner accepts it.
 -- current_value and proposed_value hold JSON text (a string, or an array of strings).
