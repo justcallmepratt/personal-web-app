@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cp-red: #C5003C;
+  /* Same tokens as the main site (frontend/src/app/globals.css). Contrast on
+     #000 / #111318, AA text needs 4.5:1: cp-red 5.78 / 5.11 (the deep red,
+     3.44 / 3.04, is for fills and borders only); cp-muted 5.54 / 4.90 (was
+     #4A4F6A at 2.62 / 2.32); cp-border-strong 3.74 / 3.31 for field outlines. */
+  --color-cp-red: #FF2E57;
+  --color-cp-red-deep: #C5003C;
   --color-cp-teal: #55EAD4;
   --color-cp-yellow: #F3E600;
   /* Pure black for OLED — pixels fully off, maximum contrast with neons */
   --color-cp-dark: #000000;
   --color-cp-panel: #0A0A10;
   --color-cp-border: #1E2235;
-  --color-cp-muted: #4A4F6A;
+  --color-cp-border-strong: #5F6688;
+  --color-cp-muted: #7A82A2;
+  --color-cp-focus: #FFFFFF;
   --color-cp-text: #C8CDD8;
 
   --font-ui: var(--font-ui), Rajdhani, sans-serif;
@@ -133,6 +140,8 @@ body {
 .glitch-text::before,
 .glitch-text::after {
   content: attr(data-text);
+  /* Empty alt text: assistive tech must not read the heading three times. */
+  content: attr(data-text) / "";
   position: absolute;
   top: 0;
   left: 0;
@@ -157,4 +166,39 @@ body {
   margin-left: 4px;
   animation: blink 1s steps(2) infinite;
   color: #00D4FF;
+}
+/* ── Keyboard focus ── in the base layer so a utility can still opt out. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-cp-focus);
+    outline-offset: 3px;
+  }
+
+  /* clip-path cuts off anything drawn outside the box, so the ring goes inside. */
+  .hud-clip:focus-visible {
+    outline-offset: -5px;
+  }
+}
+
+/* ── Reduced motion ── same rules as the main site. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .glitch-text::before,
+  .glitch-text::after {
+    content: none;
+    animation: none !important;
+  }
+
+  .terminal-cursor::after {
+    animation: none !important;
+    opacity: 1;
+  }
 }
