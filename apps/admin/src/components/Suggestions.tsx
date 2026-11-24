@@ -381,22 +381,45 @@ function NewSuggestionForm({
   const [fieldName, setFieldName] = useState(target.fields[0]?.name ?? '')
   const field = target.fields.find((f) => f.name === fieldName) ?? target.fields[0]
   // Starts from the current value, so a suggestion is an edit of what is there.
-  const [text, setText] = useState(valueToText(field?.value ?? null))
+  const currentText = valueToText(field?.value ?? null)
+  const [text, setText] = useState(currentText)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  // The value the text started from. A refresh or an accepted suggestion can change the
+  // current value under the form: untouched text follows it, while edited text is kept
+  // but flagged, because accepting a proposal built on the old value would undo the new one.
+  const [baseText, setBaseText] = useState(currentText)
+  const [stale, setStale] = useState(false)
+  if (currentText !== baseText) {
+    if (text === baseText) setText(currentText)
+    else setStale(true)
+    setBaseText(currentText)
+  }
+
+  function startFromCurrent() {
+    setText(currentText)
+    setStale(false)
+    setError(null)
+  }
 
   function chooseTarget(nextKey: string) {
     const next = targets.find((t) => targetKey(t) === nextKey) ?? targets[0]
     setKey(targetKey(next))
     setFieldName(next.fields[0]?.name ?? '')
-    setText(valueToText(next.fields[0]?.value ?? null))
+    const nextText = valueToText(next.fields[0]?.value ?? null)
+    setText(nextText)
+    setBaseText(nextText)
+    setStale(false)
     setError(null)
   }
 
   function chooseField(name: string) {
     setFieldName(name)
-    setText(valueToText(target.fields.find((f) => f.name === name)?.value ?? null))
+    const nextText = valueToText(target.fields.find((f) => f.name === name)?.value ?? null)
+    setText(nextText)
+    setBaseText(nextText)
+    setStale(false)
     setError(null)
   }
 
@@ -405,6 +428,7 @@ function NewSuggestionForm({
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     if (pending || !field) return
+    if (stale) return setError('The current value changed while you were editing. Start again from it first.')
 
     const proposedValue = field.kind === 'list' ? linesToList(text) : text
     if (sameValue(proposedValue, field.kind === 'list' ? (field.value ?? []) : (field.value ?? ''))) {
@@ -503,6 +527,18 @@ function NewSuggestionForm({
           placeholder="Why this change is right"
         />
       </label>
+
+      {stale && (
+        <div className="space-y-2">
+          <Notice tone="error">
+            The current value changed while you were editing (it was refreshed or a suggestion was accepted). Your
+            text is based on the old value.
+          </Notice>
+          <NeonButton type="button" accent="teal" onClick={startFromCurrent}>
+            Start again from the current value
+          </NeonButton>
+        </div>
+      )}
 
       {error && <Notice tone="error">{error}</Notice>}
 
