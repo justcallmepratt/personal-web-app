@@ -47,9 +47,9 @@ describe('PlannedProjects', () => {
 })
 
 describe('planned projects in the content and API', () => {
-  it('are the six planned items, each with only a name and a one-line goal', () => {
-    expect(plannedProjects).toHaveLength(6)
-    expect(plannedProjects.map((p) => p.name)).toEqual(expect.arrayContaining(['Deal Watch', 'TV Cleanup']))
+  it('are the four planned items, each with only a name and a one-line goal', () => {
+    expect(plannedProjects).toHaveLength(4)
+    expect(plannedProjects.map((p) => p.name)).toEqual(expect.arrayContaining(['Google Drive Sorter', 'TV Cleanup']))
     expect(plannedProjects.map((p) => p.name)).not.toContain('Athlink Upscale')
     expect(new Set(plannedProjects.map((p) => p.id)).size).toBe(plannedProjects.length)
     for (const p of plannedProjects) {
