@@ -241,10 +241,11 @@ VM and the volume, so download a backup first.
   (see part 3), so a fully hands-off weekly run is not possible without opening that
   database to the host. A direct, read-only database reader is the natural follow-up if
   the weekly download becomes a chore.
-- **It has not been run on a real JobSync backup.** JobSync 1.2.1 runs on this Mac since
-  2026-11-24, but no account or backup exists yet. The backup reader was written from
-  JobSync's source (its backup schema, version 1) and tested on synthetic backups in that
-  layout. Check the first real dry run by eye.
+- **It has only read an empty real backup.** On 2026-11-24 a dry run read a backup from
+  the local JobSync 1.2.1 with no jobs in it. The tool opened it, accepted the format and
+  reported "no jobs" (exit 0). Job rows have only been tested on synthetic backups built
+  from JobSync's source (backup schema version 1), so check the first dry run with real
+  jobs by eye.
 - **It has not been run against the live API.** The client was written from the backend
   source and tested against a mock server.
 - **Keyword matching, not understanding.** A skill counts when its name or an alias
