@@ -6,10 +6,12 @@ import { toLink, type ResumeData, type ResumeEntry, type ResumeLink, type Resume
 // white, top to bottom, starting a new page whenever the next line would not
 // fit. Nothing here knows about the content; it only lays out strings.
 
-const PAGE = { width: 612, height: 792, margin: 54 }
+// 0.6 in margins and 10 pt body text: within the ranges in
+// docs/RESUME_GUIDE.md (0.5-0.75 in, 10 pt or more), and as compact as they allow.
+const PAGE = { width: 612, height: 792, margin: 43 }
 const CONTENT_WIDTH = PAGE.width - PAGE.margin * 2
 const RIGHT = PAGE.width - PAGE.margin
-const SIZE = { name: 20, tagline: 11, heading: 10.5, title: 10.5, body: 9.5 }
+const SIZE = { name: 20, tagline: 11, heading: 10.5, title: 10.5, body: 10 }
 const LINE_HEIGHT = 1.32
 const SEPARATOR = '   |   '
 
@@ -103,11 +105,11 @@ class Layout {
   }
 
   /**
-   * "Label  value" with the label in bold; a label too long to share a row
-   * gets its own. With `column`, the value starts at that offset and its
-   * further lines stay aligned under it, so several rows read as a table.
+   * "Label  value" with the label in bold and the value running on after it,
+   * its further lines starting at the margin; a label too long to share a
+   * row gets its own.
    */
-  labelled(label: string, value: string, size: number, spacing: number, column?: number): void {
+  labelled(label: string, value: string, size: number, spacing: number): void {
     const labelWidth = textWidth(label, 'bold', size)
     if (labelWidth + spacing > CONTENT_WIDTH * 0.6) {
       this.paragraph(label, 'bold', size)
@@ -116,11 +118,6 @@ class Layout {
     }
     this.ensure(size * LINE_HEIGHT)
     this.page.text(PAGE.margin, this.y - size, label, 'bold', size)
-    if (column !== undefined && column >= labelWidth + spacing) {
-      const rows = value ? wrapText(value, 'regular', size, CONTENT_WIDTH - column) : ['']
-      this.lines(rows, 'regular', size, PAGE.margin + column)
-      return
-    }
     const rows = value ? wrapText(value, 'regular', size, CONTENT_WIDTH, labelWidth + spacing) : ['']
     this.lines(rows, 'regular', size, PAGE.margin, labelWidth + spacing)
   }
@@ -188,9 +185,14 @@ class Layout {
 
     const dateWidth = item.date ? textWidth(item.date, 'regular', size) : 0
     const dateBeside = dateWidth > 0 && dateWidth <= CONTENT_WIDTH * 0.5
-    if (dateBeside) this.page.text(RIGHT - dateWidth, this.y - SIZE.title, item.date as string, 'regular', size)
     const titleWidth = dateBeside ? CONTENT_WIDTH - dateWidth - 12 : CONTENT_WIDTH
+    // The title is written before the date beside it, so text extraction (and
+    // an ATS reading the content stream) gets "Title  Date", not "DateTitle".
+    const titleRow = { page: this.page, y: this.y }
     this.lines(wrapText(item.title, 'bold', SIZE.title, titleWidth), 'bold', SIZE.title)
+    if (dateBeside) {
+      titleRow.page.text(RIGHT - dateWidth, titleRow.y - SIZE.title, item.date as string, 'regular', size)
+    }
     if (item.date && !dateBeside) this.paragraph(item.date, 'regular', size)
 
     if (item.subtitle) this.paragraph(item.subtitle, 'regular', size)
@@ -217,15 +219,15 @@ class Layout {
       for (const item of rest) this.keepTogether(() => this.entry(item))
       return
     }
-    // Values share one column when every label is short enough to leave them
-    // most of the row; otherwise each value simply follows its label.
-    const spacing = 12
-    const widest = Math.max(...section.entries.map((item) => textWidth(item.title, 'bold', SIZE.body)))
-    const column = widest + spacing <= CONTENT_WIDTH * 0.4 ? widest + spacing : undefined
-    // A short table (skills, certifications) is kept whole.
+    // "Label: value" rows, each value running on right after its label. No
+    // aligned value column: layout-based extractors read an aligned column as
+    // a table and separate the labels from their values.
+    // A short list (skills, certifications) is kept whole.
     this.keepTogether(() => {
       this.heading(section.heading)
-      for (const item of section.entries) this.labelled(item.title, item.text ?? '', SIZE.body, spacing, column)
+      for (const item of section.entries) {
+        this.labelled(item.text ? `${item.title}:` : item.title, item.text ?? '', SIZE.body, 4)
+      }
     })
   }
 }

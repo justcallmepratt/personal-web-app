@@ -2,11 +2,11 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { api } from '@/lib/api'
 import { formatDateRange, formatIsoDate } from '@/lib/dates'
 import {
-  buildResume, getResumeData, localResumeData, resumeFilename, toLink, RESUME_HEADINGS,
+  buildResume, getResumeData, localResumeData, resumeFilename, toLink, MAX_RESUME_PROJECTS, RESUME_HEADINGS,
   type ResumeSources,
 } from '@/lib/resume'
 import { siteName } from '@/lib/site'
-import { education, leadership, profile } from '@/content'
+import { education, leadership, profile, projects } from '@/content'
 import type { Experience, Profile, Project } from '@/lib/types'
 
 afterEach(() => {
@@ -16,7 +16,7 @@ afterEach(() => {
 })
 
 const empty: ResumeSources = {
-  profile: null, experience: [], education: [], projects: [], certifications: [], leadership: [],
+  profile: null, experience: [], education: [], projects: [], certifications: [], leadership: [], research: [],
 }
 
 const section = (data: ReturnType<typeof buildResume>, id: string) => data.sections.find((s) => s.id === id)
@@ -47,12 +47,12 @@ describe('date helpers', () => {
 describe('resume from the repo content', () => {
   const data = localResumeData()
 
-  it('has the header and all six sections in resume order', () => {
+  it('has the header and every section in resume order', () => {
     expect(data.name).toBe('Pratham Sachan')
     expect(data.tagline).toBe(profile.tagline)
     expect(data.location).toBe('Tampa, FL')
     expect(data.sections.map((s) => s.id)).toEqual([
-      'experience', 'education', 'projects', 'skills', 'certifications', 'leadership',
+      'experience', 'education', 'projects', 'publications', 'skills', 'certifications', 'leadership',
     ])
     expect(data.sections.map((s) => s.heading)).toEqual(Object.values(RESUME_HEADINGS))
   })
@@ -106,6 +106,50 @@ describe('resume from the repo content', () => {
       'github.com/justcallmepratt/Kafka-Producer-Consumer-Demo',
       'justcallmepratt.dev/projects/kafka',
     ])
+  })
+})
+
+describe('resume selection', () => {
+  const project = (id: number, title: string, featured: boolean) =>
+    ({ id, title, featured, description: '', stack: [], repoUrl: '', demoUrl: '' })
+
+  it('prints only the featured projects from the repo content, none from high school', () => {
+    const titles = localResumeData().sections.find((s) => s.id === 'projects')?.entries.map((e) => e.title)
+    expect(titles).toEqual(projects.filter((p) => p.featured).map((p) => p.title).slice(0, MAX_RESUME_PROJECTS))
+    expect(titles).not.toContain('Smart Course Selection App')
+    expect(titles).not.toContain('FIRST Robotics: Team 79 Krunch')
+  })
+
+  it('caps the featured projects and falls back to the first few when none is featured', () => {
+    const many = Array.from({ length: 6 }, (_, i) => project(i, `P${i}`, true))
+    const capped = buildResume({ ...empty, projects: many as never })
+    expect(capped.sections[0].entries).toHaveLength(MAX_RESUME_PROJECTS)
+    const none = buildResume({ ...empty, projects: [project(1, 'A', false), project(2, 'B', false)] as never })
+    expect(none.sections[0].entries.map((e) => e.title)).toEqual(['A', 'B'])
+    const mixed = buildResume({ ...empty, projects: [project(1, 'A', false), project(2, 'B', true)] as never })
+    expect(mixed.sections[0].entries.map((e) => e.title)).toEqual(['B'])
+  })
+
+  it('lists papers as publications, with a full address, except those marked off the resume', () => {
+    const data = buildResume({
+      ...empty,
+      research: [
+        { id: 1, title: 'Paper', date: '2023-07', url: '/research/p.pdf', summary: '', sortOrder: 1 },
+        { id: 2, title: 'School paper', summary: '', resume: false, sortOrder: 2 },
+        { id: 3, title: 'Script', url: 'javascript:alert(1)', summary: '', sortOrder: 3 },
+      ] as never,
+    })
+    const [paper, script] = data.sections[0].entries
+    expect(data.sections[0].heading).toBe('Publications')
+    expect(paper).toMatchObject({ title: 'Paper', date: 'Jul 2023' })
+    expect(paper.links[0].url).toMatch(/^https:\/\/.+\/research\/p\.pdf$/)
+    expect(script).toMatchObject({ title: 'Script', links: [] })
+    expect(data.sections[0].entries).toHaveLength(2)
+  })
+
+  it('keeps the high-school paper off the resume but prints the 2023 one', () => {
+    const titles = localResumeData().sections.find((s) => s.id === 'publications')?.entries.map((e) => e.title)
+    expect(titles).toEqual(['How Generative AI Affects Customer Experience in Fintech'])
   })
 })
 
@@ -263,7 +307,7 @@ describe('getResumeData when the API misbehaves', () => {
     const data = await getResumeData()
     expect(data.name).toBe(siteName)
     // The API-backed sections are empty and gone; the repo-only ones remain.
-    expect(data.sections.map((s) => s.id)).toEqual(['education', 'certifications', 'leadership'])
+    expect(data.sections.map((s) => s.id)).toEqual(['education', 'publications', 'certifications', 'leadership'])
   })
 
   it('loses only the section whose getter throws', async () => {
@@ -271,7 +315,9 @@ describe('getResumeData when the API misbehaves', () => {
     vi.spyOn(api, 'getProfile').mockRejectedValue(new Error('boom'))
     const data = await getResumeData()
     expect(data.name).toBe('Pratham Sachan')
-    expect(data.sections.map((s) => s.id)).toEqual(['education', 'projects', 'skills', 'certifications', 'leadership'])
+    expect(data.sections.map((s) => s.id)).toEqual([
+      'education', 'projects', 'publications', 'skills', 'certifications', 'leadership',
+    ])
   })
 })
 
