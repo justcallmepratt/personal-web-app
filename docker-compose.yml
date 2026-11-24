@@ -34,8 +34,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${SUPABASE_DB_PASSWORD:-password}
       # The fallback JWT secret and admin password hash below are for local use only.
       # The hash is a publicly known sample; never use either in a deployed environment.
-      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-here}
-      ADMIN_PASSWORD_HASH: '${ADMIN_PASSWORD_HASH:-$$2a$$12$$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj8lLxKQZK.}'
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (32+ random bytes) in .env}
+      # No default: a well-known sample hash would be a well-known admin password.
+      ADMIN_PASSWORD_HASH: '${ADMIN_PASSWORD_HASH:?set ADMIN_PASSWORD_HASH (a bcrypt hash) in .env}'
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USER: ${MAIL_USER:-}

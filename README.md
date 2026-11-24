@@ -84,7 +84,9 @@ The other apps run the same way from their own directories: `apps/admin`
 `apps/kafka` (`KAFKA_DEMO_URL=http://localhost:<port> pnpm dev`,
 <http://localhost:3002/kafka>).
 
-Full stack (Postgres + API + frontend reading from the API):
+Full stack (Postgres + API + frontend reading from the API). Set `JWT_SECRET` and
+`ADMIN_PASSWORD_HASH` in `.env` first (see `.env.example`); compose refuses to start
+without them rather than fall back to a known default:
 
 ```bash
 docker compose up --build

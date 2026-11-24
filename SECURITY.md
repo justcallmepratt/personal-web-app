@@ -14,3 +14,5 @@ on this repository (Security tab → Report a vulnerability).
 Include what you found, how to reproduce it, and the affected path or endpoint. You
 will get a reply on the advisory thread; this is a personal project, so please allow
 some days.
+
+The latest security review and its findings are in [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md).

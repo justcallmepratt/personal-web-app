@@ -146,4 +146,32 @@ class EmailValidationEdgeCaseTest {
         var result = EmailValidationService.ValidationResult.reject(longReason);
         assertEquals(longReason, result.reason());
     }
+
+    // ── DNS lookup target (SSRF) ─────────────────────────────────────────────
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "x@/192.0.2.1:53/example.com",   // would become dns://192.0.2.1:53/example.com
+        "x@//192.0.2.1/example.com",
+        "x@example.com:53",
+        "x@localhost",
+        "x@exa_mple.com",
+        "x@-example.com",
+    })
+    void rejects_domains_that_are_not_plain_hostnames(String email) {
+        var result = svc.validate(email);
+        assertFalse(result.valid());
+        assertEquals("Invalid email format.", result.reason());
+    }
+
+    @Test void accepts_plain_hostnames() {
+        assertTrue(EmailValidationService.isHostname("mail.example.co.uk"));
+        assertTrue(EmailValidationService.isHostname("xn--bcher-kva.example"));
+        assertFalse(EmailValidationService.isHostname("a".repeat(254) + ".com"));
+    }
+
+    @Test void converts_idn_and_trailing_dot_before_the_check() {
+        assertEquals("xn--mnchen-3ya.de", EmailValidationService.toAsciiDomain("München.DE."));
+        assertTrue(EmailValidationService.isHostname(EmailValidationService.toAsciiDomain("münchen.de")));
+    }
 }
