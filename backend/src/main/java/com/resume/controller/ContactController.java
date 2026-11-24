@@ -64,6 +64,8 @@ public class ContactController {
         // ── 2. Email domain validation ──────────────────────────────────────
         EmailValidationService.ValidationResult emailCheck = emailValidator.validate(req.email());
         if (!emailCheck.valid()) {
+            // Nothing was saved or sent, so this attempt does not count against the limit.
+            rateLimiter.release(ip);
             return ResponseEntity.unprocessableEntity()
                     .body(new ApiResponse(false, emailCheck.reason()));
         }

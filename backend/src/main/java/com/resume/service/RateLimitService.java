@@ -77,6 +77,21 @@ public class RateLimitService {
         return allowed[0];
     }
 
+    /**
+     * Gives back the slot the latest {@link #isAllowed} call took, for a submission that was
+     * turned away before anything was saved (an address that cannot receive mail). A visitor
+     * who mistypes the domain can then correct it without being locked out for the window.
+     */
+    public void release(String ip) {
+        if (ip == null || ip.isBlank()) return;
+        log_.computeIfPresent(ip, (k, times) -> {
+            synchronized (times) {
+                times.pollLast();
+                return times.isEmpty() ? null : times;
+            }
+        });
+    }
+
     int trackedAddresses() { return log_.size(); }
 
     /** Removes addresses with no submissions inside the window. Runs from isAllowed when the map is large. */
