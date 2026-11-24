@@ -315,12 +315,13 @@ export const leadership: Leadership[] = [
 ]
 
 // Research papers, shown on /research. Repo content only. Summaries come from
-// the papers themselves; no links because the files are private in Drive.
+// the papers themselves. The PDFs are served from frontend/public/research.
 export const research: Research[] = [
   {
     id: 1,
     title: 'How Generative AI Affects Customer Experience in Fintech',
     date: '2023-07',
+    url: '/research/generative-ai-fintech-2023.pdf',
     summary:
       'A literature review of generative AI and large language models in financial services, with case studies of Capital One and American Express. It concludes that generative AI can make financial services more personal and cheaper to deliver, though most firms were still a year or two from using it.',
     sortOrder: 1,
@@ -330,6 +331,7 @@ export const research: Research[] = [
     title: 'The Art and Science of Course Selection',
     context: 'AP Research, East Lake High School',
     date: '2020-05',
+    url: '/research/course-selection-ap-research-2020.pdf',
     summary:
       'A mixed-methods survey of high-school students who had taken career and technical courses, asking what should guide course choices. 94% wanted help choosing courses but only 44% had used online tools; the paper concludes there is no one-size-fits-all rule, and students refine their choices with help from school staff, parents and peers.',
     sortOrder: 2,
