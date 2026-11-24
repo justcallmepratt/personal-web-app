@@ -18,7 +18,8 @@ import java.util.Map;
 
 /**
  * Reads listings from the Adzuna search API: one request per company and target role,
- * the first page only (see docs/RESEARCH.md for the terms and what is and is not confirmed about limits).
+ * the first page only. The "Research notes" page, linked under "Planning docs" in README.md,
+ * has the terms and what is and is not confirmed about limits.
  *
  * <p>Failure handling: a 5-second connect and 10-second read timeout; a rate-limit answer
  * (429), a server error (5xx) or a network error is tried again with a doubling wait, up

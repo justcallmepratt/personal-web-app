@@ -19,6 +19,7 @@ frontend/src/
 │   ├── experience/page.tsx       → Career timeline
 │   ├── skills/page.tsx           → Skills by category (a bar only for skills with a `level`)
 │   ├── certifications/page.tsx   → Certifications, then an Education section (degrees), from the content file
+│   ├── research/page.tsx         → Research papers, each linking its PDF (repo content only)
 │   ├── resume/page.tsx           → Resume: one print-friendly page built by lib/resume.ts
 │   ├── resume.pdf/route.ts       → The same resume as a generated PDF (static GET, hourly revalidation)
 │   ├── contact/page.tsx          → Contact form
@@ -30,13 +31,13 @@ frontend/src/
 │
 ├── content/
 │   └── index.ts                  → profile, projects, plannedProjects, experience, certifications,
-│                                   education, leadership — the site's content (the owner's real profile)
+│                                   education, leadership, research — the site's content (the owner's real profile)
 │
 ├── components/
 │   ├── layout/                   → Navbar, Footer, SkipLink, HUDChrome, ScanlineOverlay
 │   ├── sections/                 → HeroSection, ProjectsGrid, ExperienceTimeline,
 │   │                               SkillsChart, CertificationsList, EducationList, PlannedProjects,
-│   │                               ResumeDocument, ContactForm, GitHubActivity, KafkaDemo
+│   │                               ResearchList, ResumeDocument, ContactForm, GitHubActivity, KafkaDemo
 │   └── ui/                       → GlitchText, NeonButton, NeonCard, SkillBar, TerminalInput
 │
 ├── lib/
@@ -55,7 +56,7 @@ frontend/src/
 │   ├── github.ts                 → Server-only: owner's public repos from the GitHub API
 │   │                               (hourly, 5 s timeout, never throws), language summary
 │   └── types.ts                  → Profile, Project, PlannedProject, Experience, Certification,
-│                                   Education, Leadership, ContactPayload, ApiResponse
+│                                   Education, Leadership, Research, ContactPayload, ApiResponse
 │
 └── test/                         → Vitest + React Testing Library, mirrors src/
 ```
@@ -63,8 +64,12 @@ frontend/src/
 Outside `src/`: `frontend/vercel.json` sets the security headers (HSTS, X-Frame-Options,
 Referrer-Policy and others), cache headers and build commands for Vercel;
 `frontend/next.config.ts` wraps the config in `withMicrofrontends` (this app is the
-default application of the planned Vercel microfrontends group) and
-`frontend/microfrontends.json` lists only this app for now. `next.config.ts` also serves
+default application of the Vercel microfrontends group) and
+`frontend/microfrontends.json` lists this app and `admin` (routed at `/admin` and
+`/admin/:path*`). Every key there must be an app the group contains, or Vercel fails the
+`frontend` deployment (see [DEPLOYMENT.md](DEPLOYMENT.md#microfrontends-kafka-and-admin)).
+`frontend/public/research/` holds the two research PDFs, served at `/research/*.pdf`.
+`next.config.ts` also serves
 the redirects in `src/lib/redirects.ts`: `/kafka` and everything under it go to
 `/projects/kafka`.
 
@@ -89,7 +94,7 @@ the redirects in `src/lib/redirects.ts`: `/kafka` and everything under it go to
 ### Content shape
 
 `content/index.ts` is the fallback for the API content and the only source of
-certifications, education, leadership and planned projects; in production the database is what visitors see for
+certifications, education, leadership, research and planned projects; in production the database is what visitors see for
 profile, projects and experience, so keep the two in step. The site is public, so it holds only facts the owner has confirmed; `test/content/content.test.ts`
 guards against placeholder links, an email address or a phone number coming back.
 
@@ -123,6 +128,24 @@ guards against placeholder links, an email address or a phone number coming back
   `/projects` lists them under "In the works" below the real projects, with no links,
   dates or featured styling, and they never reach `getProjects()` or the home page.
   When one ships, move it into `projects`.
+- **Skills** are `{ name, category, level? }`. `category` is one of `Frontend`,
+  `Backend`, `DevOps`, `AI/ML`, `Business & Leadership` and `Other`; `/skills` shows
+  them in that order (`CATEGORIES` in `components/sections/SkillsChart.tsx`). The
+  resume leaves out the `Business & Leadership` row (`RESUME_HIDDEN_SKILL_AREAS` in
+  `lib/resume.ts`) and orders the rest Backend, Frontend, DevOps, AI/ML, Other. The
+  live database's `profile.skills` holds the same list, so change both.
+- **Research** is `{ id, title, context?, date?, summary, coAuthors?, url?, sortOrder }`,
+  read by `api.getResearch()` (repo content only) and shown on `/research`. `url` is an
+  `https` address or a file on this site such as `/research/paper.pdf`; the two papers'
+  PDFs are in `frontend/public/research/`. Check a PDF for an email address, phone number
+  or ID and strip its metadata before adding it. Research is not on the resume.
+- **Project links.** `repoUrl` must be on `github.com/justcallmepratt/`, and `demoUrl` a
+  path on this site, except the off-site demos listed in `OFF_SITE_DEMOS` in
+  `test/content/content.test.ts` (today only the Athlink demo,
+  `https://athllinkmvp-demo.vercel.app/`, hosted from its own repo).
+- **The resume is one page.** It prints at most `MAX_RESUME_PROJECTS` (2) projects, the
+  featured ones first, and the PDF test requires exactly one page. The reasoning and the
+  ATS checks are in [RESUME_GUIDE.md](RESUME_GUIDE.md).
 - **New fields in `types.ts` stay optional** so the Spring API's responses (which do
   send `level`, and may send `email` and `cvUrl`) keep type-checking.
 - `backend/.../SeedRunner.java` and the seed rows in `supabase/init.sql` still hold the old
@@ -457,7 +480,9 @@ Deployment is done by Vercel's Git integration (site) and Railway's GitHub integ
 
 ## Other docs
 
-- `docs/agents/` — phase briefs. Each has a status block that agrees with
-  [ROADMAP.md](ROADMAP.md); they predate the current structure, so treat their
-  deployment steps and file lists as out of date.
-- [`HOW_IT_WAS_BUILT.md`](HOW_IT_WAS_BUILT.md) — historical build narrative (May 2026).
+- [JOBSYNC_IMPORTER.md](JOBSYNC_IMPORTER.md) — running JobSync locally and the importer.
+- [RESUME_GUIDE.md](RESUME_GUIDE.md) — how the resume is written and checked for ATS parsers.
+- Planning and history (the roadmap, the research notes behind it, the original phase
+  briefs and the May 2026 build narrative) moved to Notion on 2026-11-24: see
+  "Planning docs" in the [README](../README.md#planning-docs). They are not kept in step
+  with the code, so treat their file lists and deployment steps as out of date.

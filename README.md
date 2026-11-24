@@ -16,14 +16,16 @@ The repository holds three Next.js apps and a Spring Boot API:
 
 | Part | Path | State |
 |---|---|---|
-| Public site | `frontend/` | Live on Vercel at https://justcallmepratt.dev. Home, projects (with an "In the works" list), experience, skills, certifications, contact and credits pages, and a GitHub activity section. Content from the API, with `frontend/src/content/index.ts` as fallback. |
+| Public site | `frontend/` | Live on Vercel at https://justcallmepratt.dev. Home, projects (with an "In the works" list), experience, skills, certifications, research, resume (page and generated PDF), contact and credits pages, and a GitHub activity section. Content from the API, with `frontend/src/content/index.ts` as fallback. |
 | REST API | `backend/` | Deployed on Railway and used by the production site for profile, projects and experience (the database holds the real content). Contact messages relayed to it are stored; email needs mail variables on Railway. See [Outstanding work](docs/DEPLOYMENT.md#outstanding-work). |
 | Kafka demo page | `apps/kafka/` | A copy of the demo built as a micro-frontend, kept for later; not deployed and not planned. The demo runs from `frontend/` at `/projects/kafka`, and `/kafka` redirects there. |
-| Admin app | `apps/admin/` | Sign-in and contact-message inbox. Ready but not deployed; sign-in stays off until `ADMIN_PASSWORD_HASH` is set on the API (username `psachan`; failed sign-ins limited to 5 per client and 30 overall per 15 minutes). See [Turn on admin](docs/DEPLOYMENT.md#turn-on-admin). |
+| Admin app | `apps/admin/` | Sign-in and contact-message inbox, deployed as the Vercel project `admin` and served at `/admin` through the microfrontends group. Sign-in waits on an admin password reset (username `psachan`; failed sign-ins limited to 5 per client and 30 overall per 15 minutes). See [Turn on admin](docs/DEPLOYMENT.md#turn-on-admin). |
 
 In production `frontend` reads the API on the server (`BACKEND_URL`) and falls back to
 `frontend/src/content/index.ts` if it is unavailable; certifications and the "In the
-works" list come only from that file. Previews and local runs use the file alone.
+works" list come only from that file, as do education and research. The research papers'
+PDFs are static files in `frontend/public/research/`. Previews and local runs use the
+file alone.
 
 The site also hosts a **live Apache Kafka demo** at `/projects/kafka`: a visitor sends a
 record, it goes through a real broker and a Spring Boot consumer on Railway, is stored
@@ -31,13 +33,18 @@ in Supabase, and shows up on the page. The service is a separate repo,
 [Kafka-Producer-Consumer-Demo](https://github.com/justcallmepratt/Kafka-Producer-Consumer-Demo);
 this repo holds the page and the relay routes.
 
+The **Athlink** recruiting prototype is linked from its project card but lives in its own
+repo, [Athllinkmvp-DEMO](https://github.com/justcallmepratt/Athllinkmvp-DEMO), deployed
+as a separate Vercel project at https://athllinkmvp-demo.vercel.app/ (sample data only).
+It is not a micro-frontend; see [Athlink demo](docs/DEPLOYMENT.md#athlink-demo).
+
 **Live:** https://justcallmepratt.dev  
 **Kafka live demo:** https://justcallmepratt.dev/projects/kafka  
 **Deployment, configuration and outstanding work:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)  
 **Code layout:** [`docs/CODEBASE_STRUCTURE.md`](docs/CODEBASE_STRUCTURE.md)  
-**Roadmap and decisions:** [`docs/ROADMAP.md`](docs/ROADMAP.md)  
-**Research behind the roadmap:** [`docs/RESEARCH.md`](docs/RESEARCH.md)  
-**How the original version was built (historical):** [`docs/HOW_IT_WAS_BUILT.md`](docs/HOW_IT_WAS_BUILT.md)
+**Resume guide:** [`docs/RESUME_GUIDE.md`](docs/RESUME_GUIDE.md)  
+**JobSync and the importer:** [`docs/JOBSYNC_IMPORTER.md`](docs/JOBSYNC_IMPORTER.md)  
+**Roadmap, research notes and phase briefs (moved to Notion):** [Planning docs](#planning-docs)
 
 ---
 
@@ -168,21 +175,22 @@ personal-web-app/
 ├── frontend/               The public site (Vercel project `frontend`)
 │   ├── src/app/            App Router pages; api/contact and api/kafka are route handlers
 │   ├── src/components/     layout/, sections/, ui/
-│   ├── src/content/        Profile, projects, experience, certifications (edit to update the site)
+│   ├── src/content/        Profile, projects, experience, certifications, research (edit to update the site)
 │   ├── src/lib/            api.ts (content source), contact.ts, github.ts, kafka.ts, site.ts, types.ts
 │   ├── src/test/           Vitest + RTL tests
-│   ├── microfrontends.json Vercel microfrontends config; lists only this app for now
+│   ├── public/research/    The research papers as PDFs
+│   ├── microfrontends.json Vercel microfrontends config: this app, and admin at /admin
 │   ├── vercel.json         Security headers
 │   └── Dockerfile          Multi-stage: pnpm build → standalone output
 ├── apps/
-│   ├── admin/              Admin sign-in and message inbox (/admin/*), not deployed
+│   ├── admin/              Admin sign-in and message inbox (/admin/*), Vercel project admin
 │   └── kafka/              Kafka demo as a micro-frontend, not deployed
 ├── docs/
 │   ├── DEPLOYMENT.md       How the site is deployed, configured, and what is outstanding
-│   ├── ROADMAP.md, RESEARCH.md
 │   ├── CODEBASE_STRUCTURE.md
-│   ├── HOW_IT_WAS_BUILT.md Historical build narrative (May 2026)
-│   └── agents/             Phase design briefs, each with a status block
+│   ├── JOBSYNC_IMPORTER.md JobSync locally, and the importer that proposes skill suggestions
+│   └── RESUME_GUIDE.md     How the resume is written and checked for ATS parsers
+├── tools/jobsync-importer/ Local command-line importer (Node 22, no dependencies)
 ├── supabase/init.sql       Database schema (local Docker dev; applied to Supabase)
 ├── .github/workflows/      ci, codeql, docker-build, release, dependabot-auto-merge, stale, summary
 ├── docker-compose.yml      Local Postgres + API + frontend
@@ -223,12 +231,23 @@ Two more route handlers serve the Kafka demo and relay to the Kafka demo service
 
 ---
 
-## Roadmap
+## Planning docs
 
-Status of every phase, the work still to do and the owner's decisions are in
-[`docs/ROADMAP.md`](docs/ROADMAP.md); the operations steps still outstanding are in
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md#outstanding-work). [`docs/agents/`](docs/agents/)
-holds the original phase briefs, each with a status block; several are dropped.
+Planning and history docs moved to Notion on 2026-11-24, under
+[Night City Dev — Planning archive](https://app.notion.com/p/4225bf59b8cc810b8729ec796f9b2c73),
+so they don't drift next to the code. They are kept as history and not updated; the last
+repo versions are at commit
+[`176f030`](https://github.com/justcallmepratt/personal-web-app/tree/176f030/docs).
+
+| Was in the repo | Notion page |
+|---|---|
+| `docs/ROADMAP.md` | [Roadmap](https://app.notion.com/p/4225bf59b8cc81c2a80cd113cd9d99d8): phase status, the owner's decisions, security follow-ups |
+| `docs/RESEARCH.md` | [Research notes](https://app.notion.com/p/4225bf59b8cc813c91bdcc6d5fca7af4): the findings behind the roadmap |
+| `docs/HOW_IT_WAS_BUILT.md` | [How This Project Was Built](https://app.notion.com/p/4225bf59b8cc8147abb9f348eaa0eed0): the May 2026 build narrative |
+| `docs/agents/ORCHESTRATOR.md` | [Agent Orchestrator](https://app.notion.com/p/4225bf59b8cc81048b5ed761aa03ceaf): the phase index and each phase's status |
+| `docs/agents/phase-*.md` | Phase briefs [7 — Visual polish](https://app.notion.com/p/4225bf59b8cc81b2aad9fc179d0d7d36), [8 — Analytics](https://app.notion.com/p/4225bf59b8cc81e28b8bdfdac38e6587), [9 — Spotify player](https://app.notion.com/p/4225bf59b8cc81f785bcf5ef7a6ee370), [10 — Credits page](https://app.notion.com/p/4225bf59b8cc81e3a553ee5d7c7d7344), [11 — Job application tracker](https://app.notion.com/p/4225bf59b8cc8162a492c59a3c29992f), [12 — Market research engine](https://app.notion.com/p/4225bf59b8cc81bfaa5edb942251b2b5), [13 — Resume auto-updater](https://app.notion.com/p/4225bf59b8cc81d480b0f9be6c67241a), [14 — LinkedIn sync](https://app.notion.com/p/4225bf59b8cc81b8be94ff0ea1668971), [15 — GitHub benchmarking](https://app.notion.com/p/4225bf59b8cc81b8a91aeee2df0e38ab), [16 — Pro dev dashboard](https://app.notion.com/p/4225bf59b8cc81f7be8cd220a6a65984), [17 — Cloud production deploy](https://app.notion.com/p/4225bf59b8cc81a7b78bf1184b4afdef) |
+
+What is still outstanding is in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md#outstanding-work).
 
 ---
 
