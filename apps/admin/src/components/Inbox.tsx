@@ -41,11 +41,11 @@ export default function Inbox({ initialMessages, loadError }: Props) {
     setBusy(false)
   }
 
-  async function toggleRead(id: number) {
+  async function setRead(id: number, read: boolean) {
     if (busy) return
     setBusy(true)
     try {
-      const res = await fetch(`/admin/api/messages/${id}/read`, { method: 'PATCH', signal: timeoutSignal() })
+      const res = await fetch(`/admin/api/messages/${id}/read?read=${read}`, { method: 'PATCH', signal: timeoutSignal() })
       if (res.status === 401) return leave(LOGIN_EXPIRED)
       if (res.ok) {
         const updated = (await res.json()) as Message
@@ -157,7 +157,7 @@ export default function Inbox({ initialMessages, loadError }: Props) {
                 </p>
               </div>
               <p className="whitespace-pre-wrap break-words text-sm">{selected.body || '(empty message)'}</p>
-              <NeonButton accent="yellow" onClick={() => toggleRead(selected.id)} disabled={busy}>
+              <NeonButton accent="yellow" onClick={() => setRead(selected.id, !selected.read)} disabled={busy}>
                 {selected.read ? 'Mark as unread' : 'Mark as read'}
               </NeonButton>
             </article>

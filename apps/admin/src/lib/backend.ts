@@ -158,8 +158,9 @@ export async function listMessages(token: string): Promise<BackendResult<Message
   return { ok: true, data: messages as Message[] }
 }
 
-export async function toggleRead(token: string, id: number): Promise<BackendResult<Message>> {
-  const raw = await call(`/api/admin/messages/${id}/read`, { method: 'PATCH', token })
+/** Sets a message's read flag (the API sets, not toggles, so a retry is harmless). */
+export async function setRead(token: string, id: number, read: boolean): Promise<BackendResult<Message>> {
+  const raw = await call(`/api/admin/messages/${id}/read?read=${read}`, { method: 'PATCH', token })
   if (!raw.ok) return raw
   if (isSignedOut(raw.status)) return { ok: false, kind: 'unauthorized', status: raw.status }
   if (raw.status === 404) return { ok: false, kind: 'not_found', status: 404 }

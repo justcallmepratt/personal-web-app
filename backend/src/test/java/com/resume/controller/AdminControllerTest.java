@@ -129,19 +129,33 @@ class AdminControllerTest {
     }
 
     @Test
-    void markRead_togglesReadStatus() throws Exception {
+    void markRead_setsReadByDefault_andStaysReadWhenRepeated() throws Exception {
         Message m = new Message();
         m.setRead(false);
         m.setName("Bob");
         when(messageRepository.findById(1L)).thenReturn(Optional.of(m));
-        Message toggled = new Message();
-        toggled.setRead(true);
-        toggled.setName("Bob");
-        when(messageRepository.save(any())).thenReturn(toggled);
+        when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         mockMvc.perform(patch("/api/admin/messages/1/read"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.read").value(true));
+        // A retry must not flip it back.
+        mockMvc.perform(patch("/api/admin/messages/1/read"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.read").value(true));
+    }
+
+    @Test
+    void markRead_withReadFalse_marksUnread() throws Exception {
+        Message m = new Message();
+        m.setRead(true);
+        m.setName("Bob");
+        when(messageRepository.findById(1L)).thenReturn(Optional.of(m));
+        when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(patch("/api/admin/messages/1/read").param("read", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.read").value(false));
     }
 
     @Test

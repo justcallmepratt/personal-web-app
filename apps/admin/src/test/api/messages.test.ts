@@ -131,7 +131,7 @@ describe('GET /admin/api/messages', () => {
 })
 
 describe('PATCH /admin/api/messages/[id]/read', () => {
-  it('toggles the message and returns the updated one', async () => {
+  it('sets the message to read by default and returns the updated one', async () => {
     const updated = message({ id: 5, read: true })
     const fetchMock = mockFetch(() => jsonResponse(updated))
 
@@ -140,9 +140,29 @@ describe('PATCH /admin/api/messages/[id]/read', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual(updated)
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe(`${BACKEND}/api/admin/messages/5/read`)
+    expect(url).toBe(`${BACKEND}/api/admin/messages/5/read?read=true`)
     expect(init?.method).toBe('PATCH')
     expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer jwt-123')
+  })
+
+  it('passes read=false through to mark a message unread', async () => {
+    const fetchMock = mockFetch(() => jsonResponse(message({ id: 5, read: false })))
+    const res = await PATCH(
+      new Request('https://justcallmepratt.dev/admin/api/messages/5/read?read=false', { method: 'PATCH' }),
+      { params: Promise.resolve({ id: '5' }) },
+    )
+    expect(res.status).toBe(200)
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BACKEND}/api/admin/messages/5/read?read=false`)
+  })
+
+  it.each(['yes', '1', ''])('rejects read=%j with 400 without calling the API', async (value) => {
+    const fetchMock = mockFetch(() => jsonResponse({}))
+    const res = await PATCH(
+      new Request(`https://justcallmepratt.dev/admin/api/messages/5/read?read=${value}`, { method: 'PATCH' }),
+      { params: Promise.resolve({ id: '5' }) },
+    )
+    expect(res.status).toBe(400)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('passes on 404 when the message does not exist', async () => {

@@ -52,20 +52,21 @@ describe('Inbox', () => {
   })
 
   it('marks a message read and back to unread through this app', async () => {
-    let read = false
-    const fetchMock = mockFetch(() => jsonResponse(message({ id: 2, subject: 'Job offer', read: (read = !read) })))
+    const fetchMock = mockFetch((url) =>
+      jsonResponse(message({ id: 2, subject: 'Job offer', read: String(url).endsWith('read=true') })))
     render(<Inbox initialMessages={two} />)
     await userEvent.click(screen.getByRole('button', { name: /job offer/i }))
 
     await userEvent.click(screen.getByRole('button', { name: 'Mark as read' }))
     expect(await screen.findByText('0 unread · 2 total')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith(
-      '/admin/api/messages/2/read',
+      '/admin/api/messages/2/read?read=true',
       expect.objectContaining({ method: 'PATCH', signal: expect.any(AbortSignal) }),
     )
 
     await userEvent.click(screen.getByRole('button', { name: 'Mark as unread' }))
     expect(await screen.findByText('1 unread · 2 total')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenLastCalledWith('/admin/api/messages/2/read?read=false', expect.anything())
   })
 
   it('removes a message the API no longer has and says so', async () => {
