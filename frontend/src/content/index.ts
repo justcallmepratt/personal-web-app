@@ -345,8 +345,6 @@ export const research: Research[] = [
     context: 'AP Research, East Lake High School',
     date: '2020-05',
     url: '/research/course-selection-ap-research-2020.pdf',
-    // High-school work: on /research, but not on the resume.
-    resume: false,
     summary:
       'A mixed-methods survey of high-school students who had taken career and technical courses, asking what should guide course choices. 94% wanted help choosing courses but only 44% had used online tools; the paper concludes there is no one-size-fits-all rule, and students refine their choices with help from school staff, parents and peers.',
     sortOrder: 2,
