@@ -1,0 +1,10 @@
+{
+  "name": "job-scout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Weekly: searches allow-listed companies' careers sites, scores postings against the resume and adds the best new ones to a local JobSync as New. Never applies.",
+  "type": "module",
+  "bin": { "job-scout": "bin/job-scout.mjs" },
+  "scripts": { "start": "node bin/job-scout.mjs", "test": "node --test \"test/*.test.mjs\"" },
+  "engines": { "node": ">=22" }
+}

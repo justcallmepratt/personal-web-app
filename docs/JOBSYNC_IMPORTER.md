@@ -135,6 +135,12 @@ backup).
 
 ### Scheduling it weekly on a Mac
 
+> **Simpler: the weekly job scout.** [`tools/job-scout`](../tools/job-scout/README.md) runs
+> once a week. It adds new matching postings to JobSync, writes JobSync's jobs as a
+> backup-style `data.json` (no manual download needed), and runs this importer as a dry run
+> on it. Install it with `tools/job-scout/install.sh`. The steps below are the older,
+> backup-folder setup.
+
 The scheduled job is a **dry run**: it cannot file, because filing needs your password and
 the tool does not store one. It writes what it would file to a log; you then run `--file`
 by hand.
