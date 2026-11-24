@@ -2,6 +2,7 @@ import type {
   Profile, Project, Experience, Certification, PlannedProject, Education, Leadership, Research,
   ContactPayload, ApiResponse, KafkaMessagesResponse,
 } from './types'
+import { normaliseExperience, normaliseList, normaliseProfile, normaliseProject } from './normalise'
 import { profile, projects, experience, certifications, plannedProjects, education, leadership, research } from '@/content'
 
 // ── Content source ───────────────────────────────────────────────────────────
@@ -47,11 +48,15 @@ const bySortOrder = <T extends { sortOrder?: number }>(items: T[]) =>
   [...items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 
 export const api = {
-  getProfile:    ()               => load<Profile>('/api/profile', () => profile),
+  // API data goes through lib/normalise: safe lists and maps, and only http(s) or on-site links.
+  getProfile:    ()               => load<Profile>('/api/profile', () => profile).then(normaliseProfile),
   getProjects:   (featured?: boolean) =>
     load<Project[]>(`/api/projects${featured ? '?featured=true' : ''}`, () =>
-      bySortOrder(featured ? projects.filter((p) => p.featured) : projects)),
-  getExperience: ()               => load<Experience[]>('/api/experience', () => bySortOrder(experience)),
+      bySortOrder(featured ? projects.filter((p) => p.featured) : projects))
+      .then((items) => normaliseList(items, normaliseProject)),
+  getExperience: ()               =>
+    load<Experience[]>('/api/experience', () => bySortOrder(experience))
+      .then((items) => normaliseList(items, normaliseExperience)),
   // The Spring API has no certifications endpoint yet, so this always reads the
   // repo content. When one exists, wrap it in load() like the getters above.
   getCertifications: (): Promise<Certification[]> => Promise.resolve(bySortOrder(certifications)),

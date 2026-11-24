@@ -69,6 +69,27 @@ describe('contact delivery: relay with SMTP fallback', () => {
     expect(sendMail).toHaveBeenCalledOnce()
   })
 
+  it.each([400, 422, 429])('backend %i with its own answer goes back to the visitor', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ success: false, message: 'No.' }, { status })))
+    const res = await post()
+    expect(res.status).toBe(status)
+    expect(await res.json()).toMatchObject({ success: false, message: 'No.' })
+    expect(sendMail).not.toHaveBeenCalled()
+  })
+
+  // A misrouted or protected backend answers with JSON that is not the API's reply.
+  it.each([401, 403, 404, 405])('backend %i falls back to SMTP', async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: 'Not Found', path: '/api/contact' }, { status })))
+    expect((await post()).status).toBe(200)
+    expect(sendMail).toHaveBeenCalledOnce()
+  })
+
+  it('a 2xx body without a boolean success falls back to SMTP', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ status: 'ok' })))
+    expect((await post()).status).toBe(200)
+    expect(sendMail).toHaveBeenCalledOnce()
+  })
+
   it('non-JSON backend response falls back to SMTP', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>gateway</html>', { status: 200 })))
     expect((await post()).status).toBe(200)

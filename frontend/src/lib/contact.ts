@@ -155,14 +155,21 @@ export async function sendContactMail(msg: ContactPayload, timeoutMs = SMTP_TIME
   }
 }
 
+// The API's own answers that the visitor should see: bad input, an address that
+// cannot receive mail, and its rate limit.
+const DEFINITE_CLIENT_ERRORS = new Set([400, 422, 429])
+
 export type RelayResult =
   | { kind: 'reply'; status: number; success: boolean; message: string }
   | { kind: 'unavailable'; reason: string }
 
 /**
- * Relays to the Spring API. A definite answer (2xx or 4xx JSON) is returned as a
- * reply to pass on. Unreachable, timed out, 5xx or non-JSON is "unavailable", so
- * the caller can fall back to SMTP.
+ * Relays to the Spring API. A definite answer is returned as a reply to pass on:
+ * a 2xx, or a 400 / 422 / 429 (validation, undeliverable address, rate limit),
+ * with the API's `{ success, message }` body. Anything else is "unavailable", so
+ * the caller can fall back to SMTP: unreachable, timed out, 5xx, non-JSON, a body
+ * without a boolean `success`, or another status such as a 404 / 401 / 403 from a
+ * misrouted or protected backend.
  */
 export async function relayToBackend(
   backend: string,
@@ -179,20 +186,21 @@ export async function relayToBackend(
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
-    if (res.status >= 500) return { kind: 'unavailable', reason: `backend ${res.status}` }
+    const definite = res.ok || DEFINITE_CLIENT_ERRORS.has(res.status)
+    if (!definite) return { kind: 'unavailable', reason: `backend ${res.status}` }
     let body: { success?: unknown; message?: unknown }
     try {
       body = await res.json()
     } catch {
       return { kind: 'unavailable', reason: 'backend returned non-JSON' }
     }
-    if (typeof body !== 'object' || body === null) {
-      return { kind: 'unavailable', reason: 'backend returned non-object JSON' }
+    if (typeof body !== 'object' || body === null || typeof body.success !== 'boolean') {
+      return { kind: 'unavailable', reason: 'backend returned an unexpected body' }
     }
     return {
       kind: 'reply',
       status: res.status,
-      success: Boolean(body.success),
+      success: body.success,
       message: typeof body.message === 'string' ? body.message : 'Send failed.',
     }
   } catch (e) {
