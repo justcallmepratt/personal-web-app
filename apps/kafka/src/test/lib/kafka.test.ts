@@ -2,7 +2,7 @@
 import { NextRequest } from 'next/server'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-import { isRateLimited, resetRateLimit } from '@/lib/rate-limit'
+import { isRateLimited, resetRateLimit, trackedKeys } from '@/lib/rate-limit'
 import { kafkaDemoUrl, scopedKey, sessionRecords, validateProduce } from '@/lib/kafka'
 import { POST } from '@/app/kafka/api/produce/route'
 import { GET } from '@/app/kafka/api/messages/route'
@@ -47,6 +47,15 @@ describe('isRateLimited', () => {
     expect(isRateLimited('a', 10, 2, 1000)).toBe(false)
     expect(isRateLimited('a', 20, 2, 1000)).toBe(true)
     expect(isRateLimited('b', 20, 2, 1000)).toBe(false)
+  })
+
+  it('drops keys whose hits have all expired once it tracks many', () => {
+    resetRateLimit()
+    for (let i = 0; i < 1000; i++) isRateLimited(`k-${i}`, 0, 2, 1000)
+    expect(trackedKeys()).toBe(1000)
+    isRateLimited('late', 5000, 2, 1000)
+    expect(trackedKeys()).toBe(1)
+    resetRateLimit()
   })
 
   it('forgets hits older than the window', () => {

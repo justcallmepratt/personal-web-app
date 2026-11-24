@@ -7,7 +7,7 @@ type TextareaProps = { label: string; multiline: true } & TextareaHTMLAttributes
 
 export default function TerminalInput(props: InputProps | TextareaProps) {
   const sharedCls =
-    'w-full bg-[#000000] border border-cp-border focus:border-cp-teal focus:outline-none px-3 py-2 font-[var(--font-mono)] text-cp-text placeholder:text-cp-muted'
+    'w-full bg-[#000000] border border-cp-border-strong focus:border-cp-teal px-3 py-2 font-[var(--font-mono)] text-cp-text placeholder:text-cp-muted'
 
   if (props.multiline) {
     const { label, multiline: _m, ...rest } = props
