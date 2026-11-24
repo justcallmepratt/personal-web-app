@@ -66,15 +66,18 @@ broker-dealer. The tool does not know which companies those are and never guesse
 
 ### One-time setup
 
-1. **Install JobSync** (not done on this Mac as of 2026-11-21). It needs Docker Desktop
-   running:
+1. **Install JobSync** outside this repository. It was installed on this Mac on
+   2026-11-24 in `~/Developer/jobsync`.
 
    ```bash
-   git clone https://github.com/Gsync/jobsync.git
+   git clone https://github.com/Gsync/jobsync.git ~/Developer/jobsync
    ```
 
+   With Docker Desktop running, start it with the command below. Without Docker Desktop,
+   follow [Running JobSync locally](#running-jobsync-locally) instead.
+
    ```bash
-   cd jobsync && docker compose up -d
+   cd ~/Developer/jobsync && docker compose up -d
    ```
 
    Open `http://localhost:3737`, create your account and add jobs. Paste the full job
@@ -160,6 +163,54 @@ by hand.
 
 It still needs a fresh backup each week; with an old one it runs and warns.
 
+### Running JobSync locally
+
+JobSync's README asks for Docker. This Mac has no Docker Desktop, so JobSync runs on
+[Colima](https://github.com/abiosoft/colima), a Docker engine in a small Linux VM, with
+the Homebrew `docker` and `docker-compose` CLIs. Set up on 2026-11-24 with JobSync 1.2.1
+(commit `4be4faa`).
+
+1. Install and start the engine (4 GB of memory is enough):
+
+   ```bash
+   brew install colima docker docker-compose
+   ```
+
+   ```bash
+   colima start --vm-type vz --cpu 2 --memory 4 --disk 30
+   ```
+
+2. Create `~/Developer/jobsync/.env` from its `.env.example`. JobSync's `.gitignore`
+   covers it. Set your own secrets, because `docker-compose.yml` falls back to public
+   placeholders:
+
+   ```bash
+   cd ~/Developer/jobsync && printf 'TZ=America/Edmonton\nNEXTAUTH_URL=http://localhost:3737\nAUTH_TRUST_HOST=true\nAUTH_SECRET=%s\nENCRYPTION_KEY=%s\nPOSTGRES_PASSWORD=%s\nMCP_ENABLED=true\n' "$(openssl rand -base64 32)" "$(openssl rand -base64 32)" "$(openssl rand -hex 16)" > .env && chmod 600 .env
+   ```
+
+   Never change `ENCRYPTION_KEY` afterwards: it encrypts the AI keys you save in
+   Settings. AI keys are optional and go in Settings, not in this file.
+
+3. Start it. If `~/.docker/config.json` still names Docker Desktop's credential helper
+   (`"credsStore": "desktop"`), image pulls fail with `docker-credential-desktop: executable
+   file not found`. Either remove that line, or give JobSync its own client config as here:
+
+   ```bash
+   mkdir -p ~/.config/jobsync-docker && printf '{"auths":{},"cliPluginsExtraDirs":["%s/lib/docker/cli-plugins"]}\n' "$(brew --prefix)" > ~/.config/jobsync-docker/config.json
+   ```
+
+   ```bash
+   cd ~/Developer/jobsync && DOCKER_CONFIG=~/.config/jobsync-docker DOCKER_HOST=unix://$HOME/.colima/default/docker.sock docker compose up -d
+   ```
+
+4. Open `http://localhost:3737`. The first start pulls two images and applies the
+   database schema, which takes about a minute.
+
+To stop it, run `docker compose down` with the same variables, then `colima stop`. The
+jobs are kept in the Docker volume `jobsync_pgdata` inside the Colima VM. Uploaded
+resumes are kept in `~/Developer/jobsync/jobsyncdb/data`. `colima delete` erases the
+VM and the volume, so download a backup first.
+
 ### When something is wrong
 
 | Situation | What the tool does |
@@ -190,10 +241,10 @@ It still needs a fresh backup each week; with an old one it runs and warns.
   (see part 3), so a fully hands-off weekly run is not possible without opening that
   database to the host. A direct, read-only database reader is the natural follow-up if
   the weekly download becomes a chore.
-- **It has not been run against a real JobSync.** Docker is not running on this Mac, so
-  the backup reader was written from JobSync's source (its backup schema, version 1,
-  JobSync 1.2.1) and tested on synthetic backups in that layout. Check the first real dry
-  run by eye.
+- **It has not been run on a real JobSync backup.** JobSync 1.2.1 runs on this Mac since
+  2026-11-24, but no account or backup exists yet. The backup reader was written from
+  JobSync's source (its backup schema, version 1) and tested on synthetic backups in that
+  layout. Check the first real dry run by eye.
 - **It has not been run against the live API.** The client was written from the backend
   source and tested against a mock server.
 - **Keyword matching, not understanding.** A skill counts when its name or an alias
@@ -212,9 +263,10 @@ It still needs a fresh backup each week; with an old one it runs and warns.
 
 Read from the repository at commit
 [`4be4faa`](https://github.com/Gsync/jobsync/tree/4be4faa0a3132358157f0446388a1b6db255e10c)
-(`main`, release v1.2.1 of 2026-11-14). Not installed or run: Docker is not running here,
-and its other way to run (`npm run dev`) needs a Postgres server, which would mean
-installing software beyond this tool.
+(`main`, release v1.2.1 of 2026-11-14). At the time of this research it was not installed or
+run. It has been running locally since 2026-11-24 (see
+[Running JobSync locally](#running-jobsync-locally)), and the findings below have not been
+rechecked against it.
 
 | Question | Finding | Source |
 |---|---|---|
