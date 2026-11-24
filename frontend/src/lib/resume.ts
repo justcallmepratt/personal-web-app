@@ -224,7 +224,7 @@ function skillEntries(profile: Profile | null): ResumeEntry[] {
 function certificationEntries(items: unknown): ResumeEntry[] {
   return records<Certification>(items).flatMap((c, i) => {
     const title = clean(c.name)
-    if (!title) return []
+    if (!title || c.resume === false) return []
     const id = clean(c.credentialId)
     return [entry(`certification-${i}`, {
       title,

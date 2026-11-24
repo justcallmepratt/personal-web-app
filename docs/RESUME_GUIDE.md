@@ -207,8 +207,10 @@ only you can confirm; nothing in them is published until you do.
   **still two pages**: about 220 pt of Skills, Certifications and Leadership
   spills over. Getting to one page needs trims to content, so the test still
   allows two pages until you decide:
-  - turn the current role's tool paragraph into bullets (3);
-  - drop the Udemy courses (9).
+  - turn the current role's tool paragraph into bullets (3).
+- **Done: 9, by leaving them out.** The two Udemy courses carry
+  `resume: false`, so they stay on /certifications and are left off the
+  resume.
 - **Done: the soft-skills part of 6.** The "Business & Leadership" row is off
   the resume (`RESUME_HIDDEN_SKILL_AREAS`) and stays on the site. The resume
   is still two pages: Skills, Certifications and Leadership spill over.

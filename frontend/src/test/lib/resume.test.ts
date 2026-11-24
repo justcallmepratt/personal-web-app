@@ -149,6 +149,19 @@ describe('resume selection', () => {
     expect(data.sections[0].entries).toHaveLength(2)
   })
 
+  it('keeps the Udemy courses off the resume and prints the certification', () => {
+    const titles = localResumeData().sections.find((s) => s.id === 'certifications')?.entries.map((e) => e.title)
+    expect(titles).toEqual(['Microsoft Technology Associate'])
+    const data = buildResume({
+      ...empty,
+      certifications: [
+        { id: 1, name: 'Cert', issuer: 'X' },
+        { id: 2, name: 'Course', issuer: 'Y', resume: false },
+      ],
+    })
+    expect(data.sections[0].entries.map((e) => e.title)).toEqual(['Cert'])
+  })
+
   it('keeps the high-school paper off the resume but prints the 2023 one', () => {
     const titles = localResumeData().sections.find((s) => s.id === 'publications')?.entries.map((e) => e.title)
     expect(titles).toEqual(['How Generative AI Affects Customer Experience in Fintech'])

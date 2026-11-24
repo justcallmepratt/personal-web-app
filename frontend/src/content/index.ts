@@ -303,8 +303,9 @@ export const experience: Experience[] = [
 // (ISO: '2023', '2023-05' or '2023-05-14'), `credentialId` and `url` when known.
 export const certifications: Certification[] = [
   { id: 1, name: 'Microsoft Technology Associate', issuer: 'Microsoft', sortOrder: 1 },
-  { id: 2, name: 'Java Programming Masterclass', issuer: 'Udemy', sortOrder: 2 },
-  { id: 3, name: 'TensorFlow', issuer: 'Udemy', sortOrder: 3 },
+  // Courses rather than certifications: on /certifications, not on the resume.
+  { id: 2, name: 'Java Programming Masterclass', issuer: 'Udemy', resume: false, sortOrder: 2 },
+  { id: 3, name: 'TensorFlow', issuer: 'Udemy', resume: false, sortOrder: 3 },
 ]
 
 // Shown on /certifications and on the resume. Only `degree` and `institution`
