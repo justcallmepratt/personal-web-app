@@ -71,7 +71,7 @@
 | 30 | Low | importer | A `--file` run that fails part-way doesn't say how many items were filed. A stalled body read is reported as `bad_response`, not as a timeout | Note |
 | 31 | Low | admin | `api/session/route.ts` re-implements `readJsonBody` and counts UTF-16 units, not bytes | Note |
 | 32 | Info | frontend | `knip` finds 10 exports used only in their own file, such as `PLANNED_HEADING`, `withTimeout`, `KAFKA_LIMITS` and `socialImage`. Removing `export` is enough | Note |
-| 33 | Info | live DB | Two leftover tables: `_RLS Check 2` and `_rls_trigger_check` | Ask: owner to drop |
+| 33 | Info | live DB | Two leftover tables: `_RLS Check 2` and `_rls_trigger_check` | Done: dropped by the owner, 2026-11-24 |
 | 34 | Info | repo | `ecc:harness-audit` scored 15/29. The root has no `CLAUDE.md` or `AGENTS.md`, and there is no `.claude/settings.json` or `.mcp.json`. Quality gates scored 10/10 | Note |
 
 ## Dropped as false positives or already handled
