@@ -33,6 +33,7 @@ describe('sitemap.xml', () => {
       `${HOST}/projects`,
       `${HOST}/skills`,
       `${HOST}/certifications`,
+      `${HOST}/research`,
       `${HOST}/resume`,
       `${HOST}/contact`,
       `${HOST}/credits`,

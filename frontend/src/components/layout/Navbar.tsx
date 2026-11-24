@@ -13,6 +13,7 @@ const links: { href: string; label: string; external?: boolean }[] = [
   { href: '/projects',   label: 'PROJECTS'   },
   { href: '/skills',     label: 'SKILLS'     },
   { href: '/certifications', label: 'CERTIFICATIONS' },
+  { href: '/research', label: 'RESEARCH' },
   { href: '/resume',     label: 'RESUME'     },
   { href: '/contact',    label: 'CONTACT'    },
   // Owner-only: /admin sends anyone who is not signed in to its sign-in page.
