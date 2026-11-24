@@ -215,11 +215,6 @@ export const plannedProjects: PlannedProject[] = [
     goal: 'A set of Stream Deck plugins and profiles for common setups: office, gaming, streaming and development.',
   },
   {
-    id: 2,
-    name: 'Athlink Upscale',
-    goal: 'Upscaling race and event photos.',
-  },
-  {
     id: 3,
     name: 'Google Email Sorter',
     goal: 'Sorting Gmail with AI-suggested labels, with a dry-run review step and no deletion.',
