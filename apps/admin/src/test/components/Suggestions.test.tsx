@@ -406,6 +406,39 @@ describe('Suggestions: create by hand', () => {
     expect(within(screen.getAllByRole('region', { name: 'Current value' })[0]).getByText('(empty)')).toBeInTheDocument()
   })
 
+  it('follows a refreshed value when untouched, and flags edited text built on the old one', async () => {
+    // After the refresh the profile tagline is "Staff Engineer" (it was "Engineer").
+    const refreshed = () =>
+      targets().map((t) =>
+        t.targetType === 'profile'
+          ? { ...t, fields: t.fields.map((f) => (f.name === 'tagline' ? { ...f, value: 'Staff Engineer' } : f)) }
+          : t,
+      )
+    const fetchMock = mockFetch((url) =>
+      url === '/admin/api/suggestions/targets' ? jsonResponse(refreshed()) : jsonResponse(all))
+    renderPage()
+
+    // Untouched: the text follows the new value.
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(await screen.findByDisplayValue('Staff Engineer')).toBeInTheDocument()
+    expect(screen.queryByText(/changed while you were editing/i)).not.toBeInTheDocument()
+
+    // Edited, then the value changes again: the edit is kept, flagged, and cannot be sent.
+    fetchMock.mockImplementation(async (url) =>
+      String(url) === '/admin/api/suggestions/targets' ? jsonResponse(targets()) : jsonResponse(all))
+    await userEvent.type(form().value, ' II')
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(await screen.findByText(/changed while you were editing/i)).toBeInTheDocument()
+    expect(form().value).toHaveValue('Staff Engineer II')
+    await userEvent.type(form().reason, 'Promotion')
+    await userEvent.click(form().submit)
+    expect(fetchMock).not.toHaveBeenCalledWith('/admin/api/suggestions', expect.objectContaining({ method: 'POST' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Start again from the current value' }))
+    expect(form().value).toHaveValue('Engineer')
+    expect(screen.queryByText(/changed while you were editing/i)).not.toBeInTheDocument()
+  })
+
   it('creates a text suggestion and shows it as pending', async () => {
     const created = suggestion({ id: 9, targetType: 'profile', targetId: 1, targetLabel: 'Profile', field: 'tagline', proposedValue: 'Backend engineer', reason: 'Clearer' })
     const fetchMock = mockApi({ create: () => jsonResponse(created) })
