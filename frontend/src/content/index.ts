@@ -255,11 +255,11 @@ export const experience: Experience[] = [
     startDate: '2024-07-01',
     endDate: null,
     current: true,
-    description:
-      'Application developer working with Spring Boot and Java (Amazon Corretto), Kafka and Confluent Kafka, SQL databases, and Splunk and Dynatrace.',
+    description: '',
     highlights: [
-      'Worked on a publish-subscribe Kafka service supporting a legacy database',
-      'Worked with data-intensive applications',
+      'Built a publish-subscribe Kafka service in Java and Spring Boot that feeds a legacy database',
+      'Develop data-intensive applications on Oracle and Microsoft SQL Server, monitored with Splunk and Dynatrace',
+      'Mentor new post-college associates joining the team',
     ],
     technologies: [
       'Java (Amazon Corretto)', 'Spring', 'Spring Boot', 'Kafka', 'Confluent Kafka',
