@@ -45,3 +45,13 @@ test('http waits and retries after a 429', async () => {
   assert.deepEqual(await res.json(), { ok: 1 })
   assert.deepEqual(waits, [2000])
 })
+
+test('htmlToText decodes &amp; once', () => {
+  assert.equal(htmlToText('a &amp;lt; b'), 'a &lt; b')
+})
+
+test('every source is an https careers site', async () => {
+  const { SOURCES } = await import('../src/sources-config.mjs')
+  assert.ok(SOURCES.length > 20)
+  for (const s of SOURCES.filter((x) => x.type === 'workday')) assert.match(s.host, /^[a-z0-9]+\.wd\d+\.myworkdayjobs\.com$/)
+})

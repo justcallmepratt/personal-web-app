@@ -11,7 +11,7 @@ Jobs go into JobSync as **New** with `applied: false`; JobSync 1.2.1 has no "Sav
 ## The weekly run (`weekly.sh`)
 
 1. Starts Colima and JobSync if they are down.
-2. **job-scout** searches the careers sites in `data/sources.json`, the companies' own public
+2. **job-scout** searches the careers sites in `src/sources-config.mjs`, the companies' own public
    search APIs (Workday, JPMorgan's Oracle site, Bank of America's). A source runs only when
    its `allowListName` is `included` in the reviewed allow-list
    (`backend/src/main/resources/market/allow-list.json`: Fortune 500 and FINRA-regulated).
@@ -59,7 +59,7 @@ Remove: `launchctl bootout gui/$(id -u)/dev.justcallmepratt.job-scout`, then del
 node tools/job-scout/bin/job-scout.mjs --dry-run --out-dir /tmp/scout
 ```
 
-`--help` lists the options (`--max`, `--min-score`, `--dump`, `--sources`, `--allowlist`).
+`--help` lists the options (`--max`, `--min-score`, `--dump`, `--allowlist`).
 Tests: `node --test tools/job-scout/test/*.test.mjs`.
 
 ## Limits
@@ -70,5 +70,5 @@ Tests: `node --test tools/job-scout/test/*.test.mjs`.
   Lincoln and ICE are not read: no public search API was found for them. Add a source by
   checking its Workday tenant and site (`/wday/cxs/<tenant>/<site>/jobs`) answers.
 - Scoring is keyword-based against the resume's skills, not a reading of the posting.
-- Company names in `sources.json` must contain one of the allow-list entry's aliases, or the
+- Company names in `src/sources-config.mjs` must contain one of the allow-list entry's aliases, or the
   importer leaves those jobs out.

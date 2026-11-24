@@ -10,6 +10,7 @@ import { parseArgs } from 'node:util'
 import { collect } from '../src/sources.mjs'
 import { reason, scorePosting } from '../src/score.mjs'
 import { BATCH, dumpData, existingUrls, mcpClient } from '../src/jobsync.mjs'
+import { SEARCH_TERMS, SOURCES } from '../src/sources-config.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const HELP = `Usage: job-scout [options]
@@ -19,14 +20,12 @@ const HELP = `Usage: job-scout [options]
   --dump <path>      Also write JobSync's jobs as a backup-style data.json here, for
                      tools/jobsync-importer --backup <path>.
   --dry-run          Search and score, write the CSV, add nothing.
-  --sources <path>   Sources file (default data/sources.json).
   --allowlist <path> Company allow-list (default: the backend's reviewed list). Also JOBSYNC_ALLOWLIST.
 Env: JOBSYNC_MCP_TOKEN (required unless --dry-run), JOBSYNC_MCP_URL, JOBSYNC_DIR.`
 
 const { values } = parseArgs({ options: {
   max: { type: 'string', default: '20' }, 'min-score': { type: 'string', default: '55' },
   'out-dir': { type: 'string', default: 'job-scout-out' }, dump: { type: 'string' }, 'dry-run': { type: 'boolean', default: false },
-  sources: { type: 'string', default: join(here, '..', 'data', 'sources.json') },
   allowlist: { type: 'string', default: process.env.JOBSYNC_ALLOWLIST ?? join(here, '..', '..', '..', 'backend', 'src', 'main', 'resources', 'market', 'allow-list.json') },
   help: { type: 'boolean', default: false },
 } })
@@ -43,15 +42,14 @@ const today = new Date().toISOString().slice(0, 10)
 if (!existsSync(values.allowlist)) { console.error(`Allow-list not found: ${values.allowlist}`); process.exit(2) }
 const allow = JSON.parse(readFileSync(values.allowlist, 'utf8'))
 const included = new Set((allow.companies ?? allow).filter((c) => c.included === true && c.fortune500?.rank >= 1 && c.fortune500?.rank <= 500 && (c.finra ?? []).length > 0).map((c) => c.name))
-const config = JSON.parse(readFileSync(values.sources, 'utf8'))
-const sources = config.sources.filter((s) => {
+const sources = SOURCES.filter((s) => {
   if (included.has(s.allowListName)) return true
   log(`Skipping ${s.company}: "${s.allowListName}" is not included in the allow-list.`)
   return false
 })
 
 log(`job-scout ${today}: searching ${sources.length} careers sites.`)
-const { postings, failures } = await collect(sources, config.searchTerms, { log })
+const { postings, failures } = await collect(sources, SEARCH_TERMS, { log })
 
 const known = values['dry-run'] && !values.dump ? new Set() : existingUrls()
 const seen = new Set()
