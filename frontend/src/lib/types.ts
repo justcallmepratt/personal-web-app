@@ -146,5 +146,7 @@ export interface Research {
   coAuthors?: string[]
   /** Public link to the paper, when there is one. */
   url?: string
+  /** `false` keeps the paper off the resume; it is still listed on /research. */
+  resume?: boolean
   sortOrder: number
 }

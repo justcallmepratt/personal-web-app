@@ -24,7 +24,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-const HEADINGS = ['Experience', 'Education', 'Projects', 'Skills', 'Certifications', 'Leadership']
+const HEADINGS = ['Experience', 'Education', 'Projects', 'Publications', 'Skills', 'Certifications', 'Leadership']
 
 const apiDown = () => {
   vi.stubEnv('BACKEND_URL', 'http://backend.test')
@@ -35,7 +35,7 @@ const apiDown = () => {
 const h2s = () => screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
 
 describe('/resume page', () => {
-  it('shows the name as the only h1 and the six sections in order', async () => {
+  it('shows the name as the only h1 and every section in order', async () => {
     render(await ResumePage())
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Pratham Sachan')
@@ -108,7 +108,7 @@ describe('/resume page', () => {
     vi.spyOn(api, 'getLeadership').mockResolvedValue([])
     vi.spyOn(api, 'getProjects').mockRejectedValue(new Error('boom'))
     render(await ResumePage())
-    expect(h2s()).toEqual(['Experience', 'Education', 'Skills'])
+    expect(h2s()).toEqual(['Experience', 'Education', 'Publications', 'Skills'])
     expect(screen.queryByRole('region', { name: 'Certifications' })).not.toBeInTheDocument()
   })
 

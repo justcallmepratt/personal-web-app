@@ -195,8 +195,24 @@ only you can confirm; nothing in them is published until you do.
       for applications. It would never be built or deployed. Only worth doing
       if you want it.
 
-Changes 1, 2 (apart from choosing projects), 4 and 7 can ship first without
-any new facts. The rest wait for your answers.
+### Status (24 Nov 2026)
+
+- **Done: 1, 4 and 7.**
+  - Stream-order extraction now reads `Backend Software Developer Jul 2024 – Present`.
+  - Skills and Certifications rows extract as one `Label: values` line each.
+  - Publications lists the 2023 paper. The AP paper carries `resume: false`,
+    so it stays on /research only.
+- **Partly done: 2.** The resume now prints only featured projects (at most
+  3, `MAX_RESUME_PROJECTS`), with 10 pt body text and 0.6 in margins. It is
+  **still two pages**: about 220 pt of Skills, Certifications and Leadership
+  spills over. Getting to one page needs trims to content, so the test still
+  allows two pages until you decide:
+  - turn the current role's tool paragraph into bullets (3);
+  - drop the "Business & Leadership" row from the resume (6);
+  - drop the Udemy courses (9).
+- **Still to do.** Layout-based extractors such as pdfminer still file a
+  right-aligned date as its own text block. If that matters, the date can move
+  onto the subtitle row (`Raymond James · Tampa, FL · Jul 2024 – Present`).
 
 ## Sources
 

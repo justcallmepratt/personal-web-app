@@ -6,7 +6,7 @@ import { localResumeData, type ResumeData, type ResumeEntry } from '@/lib/resume
 import { renderResumePdf, wrapText } from '@/lib/resumePdf'
 import { pdfPageCount, pdfSource, pdfText, pdfTextRuns } from '../helpers/pdf'
 
-const PAGE = { width: 612, height: 792, margin: 54 }
+const PAGE = { width: 612, height: 792, margin: 43 }
 const NOW = new Date('2026-11-21T10:30:00Z')
 const SITE = 'https://justcallmepratt.dev'
 
@@ -57,10 +57,11 @@ describe('resume PDF from the site content', () => {
   it('contains the owner\'s name and every section heading as real text', () => {
     const runs = pdfTextRuns(pdf)
     expect(runs[0]).toMatchObject({ text: 'Pratham Sachan', font: 'bold', page: 0 })
-    for (const heading of ['EXPERIENCE', 'EDUCATION', 'PROJECTS', 'SKILLS', 'CERTIFICATIONS', 'LEADERSHIP']) {
+    const headings = ['EXPERIENCE', 'EDUCATION', 'PROJECTS', 'PUBLICATIONS', 'SKILLS', 'CERTIFICATIONS', 'LEADERSHIP']
+    for (const heading of headings) {
       expect(runs).toContainEqual(expect.objectContaining({ text: heading, font: 'bold' }))
     }
-    expect(data.sections).toHaveLength(6)
+    expect(data.sections).toHaveLength(headings.length)
   })
 
   it('contains the content of each section', () => {
@@ -73,10 +74,33 @@ describe('resume PDF from the site content', () => {
     }
   })
 
-  it('fits on one or two pages, inside the margins', () => {
-    expect(pdfPageCount(pdf)).toBeGreaterThanOrEqual(1)
+  // One page is the goal (docs/RESUME_GUIDE.md). Reaching it needs content
+  // trims the owner has not approved yet, so this still allows two.
+  it('fits on at most two pages, inside the margins, in 10 pt body text', () => {
     expect(pdfPageCount(pdf)).toBeLessThanOrEqual(2)
     expectInsideMargins(pdf)
+    const sizes = pdfTextRuns(pdf).map((run) => run.size)
+    expect(Math.min(...sizes)).toBe(10)
+  })
+
+  it('writes each title before its date, so extracted text reads in visual order', () => {
+    const runs = pdfTextRuns(pdf).map((run) => run.text)
+    for (const [title, date] of [
+      ['Backend Software Developer', 'Jul 2024 – Present'],
+      ['Data Science Intern', 'Jun 2021 – Aug 2021'],
+    ]) {
+      expect(runs.indexOf(title)).toBeGreaterThanOrEqual(0)
+      expect(runs.indexOf(date)).toBe(runs.indexOf(title) + 1)
+    }
+  })
+
+  it('keeps each skill area on the same row as its values', () => {
+    const runs = pdfTextRuns(pdf)
+    const label = runs.find((run) => run.text === 'Backend:')
+    const value = runs[runs.indexOf(label!) + 1]
+    expect(label).toMatchObject({ font: 'bold' })
+    expect(value).toMatchObject({ font: 'regular', y: label!.y })
+    expect(value.text.startsWith('Java')).toBe(true)
   })
 
   it('carries title, author, language and date metadata', () => {
@@ -134,7 +158,7 @@ describe('resume PDF edge cases', () => {
     expect(pdfText(pdf).split('\n')).toEqual(['Test Person', 'EXPERIENCE', 'Developer', 'SKILLS', 'Backend'])
   })
 
-  it('lines the values of a short-label section up in one column', () => {
+  it('runs each value on after its label, with no aligned value column', () => {
     const pdf = renderResumePdf({
       ...bare,
       sections: [{
@@ -145,10 +169,15 @@ describe('resume PDF edge cases', () => {
         ],
       }],
     }, { now: NOW })
-    const values = pdfTextRuns(pdf).filter((run) => run.font === 'regular')
+    const runs = pdfTextRuns(pdf)
+    const values = runs.filter((run) => run.font === 'regular')
     expect(values.length).toBeGreaterThan(3)
-    expect(new Set(values.map((run) => run.x)).size).toBe(1)
-    expect(values[0].x).toBeGreaterThan(PAGE.margin + textWidth('Backend', 'bold', 9.5))
+    // The first row starts right after "Backend:"; later rows of it start at the margin.
+    expect(values[0].x).toBeCloseTo(PAGE.margin + textWidth('Backend:', 'bold', 10) + 4, 1)
+    expect(values[1].x).toBe(PAGE.margin)
+    // "Other:" and its short value share a row, and the value follows the label directly.
+    const other = runs.find((run) => run.text === 'Other:')!
+    expect(runs[runs.indexOf(other) + 1]).toMatchObject({ text: 'C', y: other.y })
     expectInsideMargins(pdf)
   })
 
@@ -208,6 +237,25 @@ describe('resume PDF edge cases', () => {
     expect(runs.find((run) => run.text === 'EXPERIENCE')?.page).toBe(titles[0].page)
   })
 
+  it('keeps every date on the page and row of its title across page breaks', () => {
+    const jobs = Array.from({ length: 30 }, (_, i) =>
+      entry({ title: `Role ${i}`, date: `Jan 20${10 + i} – Present`, text: 'Did things. '.repeat(25) }))
+    const pdf = renderResumePdf({
+      ...bare,
+      sections: [{ id: 'experience', heading: 'Experience', layout: 'entries', entries: jobs }],
+    }, { now: NOW })
+    expect(pdfPageCount(pdf)).toBeGreaterThan(2)
+    const runs = pdfTextRuns(pdf)
+    jobs.forEach((job, i) => {
+      const title = runs.filter((run) => run.text === job.title)
+      expect(title).toHaveLength(1)
+      const date = runs[runs.indexOf(title[0]) + 1]
+      expect(date).toMatchObject({ text: `Jan 20${10 + i} – Present`, page: title[0].page })
+      expect(date.y).toBeCloseTo(title[0].y, 5)
+    })
+    expectInsideMargins(pdf)
+  })
+
   it('moves a short section to the next page rather than splitting it', () => {
     const filler = entry({ title: 'Filler', text: 'Line. '.repeat(1200) })
     const skills = Array.from({ length: 6 }, (_, i) => entry({ title: `Area ${i}`, text: 'One, two, three' }))
@@ -225,7 +273,7 @@ describe('resume PDF edge cases', () => {
     const table = runs.slice(runs.indexOf(heading as never))
     expect(new Set(table.map((run) => run.page)).size).toBe(1)
     expect(table.filter((run) => run.font === 'bold').map((run) => run.text)).toEqual([
-      'SKILLS', 'Area 0', 'Area 1', 'Area 2', 'Area 3', 'Area 4', 'Area 5',
+      'SKILLS', 'Area 0:', 'Area 1:', 'Area 2:', 'Area 3:', 'Area 4:', 'Area 5:',
     ])
     // Nothing was drawn twice when the block was taken back and redrawn.
     expect(runs.filter((run) => run.text === 'SKILLS')).toHaveLength(1)
