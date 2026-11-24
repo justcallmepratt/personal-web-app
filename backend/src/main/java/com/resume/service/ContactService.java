@@ -55,7 +55,8 @@ public class ContactService {
             mail.setFrom(mailUser);
             mail.setTo(mailTo == null || mailTo.isBlank() ? mailUser : mailTo);
             mail.setReplyTo(req.email());
-            mail.setSubject("[Resume Contact] " + req.subject());
+            // A line break in the subject could start a new mail header.
+            mail.setSubject("[Resume Contact] " + req.subject().replaceAll("[\\r\\n\\u0085\\u2028\\u2029]+", " "));
             mail.setText("From: " + req.name() + " <" + req.email() + ">\n\n" + req.body());
             mailSender.send(mail);
         } catch (Exception e) {

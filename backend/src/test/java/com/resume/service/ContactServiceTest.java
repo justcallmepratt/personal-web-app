@@ -72,4 +72,18 @@ class ContactServiceTest {
         assertThat(result).isNotNull();
         verify(messageRepository).save(any(Message.class));
     }
+
+    @Test
+    void handle_flattensLineBreaksInTheSubject_soNoHeaderCanBeAdded() {
+        ContactService service = serviceWith("noreply@example.com");
+        when(messageRepository.save(any(Message.class))).thenReturn(new Message());
+
+        service.handle(new ContactRequest("Alice", "alice@example.com", "Hi\r\nBcc: victim@example.com", "World"));
+
+        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(captor.capture());
+        assertThat(captor.getValue().getSubject())
+            .isEqualTo("[Resume Contact] Hi Bcc: victim@example.com")
+            .doesNotContain("\r").doesNotContain("\n");
+    }
 }

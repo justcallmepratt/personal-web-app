@@ -93,4 +93,15 @@ class RateLimitEdgeCaseTest {
         svc.isAllowed("2.2.2.2");
         assertDoesNotThrow(svc::evictStale);
     }
+
+    @org.junit.jupiter.api.Test
+    void sweepsExpiredAddressesSoTheMapStaysBounded() {
+        // A negative window puts every earlier submission outside it.
+        RateLimitService limiter = new RateLimitService(3, -1);
+        for (int i = 0; i <= RateLimitService.SWEEP_THRESHOLD; i++) {
+            limiter.isAllowed("10.0." + (i / 256) + "." + (i % 256));
+        }
+        // The request that found the map full swept it, then added only itself.
+        org.assertj.core.api.Assertions.assertThat(limiter.trackedAddresses()).isEqualTo(1);
+    }
 }

@@ -77,4 +77,15 @@ class LoginRateLimiterTest {
     void exposesItsWindowForTheRetryAfterHeader() {
         assertThat(new LoginRateLimiter(5, 30, 900).windowSeconds()).isEqualTo(900);
     }
+
+    @Test
+    void forgetsClientsWhoseFailuresHaveExpired() {
+        // A zero-second window: every failure has expired by the next call.
+        LoginRateLimiter limiter = new LoginRateLimiter(5, 1_000_000, 0);
+        for (int i = 0; i < LoginRateLimiter.SWEEP_THRESHOLD; i++) {
+            limiter.recordFailure("10.0." + (i / 256) + "." + (i % 256));
+        }
+        // The failure that found the map full swept it: only that client and the overall key remain.
+        assertThat(limiter.trackedClients()).isEqualTo(2);
+    }
 }

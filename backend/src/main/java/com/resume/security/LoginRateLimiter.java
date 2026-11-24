@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Limits failed admin sign-in attempts so the password cannot be guessed at speed.
@@ -24,10 +25,15 @@ public class LoginRateLimiter {
 
     static final String ALL_CLIENTS = "*";
 
+    /** Map size at which clients with no recent failures are swept on the next failure. */
+    static final int SWEEP_THRESHOLD = 1_000;
+
     private final int maxPerClient;
     private final int maxOverall;
     private final long windowSeconds;
     private final ConcurrentHashMap<String, Deque<Long>> failures = new ConcurrentHashMap<>();
+    /** Second of the last sweep; sweeps run at most once a second. */
+    private final AtomicLong lastSweep = new AtomicLong(Long.MIN_VALUE);
 
     public LoginRateLimiter(
             @Value("${admin.login-rate-limit.max-attempts:5}") int maxPerClient,
@@ -73,12 +79,31 @@ public class LoginRateLimiter {
     }
 
     private void add(String key, long now) {
-        Deque<Long> times = failures.computeIfAbsent(key, k -> new ArrayDeque<>());
-        synchronized (times) {
-            prune(times, now);
-            times.addLast(now);
+        if (failures.size() >= SWEEP_THRESHOLD && lastSweep.getAndUpdate(t -> t < now ? now : t) < now) sweep(now);
+        failures.compute(key, (k, times) -> {
+            Deque<Long> d = times == null ? new ArrayDeque<>() : times;
+            synchronized (d) {
+                prune(d, now);
+                d.addLast(now);
+            }
+            return d;
+        });
+    }
+
+    /** Drops clients whose failures have all left the window, so memory stays bounded. */
+    private void sweep(long now) {
+        // computeIfPresent locks the key, so a concurrent add cannot land in a removed deque.
+        for (String key : failures.keySet()) {
+            failures.computeIfPresent(key, (k, times) -> {
+                synchronized (times) {
+                    prune(times, now);
+                    return times.isEmpty() ? null : times;
+                }
+            });
         }
     }
+
+    int trackedClients() { return failures.size(); }
 
     private void prune(Deque<Long> times, long now) {
         long cutoff = now - windowSeconds;

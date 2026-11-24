@@ -107,7 +107,14 @@ public class EmailValidationService {
             return ValidationResult.reject("Email addresses cannot contain spaces.");
         }
 
-        String domain = email.substring(email.lastIndexOf('@') + 1).toLowerCase().trim();
+        String domain = toAsciiDomain(email.substring(email.lastIndexOf('@') + 1));
+
+        // The domain goes into a DNS lookup, so accept only a plain hostname.
+        // Anything else (for example "/10.0.0.5:53/x") could steer the lookup
+        // to a server the caller picks.
+        if (!isHostname(domain)) {
+            return ValidationResult.reject("Invalid email format.");
+        }
 
         // 1. Disposable provider
         if (DISPOSABLE.contains(domain)) {
@@ -130,6 +137,26 @@ public class EmailValidationService {
         }
 
         return ValidationResult.ok();
+    }
+
+    /** Dot-separated LDH labels, at least two, at most 253 characters (RFC 1123). */
+    private static final Pattern HOSTNAME = Pattern.compile(
+        "^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+    );
+
+    /** Lower-cases, drops one trailing dot and converts IDN labels to punycode; null if not convertible. */
+    static String toAsciiDomain(String raw) {
+        String d = raw.trim().toLowerCase(java.util.Locale.ROOT);
+        if (d.endsWith(".")) d = d.substring(0, d.length() - 1);
+        try {
+            return java.net.IDN.toASCII(d, java.net.IDN.ALLOW_UNASSIGNED).toLowerCase(java.util.Locale.ROOT);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static boolean isHostname(String domain) {
+        return domain != null && HOSTNAME.matcher(domain).matches();
     }
 
     /** Strips line breaks so user-supplied text cannot forge extra log entries. */

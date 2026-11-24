@@ -55,4 +55,23 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().success()).isFalse();
         assertThat(response.getBody().message()).isEqualTo("Internal server error");
     }
+
+    @Test
+    void handleGeneral_keepsTheStatusOfSpringRequestErrors() {
+        var ex = new org.springframework.web.servlet.resource.NoResourceFoundException(
+            org.springframework.http.HttpMethod.GET, "/actuator/env", "actuator/env");
+
+        ResponseEntity<ApiResponse> response = handler.handleGeneral(ex);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+        assertThat(response.getBody().message()).isEqualTo("Not Found");
+    }
+
+    @Test
+    void handleBadInput_returns400_withoutEchoingTheInput() {
+        ResponseEntity<ApiResponse> response = handler.handleBadInput(new RuntimeException("For input string: \"abc\""));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody().message()).isEqualTo("Invalid request");
+    }
 }
