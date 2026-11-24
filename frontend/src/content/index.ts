@@ -107,10 +107,27 @@ export const projects: Project[] = [
     createdAt: '2023-02-01',
   },
   {
+    id: 9,
+    title: 'Athlink: International Athlete Recruiting',
+    description:
+      'A clickable prototype of a recruiting platform connecting international student athletes with college coaches, with separate athlete and recruiter apps. The live demo runs on sample data.',
+    longDescription:
+      'A React and TypeScript prototype with two sides: athletes onboard, build a profile and get an AI-style evaluation report; recruiters search, compare and shortlist athletes. It began as Rocket Portal, a Techstars Startup Weekend concept in November 2025.',
+    tags: ['React', 'TypeScript', 'Product', 'Startup'],
+    stack: ['React', 'TypeScript', 'Vite', 'Tailwind CSS', 'shadcn/ui'],
+    // Hosted from its own repo and Vercel project, not on this site.
+    demoUrl: 'https://athllinkmvp-demo.vercel.app/',
+    repoUrl: 'https://github.com/justcallmepratt/Athllinkmvp-DEMO',
+    imageUrl: '',
+    featured: false,
+    sortOrder: 4,
+    createdAt: '2026-05-01',
+  },
+  {
     id: 5,
     title: 'Basketball Activity Recognition',
     description:
-      'A UMass CS 328 group project that classifies basketball movements such as dribbling and dunking from a wrist-worn accelerometer and gyroscope.',
+      'Classifies basketball movements such as dribbling and dunking from a wrist-worn phone\'s accelerometer and gyroscope, using hand-built signal features and a decision-tree model. UMass CS 328 group project.',
     longDescription:
       'Uses sensor streams from the Sensor Logger app and signal features such as dominant frequency, variance, range and magnitude to train a decision-tree classifier, with a Python visualisation of the classified sections.',
     tags: ['Machine Learning', 'Python', 'Sensors', 'UMass'],
@@ -119,14 +136,14 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 4,
+    sortOrder: 5,
     createdAt: '2023-09-01',
   },
   {
     id: 6,
     title: 'MOLD: Leasing Made Easy',
     description:
-      'A venture concept from a UMass startup course, created with Talish Garg: one platform for college-town renters and landlords.',
+      'A rental platform concept for college towns, created with Talish Garg in a UMass startup course: tenant and landlord profiles, plain-language lease summaries, maintenance requests and messaging, plus a pricing and launch plan.',
     longDescription:
       'Separate tenant and landlord profiles, plain-language lease breakdowns, maintenance reporting, direct messaging and document storage. The plan covers a college-town beachhead market, a $30-a-month price, a soft-launch MVP test and a pivot plan.',
     tags: ['Startup', 'Product', 'UMass'],
@@ -135,14 +152,14 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 5,
+    sortOrder: 6,
     createdAt: '2023-10-01',
   },
   {
     id: 7,
     title: 'Project eM: Atari Emulator Console',
     description:
-      'A UMass project with Danny Vicario: an Atari 2600 emulator on a Raspberry Pi 4 with an Arduino-based controller.',
+      'An Atari 2600 console on a Raspberry Pi 4 with a custom Arduino controller: a 3D-printed joystick, hand-motion control from ultrasonic and IR sensors, and voice commands. Built with Danny Vicario at UMass.',
     longDescription:
       'Designed to run Atari 2600 games through RetroPie on a Raspberry Pi 4, with a 3D-printed joystick, ultrasonic and IR sensors for hand-motion control, and voice commands for buttons.',
     tags: ['Hardware', 'Raspberry Pi', 'Arduino', 'UMass'],
@@ -151,14 +168,14 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 6,
+    sortOrder: 7,
     createdAt: '2021-10-01',
   },
   {
     id: 4,
     title: 'Smart Course Selection App',
     description:
-      'A prototype guiding high-school students through course selection. Built May 2019 to February 2020.',
+      'A prototype that guides high-school students through choosing courses, built on my AP Research paper "The Art and Science of Course Selection". May 2019 to February 2020.',
     longDescription:
       'A prototype application guiding high-school students through course selection, which grew out of my AP Research paper "The Art and Science of Course Selection".',
     tags: ['Prototype', 'Research', 'High School'],
@@ -167,14 +184,14 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 7,
+    sortOrder: 8,
     createdAt: '2019-05-01',
   },
   {
     id: 8,
     title: 'FIRST Robotics: Team 79 Krunch',
     description:
-      'Three years on East Lake High School\'s FIRST Robotics team, including a term as Spirit lead. Won the Team Spirit award at the Orlando regional in 2018 and 2019.',
+      'Three seasons designing, building and troubleshooting competition robots with East Lake High School\'s FIRST team, including a term as Spirit lead. Team Spirit award at the Orlando regional in 2018 and 2019.',
     longDescription:
       'Took part in brainstorming, design, prototyping, assembly and troubleshooting of the competition robot, and in the team\'s STEM outreach at local schools. Awarded a varsity letter in robotics in 2019.',
     tags: ['Robotics', 'Leadership', 'High School'],
@@ -183,7 +200,7 @@ export const projects: Project[] = [
     repoUrl: '',
     imageUrl: '',
     featured: false,
-    sortOrder: 8,
+    sortOrder: 9,
     createdAt: '2017-08-01',
   },
 ]

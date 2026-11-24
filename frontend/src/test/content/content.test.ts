@@ -30,10 +30,13 @@ describe('site content', () => {
     expect(profile.socials).toEqual({ linkedin: 'https://linkedin.com/in/prathamsachan' })
   })
 
-  it('links projects only to the owner\'s GitHub or to pages of this site', () => {
+  // The one off-site demo: Athlink is deployed from its own repo (Athllinkmvp-DEMO).
+  const OFF_SITE_DEMOS = ['https://athllinkmvp-demo.vercel.app/']
+
+  it('links projects only to the owner\'s GitHub, to pages of this site or to a listed off-site demo', () => {
     for (const p of projects) {
       if (p.repoUrl) expect(p.repoUrl).toMatch(/^https:\/\/github\.com\/justcallmepratt\//)
-      if (p.demoUrl) expect(p.demoUrl).toMatch(/^\//)
+      if (p.demoUrl && !OFF_SITE_DEMOS.includes(p.demoUrl)) expect(p.demoUrl).toMatch(/^\/(?!\/)/)
     }
   })
 
